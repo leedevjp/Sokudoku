@@ -56,3 +56,8 @@ next-env.d.ts
 
 # Imported local design references
 /.design-reference/
+.local-captures/
+/scripts/capture-book.py
+/scripts/save-capture.ps1
+/scripts/save-capture.cmd
+/.codex-remote-attachments/
