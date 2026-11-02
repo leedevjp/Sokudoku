@@ -112,7 +112,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      word_recent_stat: {
+        Row: {
+          accuracy: number | null
+          attempt_count: number | null
+          average_correct_response_ms: number | null
+          correct_count: number | null
+          last_answered_at: string | null
+          user_id: string | null
+          word_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_log_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

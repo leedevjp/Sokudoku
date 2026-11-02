@@ -51,4 +51,24 @@ RLSにより自分のログだけをSELECT・INSERTできます。一般ユー�
 
 再送は同じUUIDでINSERT ... ON CONFLICT (id) DO NOTHINGを使い、記録を上書きしません。今後の保存APIでは認証セッションからuser_idを設定します。
 
-最近の回答はuser_id・word_id・question_typeごとにanswered_at DESC, id DESCで決定的に並べます。その複合インデックスと、単語の外部キー用インデックスを作成済みです。統計VIEWや保存APIはこのマイグレーションの対象外です。
+最近の回答はuser_id・word_id・question_typeごとにanswered_at DESC, id DESCで決定的に並べます。その複合インデックスと、単語の外部キー用インデックスを作成済みです。統計VIEWは次のマイグレーションで作成します。保存APIは未実装です。
+
+## word_recent_stat
+
+通常のVIEWで、回答履歴があるユーザー×単語の組み合わせだけを返します。wordとの全件結合や、未学習の単語の行生成は行いません。未学習かどうかは出題側でwordと統計を比較して判断します。
+
+意味問題と読み問題を合算し、answered_at DESC, id DESCで直近最大20試行を対象にします。時間切れと不正解も試行数に含めます。
+
+| カラム | 内容 |
+| --- | --- |
+| user_id | ユーザーID |
+| word_id | 単語ID |
+| attempt_count | 直近の試行数、1〜20 |
+| correct_count | その中の正答数 |
+| accuracy | 正答数÷試行数、0〜1 |
+| average_correct_response_ms | 正答だけの平均応答時間、正答がなければNULL |
+| last_answered_at | 最後の回答日時 |
+
+security_invokerを有効にし、基になるanswer_logのRLSを適用します。通常のログイン利用では本人の統計だけを参照できます。履歴に存在すれば論理削除済みの単語の統計も残ります。出題側でword.deleted_atを確認してください。集計結果は保存せず、読み取り時に計算するためREFRESHは不要です。
+
+回帰検証SQL: tests/sql/word_recent_stat.sql。専用の検証環境でSQLを一括実行すると、25件からの最新20件選択、同時刻の順序、問題形式合算、未学習行の不在、時間切れ、ユーザー分離を確認できます。検証用ユーザーとデータは同一トランザクションの最後でROLLBACKします。
