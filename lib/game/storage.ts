@@ -1,23 +1,45 @@
-import { openDB } from "idb";
+import { openDB, type IDBPDatabase } from "idb";
 import type { Answer, Word } from "./core";
-const database = () =>
-  openDB("sokudoku-game-v1", 1, {
+export function storageDeadline<T>(operation: Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("STORAGE_TIMEOUT")), 3000);
+    operation.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+let connection: Promise<IDBPDatabase> | undefined;
+const database = () => {
+  if (connection) return connection;
+  const opening = openDB("sokudoku-game-v1", 1, {
     upgrade(db) {
       db.createObjectStore("answer", { keyPath: "id" });
       db.createObjectStore("cache");
     },
+    blocking() {
+      void opening.then((db) => db.close());
+      connection = undefined;
+    },
+    terminated() {
+      connection = undefined;
+    },
   });
+  connection = storageDeadline(opening).catch((error) => {
+    connection = undefined;
+    void opening.then((db) => db.close(), () => {});
+    throw error;
+  });
+  return connection;
+};
 type Queued = Answer & { owner: string };
 export async function queueAnswer(owner: string, answer: Answer) {
-  await (await database()).put("answer", { ...answer, owner });
+  await storageDeadline((await database()).put("answer", { ...answer, owner }));
 }
 export type WordCache = { words: Word[]; syncedAt: string };
 export async function readWordCache(): Promise<WordCache | undefined> {
-  return (await database()).get("cache", "word-sync-v1");
+  return storageDeadline((await database()).get("cache", "word-sync-v1"));
 }
 export async function readWords(): Promise<Word[] | undefined> {
   const db = await database();
-  return (await db.get("cache", "word-sync-v1"))?.words ?? db.get("cache", "words");
+  return (await storageDeadline(db.get("cache", "word-sync-v1")))?.words ?? storageDeadline(db.get("cache", "words"));
 }
 export async function mergeWords(base: WordCache | undefined, changes: Word[], syncedAt: string): Promise<Word[]> {
   const words = new Map((base?.words ?? []).map((word) => [word.id, word]));
@@ -27,14 +49,23 @@ export async function mergeWords(base: WordCache | undefined, changes: Word[], s
   }
   const result = [...words.values()];
   try {
-  const tx = (await database()).transaction("cache", "readwrite");
-  // Keep the server timestamp verbatim, including microseconds.
-  const current: WordCache | undefined = await tx.store.get("word-sync-v1");
-  if (!current || current.syncedAt <= syncedAt) {
-    await tx.store.put({ words: result, syncedAt }, "word-sync-v1");
-    await tx.store.delete("words");
-  }
-  await tx.done;
+    const tx = (await database()).transaction("cache", "readwrite");
+    const timer = setTimeout(() => {
+      try { tx.abort(); } catch { /* Already completed. */ }
+    }, 3000);
+    // Observe transaction failure even if an earlier request rejects first.
+    void tx.done.catch(() => {});
+    try {
+      // Keep the server timestamp verbatim, including microseconds.
+      const current: WordCache | undefined = await tx.store.get("word-sync-v1");
+      if (!current || current.syncedAt <= syncedAt) {
+        await tx.store.put({ words: result, syncedAt }, "word-sync-v1");
+        await tx.store.delete("words");
+      }
+      await tx.done;
+    } finally {
+      clearTimeout(timer);
+    }
   } catch {
     // Storage denial/quota errors must not prevent an online game. No cursor is advanced.
   }
@@ -53,7 +84,7 @@ export async function flushAnswers(owner: string): Promise<void> {
   }
   flight = (async () => {
     const db = await database();
-    const all = ((await db.getAll("answer")) as Queued[]).filter(
+    const all = ((await storageDeadline(db.getAll("answer"))) as Queued[]).filter(
       (a) => a.owner === owner,
     );
     for (let i = 0; i < all.length; i += 200) {
@@ -80,7 +111,7 @@ export async function flushAnswers(owner: string): Promise<void> {
       for (const id of data.ids) {
         if (allowed.has(id)) tx.store.delete(id);
       }
-      await tx.done;
+      await storageDeadline(tx.done);
     }
   })();
   try {

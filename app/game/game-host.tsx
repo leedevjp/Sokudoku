@@ -10,7 +10,6 @@ import {
   readWords,
   readWordCache,
   mergeWords,
-  pendingCount,
 } from "@/lib/game/storage";
 import { createClient } from "@/lib/supabase/client";
 type Bootstrap = { words: Word[]; stats: Stat[]; user_id: string };
@@ -83,16 +82,9 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       }
       owner = data.user_id;
       if (!previewWords) {
-        try {
-          if (await pendingCount(owner)) {
-            await flushAnswers(owner);
-            data = await fetchData();
-          }
-          if (data.user_id !== owner) {
-            router.replace("/");
-            return;
-          }
-        } catch {}
+        // Recovery after a killed tab must never gate creation of the next game.
+        // Only acknowledged answers are removed; failed uploads remain queued.
+        void flushAnswers(owner).catch(() => {});
       }
       if (cancelled || !parent.current) return;
       if (data.words.length < 4) throw Error("WORDS");
