@@ -1,3 +1,4 @@
+import type { Database } from '@/lib/supabase/database.types';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 export async function createClient() {
@@ -5,7 +6,7 @@ export async function createClient() {
  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
  if (!url || !key) throw new Error('Supabase configuration is missing.');
- return createServerClient(url, key, {cookies:{getAll:()=>jar.getAll(),setAll(values){
+ return createServerClient<Database>(url, key, {cookies:{getAll:()=>jar.getAll(),setAll(values){
  try { values.forEach(({name,value,options})=>jar.set(name,value,options)); }
  catch { /* Server Components rely on proxy to refresh cookies. */ }
  }}});

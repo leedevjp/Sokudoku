@@ -12,7 +12,7 @@
 - サーバーで認証を検証するユーザー情報API
 - 日本語の画面・通知・エラーメッセージ
 
-認証にはSupabase Authを使用し、アプリ専用テーブルはまだ作成していません。ゲーム本体、単語管理、学習記録の同期は今後実装します。設計書はローカルで別途管理します。
+認証にはSupabase Authを使用します。単語の原本を保存する`word`テーブルを作成済みです。ゲーム本体、単語管理画面、学習記録の同期は今後実装します。設計書はローカルで別途管理します。
 
 ## 開発環境
 
@@ -68,3 +68,9 @@ vercel deploy --prod --scope leedevjps-projects
 ```
 
 Vercelの環境変数に`NEXT_PUBLIC_SUPABASE_URL`と`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`を設定します。`NEXT_PUBLIC_`の値はブラウザーに公開されるため、秘密キーは使用しないでください。
+
+## データベースの管理
+
+Prismaは使わず、`supabase/migrations/`のSQLをスキーマの正本としてGitで管理します。適用済みのファイルは編集せず、変更ごとに新しいマイグレーションを追加します。リモートの適用履歴とファイル名のバージョンを一致させます。GitへのpushやVercelのビルドだけではDBのSQLは適用されません。
+
+現在のテーブルは`word`のみです。`answer_log`は未作成です。型は`lib/supabase/database.types.ts`に保存し、DB変更時に再生成します。
