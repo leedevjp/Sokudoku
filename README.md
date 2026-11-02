@@ -1,38 +1,70 @@
 # Sokudoku
 
-일본어 단어의 의미와 읽기를 빠르게 인식하는 훈련 게임.
+日本語の単語を見て、意味と読みをすばやく思い出すためのトレーニングゲームです。
 
-## 현재 상태
+公開サイト: https://sokudoku-jp.vercel.app
 
-이메일·비밀번호 로그인, 회원가입, 메일 인증 콜백, 로그아웃, 세션 복원 및 검증된 사용자 조회 API를 구현했습니다. 별도 public 테이블 없이 Supabase Auth를 사용합니다. 게임, DB 스키마 및 기록 동기화는 아직 구현 전입니다. 상세 설계서는 로컬에서 별도 관리합니다. 미정 사항은 확정 요구로 취급하지 않습니다.
+## 実装状況
 
-## 로컬 실행
+- メールアドレスとパスワードによる新規登録・ログイン
+- 確認メールの認証コールバック
+- ログアウト、セッションの復元・更新
+- サーバーで認証を検証するユーザー情報API
+- 日本語の画面・通知・エラーメッセージ
 
-Node.js 20.9 이상과 pnpm을 사용합니다.
+認証にはSupabase Authを使用し、アプリ専用テーブルはまだ作成していません。ゲーム本体、単語管理、学習記録の同期は今後実装します。設計書はローカルで別途管理します。
+
+## 開発環境
+
+Node.js 24とpnpm 11.15.1を使用します。
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
 cp .env.example .env.local
-# .env.local에 Sokudoku 전용 프로젝트 URL과 publishable key 입력
+# .env.localにSokudoku専用のSupabase URLと公開可能キーを設定
 pnpm dev
 ```
 
 ```sh
 pnpm build
+pnpm start
 ```
 
-`.env.local`은 Git에서 제외됩니다. service_role/secret key를 NEXT_PUBLIC 변수나 저장소에 넣지 마세요. 기존 Todo 프로젝트와 별도 구성입니다.
+`.env.local`と`.vercel/`はGit管理対象外です。秘密キーやservice_roleキーをリポジトリや`NEXT_PUBLIC_`変数に含めないでください。Todoとは別のSupabaseプロジェクトを使用します。
 
-## 인증 설정
+## 認証設定
 
-Supabase Authentication > URL Configuration에서 개발 주소(http://localhost:3010 또는 사용하는 포트)와 배포 주소를 설정하세요. Redirect URLs에 각 주소의 /auth/callback을 등록해야 합니다. 배포 후 Site URL도 실제 서비스 주소로 설정하세요. Email provider와 이메일 인증이 활성화되어 있어야 합니다.
+SupabaseのAuthentication → URL Configurationで次の値を設定します。
 
-인증 메일은 가입한 브라우저에서 열어야 PKCE 코드를 세션으로 교환할 수 있습니다. 만료되거나 잘못된 링크는 /auth/error로 안내합니다. /api/auth/user는 서버 getUser() 검증 후 최소 사용자 정보만 반환하며 비로그인 요청에는 401을 반환합니다. 인증 응답은 private, no-store입니다.
+- Site URL: `https://sokudoku-jp.vercel.app`
+- Redirect URLs: `https://sokudoku-jp.vercel.app/auth/callback`
+- ローカル開発用: `http://localhost:3000/auth/callback`（ポートを変更する場合はそのURLも登録）
 
-## Vercel 배포
+メールプロバイダーとメール認証を有効にしてください。PKCEコードをセッションに交換するため、確認メールは登録時と同じブラウザーで開きます。無効なリンクは`/auth/error`に案内します。
 
-프로젝트: leedevjps-projects/sokudoku (Next.js, Node 24). 배포 주소: https://sokudoku-jp.vercel.app
+`/api/auth/user`はサーバーの`getUser()`で検証したユーザーのIDとメールアドレスだけを返します。未認証時は401を返し、認証関連の応答は`private, no-store`に設定します。
 
-CLI 배포: vercel deploy --prod --scope leedevjps-projects. GitHub 자동 배포에는 leedevjp/Sokudoku에 대한 Vercel GitHub App 접근 허용과 저장소 연결이 필요합니다.
+## Vercelのビルドとデプロイ
 
-Supabase Auth의 Site URL은 위 주소, Redirect URLs에는 https://sokudoku-jp.vercel.app/auth/callback을 등록해야 합니다.
+プロジェクト: `leedevjps-projects/sokudoku`
+
+| 設定 | 値 |
+| --- | --- |
+| フレームワーク | Next.js |
+| Node.js | 24.x |
+| インストールコマンド | `pnpm install --frozen-lockfile` |
+| ビルドコマンド | `pnpm build` |
+| 出力先 | Next.jsの既定値（上書きしない） |
+| 本番ブランチ | `main` |
+
+GitHubの`leedevjp/Sokudoku`と連携しています。`main`へのpushは本番デプロイを開始します。別ブランチのプルリクエストではプレビューデプロイが作成されます。pushによってプルリクエストそのものが自動作成されるわけではありません。
+
+Vercelはビルド後のデプロイを管理するため、別途`pnpm start`をデプロイコマンドとして設定する必要はありません。
+
+手動で本番にデプロイする場合:
+
+```sh
+vercel deploy --prod --scope leedevjps-projects
+```
+
+Vercelの環境変数に`NEXT_PUBLIC_SUPABASE_URL`と`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`を設定します。`NEXT_PUBLIC_`の値はブラウザーに公開されるため、秘密キーは使用しないでください。

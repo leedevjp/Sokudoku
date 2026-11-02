@@ -1,9 +1,9 @@
-# Sokudoku Supabase
+# SokudokuのSupabase設定
 
-- Project: Sokudoku
-- Reference: wjwtfuocfbvkwhspacpg
-- Organization: leedevjp
-- Region: ap-northeast-1 (Tokyo)
-- Dashboard: https://supabase.com/dashboard/project/wjwtfuocfbvkwhspacpg
+- プロジェクト名: Sokudoku
+- プロジェクト参照ID: wjwtfuocfbvkwhspacpg
+- 組織: leedevjp
+- リージョン: ap-northeast-1（東京）
+- 管理画面: https://supabase.com/dashboard/project/wjwtfuocfbvkwhspacpg
 
-Local client configuration is in the ignored .env.local file. Configure the same NEXT_PUBLIC variables separately for deployment. No service-role key is required by the current scaffold. Database schema has not been applied yet.
+ローカル接続設定はGit管理対象外の`.env.local`に保存します。デプロイ先の環境変数はVercelで別途設定します。現在の認証実装にservice_roleキーは不要です。アプリ専用のデータベーススキーマはまだ適用していません。

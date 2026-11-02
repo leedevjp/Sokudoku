@@ -5,13 +5,13 @@ import { createClient } from '@/lib/supabase/client';
 
 function message(code?: string) {
  switch(code) {
- case 'invalid_credentials': return '이메일 또는 비밀번호가 올바르지 않습니다.';
- case 'email_not_confirmed': return '인증 메일의 링크를 먼저 눌러 주세요.';
- case 'user_already_exists': case 'email_exists': return '이미 등록된 이메일입니다. 로그인해 주세요.';
- case 'weak_password': return '더 안전한 비밀번호를 입력해 주세요.';
- case 'over_email_send_rate_limit': case 'over_request_rate_limit': return '요청이 많습니다. 잠시 후 다시 시도해 주세요.';
- case 'signup_disabled': return '현재 회원가입이 비활성화되어 있습니다.';
- default: return '인증에 실패했습니다. 입력 내용과 연결을 확인해 주세요.';
+ case 'invalid_credentials': return 'メールアドレスまたはパスワードが正しくありません。';
+ case 'email_not_confirmed': return '確認メールのリンクを開いて、認証を完了してください。';
+ case 'user_already_exists': case 'email_exists': return 'このメールアドレスは登録済みです。ログインしてください。';
+ case 'weak_password': return 'より安全なパスワードを入力してください。';
+ case 'over_email_send_rate_limit': case 'over_request_rate_limit': return 'リクエストが多すぎます。しばらく待ってから再度お試しください。';
+ case 'signup_disabled': return '現在、新規登録を受け付けていません。';
+ default: return '認証に失敗しました。入力内容と接続を確認してください。';
  }
 }
 export default function AuthPanel() {
@@ -30,13 +30,13 @@ export default function AuthPanel() {
    if(active){setUser(session?.user??null);setLoading(false);}
   });
   void client.auth.getUser().then(({data,error})=>{
-   if(active){setUser(data.user);setLoading(false);if(error&&error.name!=='AuthSessionMissingError')setNotice('세션을 확인하지 못했습니다. 다시 로그인해 주세요.');}
-  }).catch(()=>{if(active){setLoading(false);setNotice('인증 서버에 연결할 수 없습니다.');}});
+   if(active){setUser(data.user);setLoading(false);if(error&&error.name!=='AuthSessionMissingError')setNotice('セッションを確認できませんでした。再度ログインしてください。');}
+  }).catch(()=>{if(active){setLoading(false);setNotice('認証サーバーに接続できません。');}});
   return ()=>{active=false;subscription.unsubscribe();};
  },[]);
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(lock.current)return;
-  if(password.length<8){setNotice('비밀번호를 8자 이상 입력해 주세요.');return;}
+  if(password.length<8){setNotice('パスワードは8文字以上で入力してください。');return;}
   lock.current=true;setBusy(true);setNotice('');
   try {
    const client=createClient();
@@ -45,36 +45,36 @@ export default function AuthPanel() {
     const {data,error}=await client.auth.signUp({email:email.trim(),password,options:{emailRedirectTo:redirect.toString()}});
     if(error)setNotice(message(error.code));
     else if(data.session){setUser(data.user);setPassword('');}
-    else {setNotice('확인 메일을 보냈습니다. 이 브라우저에서 링크를 열어 인증한 뒤 로그인해 주세요.');setPassword('');}
+    else {setNotice('確認メールを送信しました。このブラウザーでリンクを開き、メール認証を完了してください。');setPassword('');}
    }else{
     const {data,error}=await client.auth.signInWithPassword({email:email.trim(),password});
     if(error)setNotice(message(error.code));else{setUser(data.user);setPassword('');}
    }
-  }catch{setNotice('인증 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
+  }catch{setNotice('認証サーバーに接続できません。しばらく待ってから再度お試しください。');}
   finally{lock.current=false;setBusy(false);}
  }
  async function signOut(){
   if(lock.current)return;lock.current=true;setBusy(true);setNotice('');
-  try{const {error}=await createClient().auth.signOut();if(error)setNotice('로그아웃에 실패했습니다. 다시 시도해 주세요.');else{setUser(null);setPassword('');setNotice('로그아웃했습니다.');}}
-  catch{setNotice('연결을 확인하고 다시 로그아웃해 주세요.');}
+  try{const {error}=await createClient().auth.signOut();if(error)setNotice('ログアウトに失敗しました。再度お試しください。');else{setUser(null);setPassword('');setNotice('ログアウトしました。');}}
+  catch{setNotice('接続を確認して、再度ログアウトしてください。');}
   finally{lock.current=false;setBusy(false);}
  }
  return <main className="auth-shell"><section className="auth-card">
   <a className="brand" href="/">速読 <span>SOKUDOKU</span></a>
-  {loading?<p role="status">로그인 상태 확인 중…</p>:user?<>
-   <p className="eyebrow">READY TO READ</p><h1>다시 만나 반가워요.</h1>
-   <p className="description account-email">{user.email}</p><div className="notice" role="status">로그인되었습니다. 단어 훈련은 준비 중입니다.</div>
-   <button className="primary" disabled={busy} onClick={signOut}>{busy?'처리 중…':'로그아웃'}</button>
+  {loading?<p role="status">ログイン状態を確認中…</p>:user?<>
+   <p className="eyebrow">読む準備ができました</p><h1>おかえりなさい。</h1>
+   <p className="description account-email">{user.email}</p><div className="notice" role="status">ログインしました。単語トレーニングは準備中です。</div>
+   <button className="primary" disabled={busy} onClick={signOut}>{busy?'処理中…':'ログアウト'}</button>
   </>:<>
-   <p className="eyebrow">아는 단어를, 멈추지 않고.</p><h1>{mode==='login'?'읽는 힘을 이어가세요.':'훈련을 시작해 보세요.'}</h1>
-   <p className="description">일본어의 의미와 읽기를 더 빠르게.<br/>이메일 계정으로 Sokudoku를 시작하세요.</p>
-   <div className="auth-tabs">{(['login','signup'] as const).map(m=><button key={m} type="button" aria-pressed={mode===m} disabled={busy} onClick={()=>{setMode(m);setNotice('');setPassword('');}}>{m==='login'?'로그인':'회원가입'}</button>)}</div>
+   <p className="eyebrow">知っている単語を、止まらずに。</p><h1>{mode==='login'?'読む力を、積み重ねよう。':'トレーニングを始めよう。'}</h1>
+   <p className="description">日本語の意味と読みを、もっと速く。<br/>メールアドレスでSokudokuを始めましょう。</p>
+   <div className="auth-tabs">{(['login','signup'] as const).map(m=><button key={m} type="button" aria-pressed={mode===m} disabled={busy} onClick={()=>{setMode(m);setNotice('');setPassword('');}}>{m==='login'?'ログイン':'新規登録'}</button>)}</div>
    <form onSubmit={submit}>
-    <label htmlFor="email">이메일</label><input id="email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" disabled={busy}/>
-    <label htmlFor="password">비밀번호</label><input id="password" type="password" required minLength={8} autoComplete={mode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder="8자 이상" disabled={busy}/>
-    <button className="primary" disabled={busy}>{busy?'처리 중…':mode==='signup'?'가입하고 인증 메일 받기':'로그인'}</button>
-   </form><p className="footnote">회원가입 후 이메일 인증이 필요합니다.</p>
+    <label htmlFor="email">メールアドレス</label><input id="email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" disabled={busy}/>
+    <label htmlFor="password">パスワード</label><input id="password" type="password" required minLength={8} autoComplete={mode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder="8文字以上" disabled={busy}/>
+    <button className="primary" disabled={busy}>{busy?'処理中…':mode==='signup'?'登録して確認メールを受け取る':'ログイン'}</button>
+   </form><p className="footnote">新規登録後はメール認証が必要です。</p>
   </>}
   {notice&&<p className="notice" role="status" aria-live="polite">{notice}</p>}
- </section><p className="outside-note">작은 반복이 만드는, 즉시 읽는 힘.</p></main>;
+ </section><p className="outside-note">小さな反復が、すぐに読む力になる。</p></main>;
 }
