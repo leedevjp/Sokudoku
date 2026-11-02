@@ -17,6 +17,24 @@ export default function AuthPanel() {
       "sent" | "error" | "unconfirmed" | "rate" | "logout" | null
     >(null);
   const lock = useRef(false);
+  const [modal, setModal] = useState<"details" | "auth" | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (modal) {
+      if (!element.open) element.showModal();
+      const previous = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = previous;
+      };
+    }
+    if (element.open) element.close();
+  }, [modal]);
+  useEffect(() => {
+    if (user && modal === "auth") setModal(null);
+  }, [user, modal]);
   useEffect(() => {
     let active = true;
     const client = createClient();
@@ -130,7 +148,7 @@ export default function AuthPanel() {
     logout: t("ログアウトしました。", "로그아웃했습니다."),
   };
   return (
-    <main className="site-shell">
+    <main className="site-shell home-shell">
       <header className="site-header">
         <Link className="brand" href="/">
           <span className="brand-mark">速</span>Sokudoku
@@ -138,86 +156,117 @@ export default function AuthPanel() {
         </Link>
         <SettingsBar />
       </header>
-      <div className="landing-grid">
-        <section className="intro">
-          <p className="eyebrow">
-            {t(
-              "ひと目でわかる。その先へ。",
-              "보는 순간 이해하는, 그 다음으로.",
-            )}
-          </p>
-          <h1>
-            {t("知っている言葉を、", "아는 단어를,")}
-            <br />
-            <span>{t("瞬間のチカラに。", "순간의 실력으로.")}</span>
-          </h1>
-          <p className="description">
-            {t(
-              "意味をつかむ。読みがひらめく。",
-              "뜻을 떠올리고, 읽기가 번뜩이는 순간.",
-            )}
-            <br />
-            {t(
-              "小さな反復で、日本語がもっと軽やかに。",
-              "작은 반복으로 일본어를 더 가볍게.",
-            )}
-          </p>
-          <div className="preview-stack" aria-hidden="true">
-            <span className="spark s1">✦</span>
-            <span className="spark s2">✦</span>
-            <div className="preview-target">
-              <i className="corner tl" />
-              <i className="corner tr" />
-              <i className="corner bl" />
-              <i className="corner br" />
-              <div className="preview-word">
-                <span className="preview-kind">
-                  <i />
-                  {t("意味", "의미")}
-                </span>
-                <strong>兄</strong>
-                <span className="preview-reading">あに</span>
-              </div>
-            </div>
-            <div className="preview-answer">
-              <span>1</span>
-              <b>형(형, 오빠)</b>
-              <i>↗</i>
-            </div>
-            <div className="preview-chip">
-              {t(
-                "知っている。その瞬間が、速くなる。",
-                "아는 순간이, 더 빨라집니다.",
-              )}
+      <section className="home-content">
+        <p className="eyebrow">
+          {t("ひと目でわかる。その先へ。", "보는 순간 이해하는, 그 다음으로.")}
+        </p>
+        <h1>
+          {t("知っている言葉を、", "아는 단어를,")}
+          <br />
+          <span>{t("瞬間のチカラに。", "순간의 실력으로.")}</span>
+        </h1>
+        <p className="description">
+          {t(
+            "意味をつかむ。読みがひらめく。",
+            "뜻을 떠올리고, 읽기가 번뜩이는 순간.",
+          )}
+          <br />
+          {t(
+            "小さな反復で、日本語がもっと軽やかに。",
+            "작은 반복으로 일본어를 더 가볍게.",
+          )}
+        </p>
+        <div className="preview-stack home-visual" aria-hidden="true">
+          <span className="spark s1">✦</span>
+          <span className="spark s2">✦</span>
+          <div className="preview-target">
+            <i className="corner tl" />
+            <i className="corner tr" />
+            <i className="corner bl" />
+            <i className="corner br" />
+            <div className="preview-word">
+              <span className="preview-kind">
+                <i />
+                {t("意味", "의미")}
+              </span>
+              <strong>兄</strong>
+              <span className="preview-reading">あに</span>
             </div>
           </div>
-          <div className="feature-row">
-            <span>
-              <b>01</b> {t("見て", "보고")}
-            </span>
-            <span>
-              <b>02</b> {t("選んで", "고르고")}
-            </span>
-            <span>
-              <b>03</b> {t("突き抜ける", "돌파하기")}
-            </span>
+          <div className="preview-answer">
+            <span>1</span>
+            <b>형(형, 오빠)</b>
+            <i>↗</i>
           </div>
-        </section>
-        <section className="auth-card">
-          {loading ? (
-            <p role="status">
-              {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
-            </p>
-          ) : user ? (
+        </div>
+      </section>
+      <div className="home-actions">
+        {loading ? (
+          <button className="primary" disabled>
+            {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
+          </button>
+        ) : user ? (
+          <Link className="primary" href="/game">
+            {t("トレーニングを始める", "훈련 시작하기")}
+            <span>→</span>
+          </Link>
+        ) : (
+          <button className="primary" onClick={() => setModal("auth")}>
+            {t("ログインして始める", "로그인하고 시작하기")}
+            <span>→</span>
+          </button>
+        )}
+        <button className="details-button" onClick={() => setModal("details")}>
+          {t("遊び方・アカウント", "상세 설명 · 계정")}
+          <span>↗</span>
+        </button>
+        {notice && modal === null && (
+          <p className="home-notice" role="status">
+            {notices[notice]}
+          </p>
+        )}
+      </div>
+      <footer>
+        {t("毎日の「わかった」を、もっと速く。", "매일의 이해를, 더 빠르게.")}
+      </footer>
+      <dialog
+        ref={dialog}
+        className="home-dialog"
+        aria-labelledby="home-dialog-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          setModal(null);
+        }}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const r = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < r.left ||
+            event.clientX > r.right ||
+            event.clientY < r.top ||
+            event.clientY > r.bottom
+          )
+            setModal(null);
+        }}
+      >
+        <div className="dialog-content">
+          <button
+            className="dialog-close"
+            autoFocus
+            aria-label={t("閉じる", "닫기")}
+            onClick={() => setModal(null)}
+          >
+            ×
+          </button>
+          {modal === "details" ? (
             <>
-              <div className="card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 9V5h4m6 0h4v4m0 6v4h-4m-6 0H5v-4M9 12h6m-3-3v6" />
-                </svg>
-              </div>
               <p className="eyebrow">{t("準備はできています", "준비됐어요")}</p>
-              <h2>{t("さあ、ひと勝負。", "자, 한 판 해볼까요.")}</h2>
-              <p className="description account-email">{user.email}</p>
+              <h2 id="home-dialog-title">
+                {t("さあ、ひと勝負。", "자, 한 판 해볼까요.")}
+              </h2>
+              {user && (
+                <p className="description account-email">{user.email}</p>
+              )}
               <div className="rule-list">
                 <p>
                   <b className="life-rule">
@@ -248,17 +297,37 @@ export default function AuthPanel() {
                   </span>
                 </p>
               </div>
-              <Link className="primary link-button" href="/game">
-                {t("トレーニングを始める", "훈련 시작하기")} <span>→</span>
-              </Link>
-              <button className="text-button" disabled={busy} onClick={logout}>
-                {t("ログアウト", "로그아웃")}
+              <p className="dialog-explanation">
+                {t(
+                  "数字キー・テンキー・タッチ・クリックに対応。意味問題と読み問題に答えて、読む力を鍛えましょう。",
+                  "숫자키·키패드·터치·클릭을 지원합니다. 의미와 읽기 문제를 풀며 단어 인식 속도를 높여보세요.",
+                )}
+              </p>
+              <button className="primary" onClick={() => setModal(null)}>
+                {t("わかりました", "확인했어요")}
+                <span>✓</span>
               </button>
+              {user ? (
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={logout}
+                >
+                  {t("ログアウト", "로그아웃")}
+                </button>
+              ) : (
+                <button
+                  className="text-button"
+                  onClick={() => setModal("auth")}
+                >
+                  {t("ログイン・新規登録", "로그인 · 회원가입")}
+                </button>
+              )}
             </>
           ) : (
             <>
-              <div className="card-icon">↗</div>
-              <h2>
+              <p className="eyebrow">SOKUDOKU</p>
+              <h2 id="home-dialog-title">
                 {mode === "login"
                   ? t("おかえりなさい", "다시 만나 반가워요")
                   : t("はじめの一歩を", "첫 걸음을 시작해요")}
@@ -318,11 +387,11 @@ export default function AuthPanel() {
                   {busy
                     ? t("処理中…", "처리 중…")
                     : mode === "login"
-                      ? t("ログインして始める", "로그인하고 시작하기")
+                      ? t("ログイン", "로그인")
                       : t(
                           "登録して確認メールを受け取る",
                           "가입하고 인증 메일 받기",
-                        )}{" "}
+                        )}
                   <span>→</span>
                 </button>
               </form>
@@ -334,18 +403,13 @@ export default function AuthPanel() {
               </p>
             </>
           )}
-          {notice && (
+          {notice && modal !== null && (
             <p className="notice" role="status" aria-live="polite">
               {notices[notice]}
             </p>
           )}
-        </section>
-      </div>
-      <footer>
-        速読 /{" "}
-        {t("毎日の「わかった」を、もっと速く。", "매일의 이해를, 더 빠르게.")}
-        <span>MADE FOR YOUR MOMENT.</span>
-      </footer>
+        </div>
+      </dialog>
     </main>
   );
 }
