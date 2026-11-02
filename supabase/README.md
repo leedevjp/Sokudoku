@@ -51,7 +51,7 @@ RLSにより自分のログだけをSELECT・INSERTできます。一般ユー�
 
 再送は同じUUIDでINSERT ... ON CONFLICT (id) DO NOTHINGを使い、記録を上書きしません。今後の保存APIでは認証セッションからuser_idを設定します。
 
-最近の回答はuser_id・word_id・question_typeごとにanswered_at DESC, id DESCで決定的に並べます。その複合インデックスと、単語の外部キー用インデックスを作成済みです。統計VIEWは次のマイグレーションで作成します。保存APIは未実装です。
+最近の回答はuser_id・word_id・question_typeごとにanswered_at DESC, id DESCで決定的に並べます。その複合インデックスと、単語の外部キー用インデックスを作成済みです。統計VIEWは次のマイグレーションで作成します。回答保存APIを実装済みです。
 
 ## word_recent_stat
 
@@ -72,3 +72,7 @@ RLSにより自分のログだけをSELECT・INSERTできます。一般ユー�
 security_invokerを有効にし、基になるanswer_logのRLSを適用します。通常のログイン利用では本人の統計だけを参照できます。履歴に存在すれば論理削除済みの単語の統計も残ります。出題側でword.deleted_atを確認してください。集計結果は保存せず、読み取り時に計算するためREFRESHは不要です。
 
 回帰検証SQL: tests/sql/word_recent_stat.sql。専用の検証環境でSQLを一括実行すると、25件からの最新20件選択、同時刻の順序、問題形式合算、未学習行の不在、時間切れ、ユーザー分離を確認できます。検証用ユーザーとデータは同一トランザクションの最後でROLLBACKします。
+
+## game_bootstrap
+
+認証済みユーザー向けのsecurity invoker関数です。アクティブなwordとRLSで絞られたword_recent_statをJSONで返し、同じSQLスナップショットで取得します。anonとPUBLICには実行権限を付与しません。アプリは認証済みのNext.js APIを経由して呼び出します。
