@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      answer_log: {
+        Row: {
+          answered_at: string
+          id: string
+          question_type: string
+          received_at: string
+          response_ms: number
+          result: string
+          selected_word_id: string | null
+          time_limit_ms: number
+          user_id: string
+          word_id: string
+        }
+        Insert: {
+          answered_at: string
+          id: string
+          question_type: string
+          received_at?: string
+          response_ms: number
+          result: string
+          selected_word_id?: string | null
+          time_limit_ms: number
+          user_id?: string
+          word_id: string
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          question_type?: string
+          received_at?: string
+          response_ms?: number
+          result?: string
+          selected_word_id?: string | null
+          time_limit_ms?: number
+          user_id?: string
+          word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_log_selected_word_id_fkey"
+            columns: ["selected_word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answer_log_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       word: {
         Row: {
           created_at: string
