@@ -8,7 +8,9 @@ import {
   flushAnswers,
   queueAnswer,
   readWords,
-  saveWords,
+  readWordCache,
+  mergeWords,
+  pendingCount,
 } from "@/lib/game/storage";
 import { createClient } from "@/lib/supabase/client";
 type Bootstrap = { words: Word[]; stats: Stat[]; user_id: string };
@@ -30,7 +32,9 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     const answers: Answer[] = [];
     const writes: Promise<unknown>[] = [];
     async function fetchData(): Promise<Bootstrap> {
-      const response = await fetch("/api/game/bootstrap", {
+      const cached = await readWordCache().catch(() => undefined);
+      const query = cached ? `?since=${encodeURIComponent(cached.syncedAt)}` : "";
+      const response = await fetch(`/api/game/bootstrap${query}`, {
         cache: "no-store",
         signal: AbortSignal.timeout(15000),
       });
@@ -39,7 +43,9 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         throw Error("LOGIN");
       }
       if (!response.ok) throw Error("LOAD");
-      return response.json();
+      const data = await response.json() as Bootstrap & { synced_at: string; reset: boolean };
+      const words = await mergeWords(data.reset ? undefined : cached, data.words, data.synced_at);
+      return { ...data, words };
     }
     async function sync() {
       if (previewWords) return true;
@@ -77,10 +83,11 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       }
       owner = data.user_id;
       if (!previewWords) {
-        await saveWords(data.words).catch(() => {});
         try {
-          await flushAnswers(owner);
-          data = await fetchData();
+          if (await pendingCount(owner)) {
+            await flushAnswers(owner);
+            data = await fetchData();
+          }
           if (data.user_id !== owner) {
             router.replace("/");
             return;
@@ -109,17 +116,22 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         onFinish: async () => {
           ended = true;
           const ok = await sync();
-          if (ok && !previewWords) await fetchData().catch(() => {});
           return ok;
         },
         onRetry: async () => {
           ended = false;
-          if (previewWords) return [];
+          if (previewWords) return { words: previewWords, stats: [] };
           await sync();
           try {
-            return (await fetchData()).stats;
+            const fresh = await fetchData();
+            if (fresh.user_id !== owner) {
+              router.replace("/");
+              throw Error("LOGIN");
+            }
+            data = fresh;
+            return { words: fresh.words, stats: fresh.stats };
           } catch {
-            return [];
+            return { words: data.words, stats: [] };
           }
         },
         onExit: () => router.push("/"),

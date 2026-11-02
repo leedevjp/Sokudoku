@@ -11,11 +11,34 @@ type Queued = Answer & { owner: string };
 export async function queueAnswer(owner: string, answer: Answer) {
   await (await database()).put("answer", { ...answer, owner });
 }
-export async function saveWords(words: Word[]) {
-  await (await database()).put("cache", words, "words");
+export type WordCache = { words: Word[]; syncedAt: string };
+export async function readWordCache(): Promise<WordCache | undefined> {
+  return (await database()).get("cache", "word-sync-v1");
 }
 export async function readWords(): Promise<Word[] | undefined> {
-  return (await database()).get("cache", "words");
+  const db = await database();
+  return (await db.get("cache", "word-sync-v1"))?.words ?? db.get("cache", "words");
+}
+export async function mergeWords(base: WordCache | undefined, changes: Word[], syncedAt: string): Promise<Word[]> {
+  const words = new Map((base?.words ?? []).map((word) => [word.id, word]));
+  for (const word of changes) {
+    if (word.deleted_at) words.delete(word.id);
+    else words.set(word.id, word);
+  }
+  const result = [...words.values()];
+  try {
+  const tx = (await database()).transaction("cache", "readwrite");
+  // Keep the server timestamp verbatim, including microseconds.
+  const current: WordCache | undefined = await tx.store.get("word-sync-v1");
+  if (!current || current.syncedAt <= syncedAt) {
+    await tx.store.put({ words: result, syncedAt }, "word-sync-v1");
+    await tx.store.delete("words");
+  }
+  await tx.done;
+  } catch {
+    // Storage denial/quota errors must not prevent an online game. No cursor is advanced.
+  }
+  return result;
 }
 export async function pendingCount(owner: string) {
   return ((await (await database()).getAll("answer")) as Queued[]).filter(

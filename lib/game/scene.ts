@@ -18,7 +18,7 @@ type Options = {
   onPreferences: (p: Preferences) => void;
   onAnswer: (a: Answer) => void;
   onFinish: () => Promise<boolean>;
-  onRetry: () => Promise<Stat[]>;
+  onRetry: () => Promise<{ words: Word[]; stats: Stat[] }>;
   onExit: () => void;
   preview?: boolean;
 };
@@ -1054,8 +1054,9 @@ export class TrainingScene extends Phaser.Scene {
         this.retryPending = true;
         void this.opts
           .onRetry()
-          .then((stats) => {
-            this.opts.stats = stats;
+          .then((data) => {
+            this.opts.words = data.words;
+            this.opts.stats = data.stats;
             this.retryPending = false;
             this.startRun();
           })

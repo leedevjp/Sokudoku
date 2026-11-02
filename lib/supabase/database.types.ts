@@ -135,6 +135,7 @@ export type Database = {
     };
     Functions: {
       game_bootstrap: { Args: never; Returns: Json };
+      game_sync: { Args: { since?: string }; Returns: Json };
     };
     Enums: {
       [_ in never]: never;
