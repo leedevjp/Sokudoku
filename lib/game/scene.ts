@@ -22,18 +22,11 @@ type Options = {
   onExit: () => void;
   preview?: boolean;
 };
-type Phase =
-  | "intro"
-  | "arming"
-  | "play"
-  | "flight"
-  | "feedback"
-  | "paused"
-  | "end";
+type Phase = "arming" | "play" | "flight" | "feedback" | "paused" | "end";
 export class TrainingScene extends Phaser.Scene {
   private opts: Options;
   private prefs: Preferences;
-  private phase: Phase = "intro";
+  private phase: Phase = "arming";
   private beforePause: Phase = "play";
   private resizeElapsed = 0;
   private gate = new AnswerGate();
@@ -61,7 +54,10 @@ export class TrainingScene extends Phaser.Scene {
   private scoreView?: Phaser.GameObjects.Text;
   private syncOK: boolean | null = null;
   private viewGeneration = 0;
-  constructor(opts: Options) {
+  constructor(
+    opts: Options,
+    private density: number,
+  ) {
     super("Training");
     this.opts = opts;
     this.prefs = opts.preferences;
@@ -70,10 +66,10 @@ export class TrainingScene extends Phaser.Scene {
     return palette[this.prefs.theme];
   }
   private get w() {
-    return this.scale.width;
+    return this.scale.width / this.density;
   }
   private get h() {
-    return this.scale.height;
+    return this.scale.height / this.density;
   }
   private get cw() {
     return this.boardLayout.width;
@@ -97,7 +93,18 @@ export class TrainingScene extends Phaser.Scene {
   private hex(n: number) {
     return "#" + n.toString(16).padStart(6, "0");
   }
+  setRenderDensity(value: number) {
+    this.density = value;
+  }
+  private syncCamera() {
+    // World units remain CSS pixels; only the framebuffer and camera are high-DPI.
+    this.cameras.main
+      .setViewport(0, 0, this.scale.width, this.scale.height)
+      .setZoom(this.density)
+      .centerOn(this.w / 2, this.h / 2);
+  }
   create() {
+    this.syncCamera();
     this.game.canvas.setAttribute(
       "aria-label",
       this.t(
@@ -107,7 +114,12 @@ export class TrainingScene extends Phaser.Scene {
     );
     this.game.canvas.setAttribute("tabindex", "0");
     this.input.on("pointerup", (p: Phaser.Input.Pointer) => {
-      if (p.x < 0 || p.y < 0 || p.x > this.w || p.y > this.h) {
+      if (
+        p.x < 0 ||
+        p.y < 0 ||
+        p.x > this.scale.width ||
+        p.y > this.scale.height
+      ) {
         this.cancelPress();
         return;
       }
@@ -127,7 +139,7 @@ export class TrainingScene extends Phaser.Scene {
       document.removeEventListener("visibilitychange", this.visibility);
       window.removeEventListener("pointercancel", this.cancelPress);
     });
-    this.drawIntro();
+    this.startRun();
   }
   private text(
     x: number,
@@ -144,7 +156,7 @@ export class TrainingScene extends Phaser.Scene {
         align: "center",
         lineSpacing: 6,
       })
-      .setResolution(Math.min(window.devicePixelRatio || 1, 2))
+      .setResolution(this.density)
       .setOrigin(0.5);
   }
   private box(
@@ -309,62 +321,6 @@ export class TrainingScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(this.c.bg);
     this.backdrop();
   }
-  private drawIntro() {
-    this.clear();
-    const x = this.w / 2,
-      y = this.h / 2;
-    this.box(
-      x,
-      y + 30,
-      Math.min(this.cw, 500),
-      Math.min(this.h - 48, 510),
-      this.c.panel,
-      28,
-    );
-    this.text(x, y - 165, "速読 / SOKUDOKU", 16, this.c.blue);
-    this.text(
-      x,
-      y - 106,
-      this.t("ひらめきを、打ち抜こう。", "순간의 인식으로, 돌파하세요."),
-      27,
-    );
-    this.text(
-      x,
-      y - 40,
-      this.t(
-        "押して、離す。答えが飛んでいく。",
-        "누르고, 떼세요. 정답이 날아갑니다.",
-      ),
-      14,
-      this.c.muted,
-    );
-    this.text(
-      x,
-      y + 3,
-      this.t("5ライフ · 10秒から2秒へ加速", "하트 5개 · 10초에서 2초까지 가속"),
-      13,
-      this.c.muted,
-    );
-    this.text(
-      x,
-      y + 40,
-      this.t("1  2 / 3  4  ·  タッチ対応", "1  2 / 3  4  ·  터치 지원"),
-      13,
-      this.c.muted,
-    );
-    this.button(
-      this.t("スタート →", "시작하기 →"),
-      x,
-      y + 110,
-      Math.min(300, this.cw),
-      () => this.startRun(),
-      true,
-    );
-    this.button(this.t("ホーム", "홈"), x, y + 172, 130, () =>
-      this.opts.onExit(),
-    );
-    this.settings(y + 232);
-  }
   private settings(y: number, parent?: Phaser.GameObjects.Container) {
     this.button(
       this.prefs.lang === "jp" ? "JP ⇄ KR" : "KR ⇄ JP",
@@ -402,8 +358,7 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   private redrawStatic() {
-    if (this.phase === "intro") this.drawIntro();
-    else if (this.phase === "end") this.drawEnd();
+    if (this.phase === "end") this.drawEnd();
     else if (this.phase === "paused") {
       this.cameras.main.setBackgroundColor(this.c.bg);
       this.drawPause();
@@ -910,12 +865,7 @@ export class TrainingScene extends Phaser.Scene {
     if (document.hidden) this.hidden();
   };
   private pause() {
-    if (
-      this.phase === "paused" ||
-      this.phase === "intro" ||
-      this.phase === "end"
-    )
-      return;
+    if (this.phase === "paused" || this.phase === "end") return;
     this.beforePause = this.phase;
     this.pauseAt = performance.now();
     this.cancelPress();
@@ -1001,8 +951,8 @@ export class TrainingScene extends Phaser.Scene {
     this.tweens.resumeAll();
   }
   private resize() {
-    if (this.phase === "intro") this.drawIntro();
-    else if (this.phase === "end") this.drawEnd();
+    this.syncCamera();
+    if (this.phase === "end") this.drawEnd();
     else {
       const resolved =
         this.phase === "flight" ||
@@ -1142,19 +1092,63 @@ export class TrainingScene extends Phaser.Scene {
       );
   }
 }
+/** High-DPI framebuffer, bounded to keep large desktops from allocating huge surfaces. */
+function densityFor(parent: HTMLElement) {
+  const width = Math.max(1, parent.clientWidth),
+    height = Math.max(1, parent.clientHeight);
+  return Math.max(
+    1,
+    Math.min(
+      window.devicePixelRatio || 1,
+      3,
+      4096 / Math.max(width, height),
+      Math.sqrt(8_388_608 / (width * height)),
+    ),
+  );
+}
 export function createTraining(parent: HTMLElement, options: Options) {
-  return new Phaser.Game({
+  let density = densityFor(parent);
+  const scene = new TrainingScene(options, density);
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
     backgroundColor: palette[options.preferences.theme].bg,
     scale: {
-      mode: Phaser.Scale.RESIZE,
-      width: parent.clientWidth,
-      height: parent.clientHeight,
+      mode: Phaser.Scale.NONE,
+      width: Math.round(parent.clientWidth * density),
+      height: Math.round(parent.clientHeight * density),
+      zoom: 1 / density,
+      autoRound: false,
     },
-    render: { antialias: true, pixelArt: false },
+    render: { antialias: true, antialiasGL: true, pixelArt: false },
     input: { activePointers: 3 },
-    scene: [new TrainingScene(options)],
+    scene: [scene],
     audio: { noAudio: true },
   });
+  const resizeCanvas = () => {
+    if (!game.isBooted) return;
+    const nextDensity = densityFor(parent);
+    const width = Math.round(parent.clientWidth * nextDensity),
+      height = Math.round(parent.clientHeight * nextDensity);
+    if (width < 1 || height < 1) return;
+    if (
+      game.scale.width === width &&
+      game.scale.height === height &&
+      nextDensity === density
+    )
+      return;
+    const changed = nextDensity !== density;
+    density = nextDensity;
+    scene.setRenderDensity(density);
+    if (changed) game.scale.setZoom(1 / density);
+    game.scale.resize(width, height);
+  };
+  const observer = new ResizeObserver(resizeCanvas);
+  observer.observe(parent);
+  window.addEventListener("resize", resizeCanvas);
+  game.events.once(Phaser.Core.Events.DESTROY, () => {
+    observer.disconnect();
+    window.removeEventListener("resize", resizeCanvas);
+  });
+  return game;
 }
