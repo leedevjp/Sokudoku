@@ -28,3 +28,11 @@ pnpm build
 Supabase Authentication > URL Configuration에서 개발 주소(http://localhost:3010 또는 사용하는 포트)와 배포 주소를 설정하세요. Redirect URLs에 각 주소의 /auth/callback을 등록해야 합니다. 배포 후 Site URL도 실제 서비스 주소로 설정하세요. Email provider와 이메일 인증이 활성화되어 있어야 합니다.
 
 인증 메일은 가입한 브라우저에서 열어야 PKCE 코드를 세션으로 교환할 수 있습니다. 만료되거나 잘못된 링크는 /auth/error로 안내합니다. /api/auth/user는 서버 getUser() 검증 후 최소 사용자 정보만 반환하며 비로그인 요청에는 401을 반환합니다. 인증 응답은 private, no-store입니다.
+
+## Vercel 배포
+
+프로젝트: leedevjps-projects/sokudoku (Next.js, Node 24). 배포 주소: https://sokudoku-weld.vercel.app
+
+CLI 배포: vercel deploy --prod --scope leedevjps-projects. GitHub 자동 배포에는 leedevjp/Sokudoku에 대한 Vercel GitHub App 접근 허용과 저장소 연결이 필요합니다.
+
+Supabase Auth의 Site URL은 위 주소, Redirect URLs에는 https://sokudoku-weld.vercel.app/auth/callback을 등록해야 합니다.

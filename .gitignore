@@ -45,3 +45,8 @@ next-env.d.ts
 # Local planning and agent instructions
 /Sokudoku_design.md
 /AGENTS.md
+
+.vercel
+.env*
+
+!.env.example
