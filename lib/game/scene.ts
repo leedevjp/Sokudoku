@@ -53,7 +53,11 @@ export class TrainingScene extends Phaser.Scene {
   private held = new Set<string>();
   private syncing = false;
   private retryPending = false;
-  private heartView?: Phaser.GameObjects.Text;
+  private heartView?: Phaser.GameObjects.Container;
+  private maxSeconds?: Phaser.GameObjects.Text;
+  private promptCaption?: Phaser.GameObjects.Text;
+  private keyHints?: Phaser.GameObjects.Container;
+  private timeBar = { x: 0, y: 0, width: 0, height: 0 };
   private scoreView?: Phaser.GameObjects.Text;
   private syncOK: boolean | null = null;
   private viewGeneration = 0;
@@ -72,7 +76,17 @@ export class TrainingScene extends Phaser.Scene {
     return this.scale.height;
   }
   private get cw() {
-    return Math.min(this.w - 36, 540);
+    return this.boardLayout.width;
+  }
+  private get boardLayout() {
+    const scale = Math.max(
+      0.25,
+      Math.min((this.w - 48) / 632, (this.h - 26) / 1024, 1),
+    );
+    const width = 632 * scale;
+    const top = Math.max(14, Math.min(38 * scale, (this.h - 1024 * scale) / 2));
+    const extra = Math.max(0, this.h - (top + 1024 * scale)) * 0.45;
+    return { scale, width, left: (this.w - width) / 2, top, extra };
   }
   private get factor() {
     return Math.min(1.15, this.cw / 440);
@@ -124,7 +138,7 @@ export class TrainingScene extends Phaser.Scene {
   ) {
     return this.add
       .text(x, y, value, {
-        fontFamily: 'Arial,"Yu Gothic","Malgun Gothic",sans-serif',
+        fontFamily: getComputedStyle(document.body).fontFamily,
         fontSize: Math.round(size * this.factor),
         color: this.hex(color),
         align: "center",
@@ -142,10 +156,128 @@ export class TrainingScene extends Phaser.Scene {
     r = 20,
   ) {
     const g = this.add.graphics();
-    g.fillStyle(color, 1);
-    g.fillRoundedRect(x - width / 2, y - height / 2, width, height, r);
-    g.lineStyle(1, this.c.line, 1);
-    g.strokeRoundedRect(x - width / 2, y - height / 2, width, height, r);
+    const depth = Math.max(3, 6 * this.boardLayout.scale);
+    g.fillStyle(this.c.shade).fillRoundedRect(
+      x - width / 2,
+      y - height / 2 + depth,
+      width,
+      height,
+      r,
+    );
+    g.fillStyle(color).fillRoundedRect(
+      x - width / 2,
+      y - height / 2,
+      width,
+      height,
+      r,
+    );
+    g.lineStyle(
+      Math.max(1, 2 * this.boardLayout.scale),
+      color === this.c.blue ? this.c.blueDark : this.c.line,
+    ).strokeRoundedRect(x - width / 2, y - height / 2, width, height, r);
+    return g;
+  }
+  private designText(
+    x: number,
+    y: number,
+    label: string,
+    size: number,
+    color = this.c.ink,
+    bold = false,
+  ) {
+    const text = this.text(x, y, label, size / this.factor, color);
+    if (bold) text.setFontStyle("bold");
+    return text;
+  }
+  private backdrop() {
+    const g = this.add.graphics();
+    const dark = this.prefs.theme === "dark";
+    const radius = Math.max(this.w * 0.65, 380);
+    for (let i = 28; i >= 1; i--) {
+      g.fillStyle(this.c.blue, dark ? 0.007 : 0.004).fillCircle(
+        this.w * 0.9,
+        this.h * 0.03,
+        (radius * i) / 28,
+      );
+      g.fillStyle(this.c.sky, dark ? 0.004 : 0.005).fillCircle(
+        this.w * 0.04,
+        this.h * 0.97,
+        (radius * i) / 28,
+      );
+    }
+    const step = Math.max(18, 32 * this.boardLayout.scale);
+    g.fillStyle(this.c.dot, dark ? 0.12 : 0.1);
+    for (let x = step / 2; x < this.w; x += step)
+      for (let y = step / 2; y < this.h; y += step)
+        g.fillCircle(x, y, Math.max(0.8, 1.5 * this.boardLayout.scale));
+  }
+  private paintChoice(c: Phaser.GameObjects.Container, pressed = false) {
+    const g = c.list[0] as Phaser.GameObjects.Graphics;
+    const { scale: s } = this.boardLayout;
+    const w = c.width,
+      h = c.height,
+      r = 22 * s;
+    g.clear()
+      .fillStyle(pressed ? this.c.blueDark : this.c.shade)
+      .fillRoundedRect(-w / 2, -h / 2 + (pressed ? 3 : 6) * s, w, h, r);
+    g.fillStyle(pressed ? this.c.press : this.c.panel).fillRoundedRect(
+      -w / 2,
+      -h / 2,
+      w,
+      h,
+      r,
+    );
+    g.lineStyle(
+      Math.max(1, 2 * s),
+      pressed ? this.c.blue : this.c.line,
+    ).strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+  }
+  private drawHearts() {
+    if (!this.heartView) return;
+    this.heartView.removeAll(true);
+    const { scale: s } = this.boardLayout;
+    for (let i = 0; i < 5; i++) {
+      const g = this.add.graphics();
+      const points: Phaser.Math.Vector2[] = [];
+      for (let k = 0; k < 64; k++) {
+        const a = (k * Math.PI * 2) / 64;
+        points.push(
+          new Phaser.Math.Vector2(
+            (i - 2) * 38 * s + 16 * Math.pow(Math.sin(a), 3) * 0.92 * s,
+            (-13 * Math.cos(a) +
+              5 * Math.cos(2 * a) +
+              2 * Math.cos(3 * a) +
+              Math.cos(4 * a) -
+              2.5) *
+              0.92 *
+              s,
+          ),
+        );
+      }
+      if (i < this.hearts) g.fillStyle(this.c.red).fillPoints(points, true);
+      else
+        g.lineStyle(Math.max(1, 2 * s), this.c.muted, 0.45).strokePoints(
+          points,
+          true,
+        );
+      this.heartView.add(g);
+    }
+  }
+  private spark(x: number, y: number, r: number, alpha: number) {
+    const g = this.add.graphics().fillStyle(this.c.blue, alpha);
+    g.fillPoints(
+      [
+        { x, y: y - r },
+        { x: x + r * 0.25, y: y - r * 0.25 },
+        { x: x + r, y },
+        { x: x + r * 0.25, y: y + r * 0.25 },
+        { x, y: y + r },
+        { x: x - r * 0.25, y: y + r * 0.25 },
+        { x: x - r, y },
+        { x: x - r * 0.25, y: y - r * 0.25 },
+      ].map((p) => new Phaser.Math.Vector2(p.x, p.y)),
+      true,
+    );
     return g;
   }
   private button(
@@ -159,7 +291,7 @@ export class TrainingScene extends Phaser.Scene {
   ) {
     const b = this.add.container(x, y);
     b.add(this.box(0, 0, width, 46, primary ? this.c.blue : this.c.panel, 13));
-    b.add(this.text(0, 0, label, 13, primary ? 0xffffff : this.c.ink));
+    b.add(this.text(0, 0, label, 13, primary ? this.c.onBrand : this.c.ink));
     b.setSize(width, 46).setInteractive({ useHandCursor: true });
     b.on("pointerup", action);
     if (parent) parent.add(b);
@@ -175,11 +307,20 @@ export class TrainingScene extends Phaser.Scene {
     this.overlay = undefined;
     this.wordView = undefined;
     this.cameras.main.setBackgroundColor(this.c.bg);
+    this.backdrop();
   }
   private drawIntro() {
     this.clear();
     const x = this.w / 2,
       y = this.h / 2;
+    this.box(
+      x,
+      y + 30,
+      Math.min(this.cw, 500),
+      Math.min(this.h - 48, 510),
+      this.c.panel,
+      28,
+    );
     this.text(x, y - 165, "速読 / SOKUDOKU", 16, this.c.blue);
     this.text(
       x,
@@ -300,92 +441,232 @@ export class TrainingScene extends Phaser.Scene {
   }
   private drawBoard() {
     this.clear();
+    const { scale: s, left, width: cw, top, extra } = this.boardLayout;
     const x = this.w / 2,
-      cw = this.cw,
-      left = x - cw / 2;
-    const small = this.h < 650;
-    this.text(left + 28, 31, "速読", 17, this.c.blue);
-    this.button("Ⅱ", left + cw - 23, 31, 45, () => this.pause());
-    this.heartView = this.text(
-      x,
-      31,
-      Array.from({ length: 5 }, (_, i) => (i < this.hearts ? "♥" : "♡")).join(
-        " ",
-      ),
-      23,
-      this.c.red,
+      right = left + cw;
+    const headerY = top + 22 * s;
+    const mark = this.add.container(left + 22 * s, headerY);
+    const logo = this.box(0, 0, 44 * s, 44 * s, this.c.blue, 14 * s);
+    mark.add(logo);
+    mark.add(this.designText(0, 0, "速", 23 * s, this.c.onBrand, true));
+    this.designText(
+      left + 56 * s,
+      headerY,
+      "Sokudoku",
+      19 * s,
+      this.c.ink,
+      true,
+    ).setOrigin(0, 0.5);
+    this.designText(left + 151 * s, headerY, ".", 22 * s, this.c.blue, true);
+    this.heartView = this.add.container(x, headerY);
+    this.drawHearts();
+    const pause = this.add.container(right - 22 * s, headerY);
+    pause.add(this.box(0, 0, 44 * s, 44 * s, this.c.panel, 14 * s));
+    pause.add(
+      this.add
+        .graphics()
+        .fillStyle(this.c.ink)
+        .fillRoundedRect(-7 * s, -8 * s, 5 * s, 16 * s, 2 * s)
+        .fillRoundedRect(3 * s, -8 * s, 5 * s, 16 * s, 2 * s),
     );
-    this.box(x, 86, cw, 10, this.c.line, 5);
-    this.bar = this.add.graphics();
-    this.seconds = this.text(
-      left + cw - 30,
-      109,
-      `${(this.maxTime / 1000).toFixed(1)}s`,
-      12,
+    pause
+      .setSize(Math.max(44, 44 * s), Math.max(44, 44 * s))
+      .setInteractive({ useHandCursor: true })
+      .on("pointerup", () => this.pause());
+    const metaY = top + 89 * s;
+    this.designText(
+      left,
+      metaY + 5 * s,
+      this.t("正答", "정답"),
+      15 * s,
       this.c.muted,
-    );
-    this.scoreView = this.text(
-      left + 54,
-      109,
-      `${this.t("正答", "정답")}  ${this.correct}`,
-      12,
+    ).setOrigin(0, 0.5);
+    this.scoreView = this.designText(
+      left + 37 * s,
+      metaY,
+      String(this.correct),
+      34 * s,
+      this.c.ink,
+      true,
+    ).setOrigin(0, 0.5);
+    this.seconds = this.designText(
+      right - 82 * s,
+      metaY,
+      (this.maxTime / 1000).toFixed(1),
+      34 * s,
       this.c.blue,
-    );
-    const qy = Math.max(190, this.h * (small ? 0.33 : 0.34));
+      true,
+    ).setOrigin(1, 0.5);
+    this.maxSeconds = this.designText(
+      right,
+      metaY + 5 * s,
+      "s / " + (this.maxTime / 1000).toFixed(1) + "s",
+      16 * s,
+      this.c.muted,
+    ).setOrigin(1, 0.5);
+    this.timeBar = { x: left, y: top + 114 * s, width: cw, height: 14 * s };
+    this.add
+      .graphics()
+      .fillStyle(this.c.press)
+      .fillRoundedRect(left, this.timeBar.y, cw, 14 * s, 7 * s);
+    this.bar = this.add.graphics();
+    const cardTop = top + 202 * s + extra,
+      size = 300 * s,
+      qy = cardTop + size / 2;
     this.wordView = this.add.container(x, qy);
-    const kind =
-      this.q.kind === "reading"
-        ? this.t("読み", "읽기")
-        : this.t("意味", "의미");
-    this.wordView.add(this.text(0, -54, kind, 12, this.c.blue));
-    const word = this.text(
+    const halo = this.add.graphics();
+    for (let i = 12; i >= 1; i--)
+      halo
+        .fillStyle(this.c.blue, this.prefs.theme === "dark" ? 0.004 : 0.007)
+        .fillRoundedRect(
+          -size / 2 - i * 2 * s,
+          -size / 2 + i * s,
+          size + i * 4 * s,
+          size + 25 * s,
+          40 * s,
+        );
+    this.wordView.add(halo);
+    const frame = this.add
+      .graphics()
+      .lineStyle(Math.max(1.5, 4 * s), this.c.blue);
+    const edge = size / 2 + 22 * s,
+      arm = 46 * s;
+    for (const dx of [-1, 1])
+      for (const dy of [-1, 1])
+        frame
+          .beginPath()
+          .moveTo(dx * (edge - arm), dy * edge)
+          .lineTo(dx * edge, dy * edge)
+          .lineTo(dx * edge, dy * (edge - arm))
+          .strokePath();
+    this.wordView.add(frame);
+    this.wordView.add(this.box(0, 0, size, size, this.c.panel, 40 * s));
+    const tint = this.add.graphics();
+    tint
+      .fillGradientStyle(
+        this.c.panel,
+        this.c.panel,
+        this.c.tint,
+        this.c.tint,
+        1,
+        1,
+        1,
+        1,
+      )
+      .fillRoundedRect(
+        -size / 2 + 2 * s,
+        -size / 2 + 2 * s,
+        size - 4 * s,
+        size - 10 * s,
+        38 * s,
+      );
+    this.wordView.add(tint);
+    const badgeWidth = 72 * s,
+      badgeX = -size / 2 + 22 * s + badgeWidth / 2,
+      badgeY = -size / 2 + 36 * s;
+    this.wordView.add(
+      this.add
+        .graphics()
+        .fillStyle(this.c.press)
+        .fillRoundedRect(
+          badgeX - badgeWidth / 2,
+          badgeY - 15 * s,
+          badgeWidth,
+          30 * s,
+          15 * s,
+        ),
+    );
+    this.wordView.add(
+      this.add.circle(badgeX - 20 * s, badgeY, 4 * s, this.c.blue),
+    );
+    this.wordView.add(
+      this.designText(
+        badgeX + 7 * s,
+        badgeY,
+        this.q.kind === "reading"
+          ? this.t("読み", "읽기")
+          : this.t("意味", "의미"),
+        14 * s,
+        this.c.blue,
+        true,
+      ),
+    );
+    const length = Array.from(this.q.word.term).length;
+    const word = this.designText(
       0,
-      0,
+      14 * s,
       this.q.word.term,
-      Math.min(61, 300 / Math.max(2, this.q.word.term.length)),
+      Math.min(176, 245 / Math.min(Math.max(length, 1), 5)) * s,
       this.c.ink,
     );
-    if (word.width > cw - 20) word.setScale((cw - 20) / word.width);
+    word.setWordWrapWidth(size - 38 * s, true);
+    while (
+      word.height > size - 90 * s &&
+      parseFloat(String(word.style.fontSize)) > 20 * s
+    )
+      word.setFontSize(parseFloat(String(word.style.fontSize)) - 1);
     this.wordView.add(word);
-    this.wordView.add(
-      this.text(
-        0,
-        57,
-        this.q.kind === "reading"
-          ? this.t("読み方を選ぼう", "읽기를 고르세요")
-          : this.t("韓国語の意味を選ぼう", "한국어 뜻을 고르세요"),
-        12,
-        this.c.muted,
-      ),
-    );
-    const ch = Math.max(78, Math.min(122, (this.h - qy - 140) / 2));
-    const bottom = this.h - 62;
-    const row2 = bottom - ch / 2,
-      row1 = row2 - ch - 14;
-    const width = (cw - 14) / 2;
+    this.spark(x - size / 2 - 55 * s, cardTop + 12 * s, 15 * s, 0.7);
+    this.spark(x + size / 2 + 65 * s, cardTop + size + 44 * s, 10 * s, 0.45);
+    this.promptCaption = this.designText(
+      x,
+      cardTop + 359 * s,
+      this.q.kind === "reading"
+        ? this.t("読み方を選んでください", "읽기를 고르세요")
+        : this.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요"),
+      20 * s,
+      this.c.muted,
+    ).setWordWrapWidth(cw, true);
+    const choiceTop = top + 644 * s + extra,
+      gap = 16 * s,
+      ch = 128 * s,
+      width = (cw - gap) / 2;
     this.q.options.forEach((option, i) => {
-      const bx = left + width / 2 + (i % 2) * (width + 14),
-        by = i < 2 ? row1 : row2;
+      const bx = left + width / 2 + (i % 2) * (width + gap),
+        by = choiceTop + ch / 2 + Math.floor(i / 2) * (ch + gap);
       const container = this.add.container(bx, by);
-      container.add(this.box(0, 0, width, ch, this.c.panel, 18));
+      container.setSize(width, ch);
+      container.add(this.add.graphics());
+      this.paintChoice(container);
+      const badgeCenter = -width / 2 + 41 * s;
       container.add(
-        this.text(
-          -width / 2 + 23,
-          -ch / 2 + 22,
+        this.add
+          .graphics()
+          .fillStyle(this.c.press)
+          .fillRoundedRect(
+            badgeCenter - 19 * s,
+            -19 * s,
+            38 * s,
+            38 * s,
+            12 * s,
+          ),
+      );
+      container.add(
+        this.designText(
+          badgeCenter,
+          0,
           String(i + 1),
-          12,
+          19 * s,
           this.c.blue,
+          true,
         ),
       );
-      const label = this.text(0, 8, choiceLabel(option, this.q.kind), 19);
-      label.setWordWrapWidth(width - 30, true);
+      const label = this.designText(
+        -width / 2 + 76 * s,
+        0,
+        choiceLabel(option, this.q.kind),
+        24 * s,
+        this.c.ink,
+        true,
+      ).setOrigin(0, 0.5);
+      label.setWordWrapWidth(width - 96 * s, true);
       while (
-        label.height > ch - 38 &&
-        Number(label.style.fontSize.toString().replace("px", "")) > 12
+        label.height > ch - 28 * s &&
+        parseFloat(String(label.style.fontSize)) > 15 * s
       )
-        label.setFontSize(parseInt(label.style.fontSize.toString()) - 1);
+        label.setFontSize(parseFloat(String(label.style.fontSize)) - 1);
       container.add(label);
-      container.setSize(width, ch).setInteractive({ useHandCursor: true });
+      container.setInteractive({ useHandCursor: true });
       container.on("pointerdown", (p: Phaser.Input.Pointer) => {
         if (p.wasTouch || p.leftButtonDown()) this.press("p" + p.id, i);
       });
@@ -403,29 +684,45 @@ export class TrainingScene extends Phaser.Scene {
         this.t("ライフ", "하트") + this.hearts,
       ].join(" / "),
     );
-    this.status = this.text(
-      x,
-      this.h - 25,
+    const footerY = top + 980 * s + extra;
+    this.keyHints = this.add.container(x - 135 * s, footerY);
+    for (let i = 0; i < 4; i++) {
+      this.keyHints.add(
+        this.box(i * 34 * s, 0, 28 * s, 26 * s, this.c.panel, 7 * s),
+      );
+      this.keyHints.add(
+        this.designText(i * 34 * s, 0, String(i + 1), 14 * s, this.c.ink, true),
+      );
+    }
+    this.status = this.designText(
+      x + 5 * s,
+      footerY,
       this.t("押して、離して、回答。", "누르고, 떼서, 답하세요."),
-      11,
+      17 * s,
       this.c.muted,
-    );
+    ).setOrigin(0, 0.5);
     this.drawTime(1);
   }
   private drawTime(ratio: number) {
-    const cw = this.cw,
-      x = this.w / 2 - cw / 2;
+    const { x, y, width, height } = this.timeBar;
+    const fill = width * Math.max(0, ratio);
+    if (!this.bar) return;
+    this.bar.clear();
+    if (fill < 1) return;
+    const color = ratio < 0.25 ? this.c.red : this.c.blue;
     this.bar
-      ?.clear()
-      .fillStyle(ratio < 0.25 ? this.c.red : this.c.sky, 1)
-      .fillRoundedRect(x, 81, Math.max(0, cw * ratio), 10, 5);
+      .fillStyle(color, 0.08)
+      .fillRoundedRect(x - 2, y - 3, fill + 4, height + 6, height / 2);
+    this.bar
+      .fillGradientStyle(color, this.c.sky, color, this.c.sky, 1, 1, 1, 1)
+      .fillRoundedRect(x, y, fill, height, Math.min(fill / 2, height / 2));
   }
   update() {
     if (this.phase !== "play") return;
     const elapsed = performance.now() - this.started;
     this.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
     this.seconds?.setText(
-      `${(Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1)}s`,
+      (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
     );
     if (elapsed >= this.maxTime) this.resolve(null);
   }
@@ -439,14 +736,7 @@ export class TrainingScene extends Phaser.Scene {
       duration: 85,
       ease: "Sine.Out",
     });
-    const bg = c.list[0] as Phaser.GameObjects.Graphics;
-    bg.clear();
-    const width = c.width,
-      height = c.height;
-    bg.fillStyle(this.c.press, 1)
-      .fillRoundedRect(-width / 2, -height / 2, width, height, 18)
-      .lineStyle(2, this.c.sky)
-      .strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
+    this.paintChoice(c, true);
   }
   private release(source: string) {
     if (this.phase !== "play") return;
@@ -461,12 +751,7 @@ export class TrainingScene extends Phaser.Scene {
       const c = this.choices[i];
       this.tweens.killTweensOf(c);
       c.setScale(1);
-      const g = c.list[0] as Phaser.GameObjects.Graphics;
-      g.clear()
-        .fillStyle(this.c.panel)
-        .fillRoundedRect(-c.width / 2, -c.height / 2, c.width, c.height, 18)
-        .lineStyle(1, this.c.line)
-        .strokeRoundedRect(-c.width / 2, -c.height / 2, c.width, c.height, 18);
+      this.paintChoice(c);
     }
   };
   private keyDown = (e: KeyboardEvent) => {
@@ -541,12 +826,10 @@ export class TrainingScene extends Phaser.Scene {
       });
     const hit = () => {
       this.phase = "feedback";
-      this.heartView?.setText(
-        Array.from({ length: 5 }, (_, i) =>
-          i < this.hearts ? "♥" : "♡",
-        ).join(" "),
-      );
-      this.scoreView?.setText(this.t("正答", "정답") + "  " + this.correct);
+      this.drawHearts();
+      this.scoreView?.setText(String(this.correct));
+      this.keyHints?.setVisible(false);
+      this.status?.setOrigin(0.5).setPosition(this.w / 2, this.status.y);
       const at = this.wordView!;
       if (result === "correct") {
         this.burst(at.x, at.y, this.c.blue);
@@ -557,7 +840,8 @@ export class TrainingScene extends Phaser.Scene {
         if (index !== null) this.choices[index]?.setVisible(false);
         this.cameras.main.shake(110, 0.004);
       }
-      const answer = `${this.q.word.term}  ·  ${this.q.word.kana}\n${choiceLabel(this.q.word, "meaning")}`;
+      const answer =
+        this.q.word.kana + " · " + choiceLabel(this.q.word, "meaning");
       this.status?.setText(
         result === "correct"
           ? `${this.t("正解", "정답")} · ${a.response_ms} ms`
@@ -565,15 +849,8 @@ export class TrainingScene extends Phaser.Scene {
             ? this.t("時間切れ", "시간 초과")
             : this.t("もう一度、覚えよう", "다시 기억해봐요"),
       );
-      if (result !== "correct") {
-        this.text(
-          this.w / 2,
-          this.h * 0.46,
-          answer,
-          15,
-          this.c.ink,
-        ).setWordWrapWidth(this.cw - 20, true);
-      }
+      if (result !== "correct")
+        this.promptCaption?.setText(answer).setColor(this.hex(this.c.blue));
       this.time.delayedCall(result === "correct" ? 320 : 1000, () => {
         if (this.hearts === 0) this.finish();
         else this.next();
@@ -654,6 +931,16 @@ export class TrainingScene extends Phaser.Scene {
       this.add
         .rectangle(this.w / 2, this.h / 2, this.w, this.h, this.c.bg, 0.96)
         .setInteractive(),
+    );
+    overlay.add(
+      this.box(
+        this.w / 2,
+        this.h / 2 + 22,
+        Math.min(this.cw, 440),
+        340,
+        this.c.panel,
+        26,
+      ),
     );
     overlay.add(
       this.text(
@@ -773,6 +1060,14 @@ export class TrainingScene extends Phaser.Scene {
     this.clear();
     const x = this.w / 2,
       y = this.h / 2;
+    this.box(
+      x,
+      y + 20,
+      Math.min(this.cw, 500),
+      Math.min(this.h - 40, 560),
+      this.c.panel,
+      28,
+    );
     const correct = this.logs.filter((a) => a.result === "correct");
     const avg = correct.length
       ? Math.round(

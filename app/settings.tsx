@@ -22,6 +22,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = prefs.lang === "jp" ? "ja" : "ko";
     document.documentElement.dataset.theme = prefs.theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", prefs.theme === "dark" ? "#0b1530" : "#f3f8ff");
   }, [prefs]);
   function change(p: Partial<Preferences>) {
     setPrefs((old) => {
@@ -47,6 +50,7 @@ export function SettingsBar() {
       <button
         onClick={() => change({ lang: prefs.lang === "jp" ? "kr" : "jp" })}
         aria-label="KR / JP"
+        title={prefs.lang === "jp" ? "韓国語に切り替える" : "일본어로 바꾸기"}
       >
         {prefs.lang === "jp" ? "JP" : "KR"} <span>⇄</span>
       </button>

@@ -163,20 +163,44 @@ export default function AuthPanel() {
             )}
           </p>
           <div className="preview-stack" aria-hidden="true">
-            <div className="preview-orbit" />
-            <div className="preview-word">
-              秋<span>あき</span>
+            <span className="spark s1">✦</span>
+            <span className="spark s2">✦</span>
+            <div className="preview-target">
+              <i className="corner tl" />
+              <i className="corner tr" />
+              <i className="corner bl" />
+              <i className="corner br" />
+              <div className="preview-word">
+                <span className="preview-kind">
+                  <i />
+                  {t("意味", "의미")}
+                </span>
+                <strong>兄</strong>
+                <span className="preview-reading">あに</span>
+              </div>
+            </div>
+            <div className="preview-answer">
+              <span>1</span>
+              <b>형(형, 오빠)</b>
+              <i>↗</i>
             </div>
             <div className="preview-chip">
-              {t("ひらめき、加速中。", "순간의 인식, 가속 중.")} ↗
+              {t(
+                "知っている。その瞬間が、速くなる。",
+                "아는 순간이, 더 빨라집니다.",
+              )}
             </div>
-            <span className="spark s1">✦</span>
-            <span className="spark s2">＋</span>
           </div>
           <div className="feature-row">
-            <span>01 / {t("見て", "보고")}</span>
-            <span>02 / {t("選んで", "고르고")}</span>
-            <span>03 / {t("突き抜ける", "돌파하기")}</span>
+            <span>
+              <b>01</b> {t("見て", "보고")}
+            </span>
+            <span>
+              <b>02</b> {t("選んで", "고르고")}
+            </span>
+            <span>
+              <b>03</b> {t("突き抜ける", "돌파하기")}
+            </span>
           </div>
         </section>
         <section className="auth-card">
@@ -186,13 +210,19 @@ export default function AuthPanel() {
             </p>
           ) : user ? (
             <>
-              <div className="card-icon">↗</div>
+              <div className="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 9V5h4m6 0h4v4m0 6v4h-4m-6 0H5v-4M9 12h6m-3-3v6" />
+                </svg>
+              </div>
               <p className="eyebrow">{t("準備はできています", "준비됐어요")}</p>
               <h2>{t("さあ、ひと勝負。", "자, 한 판 해볼까요.")}</h2>
               <p className="description account-email">{user.email}</p>
               <div className="rule-list">
                 <p>
-                  <b>5 ♥</b>
+                  <b className="life-rule">
+                    5 <span>♥</span>
+                  </b>
                   <span>
                     {t("ミス・時間切れでライフ−1", "오답·시간 초과 시 하트 −1")}
                   </span>
@@ -204,7 +234,12 @@ export default function AuthPanel() {
                   </span>
                 </p>
                 <p>
-                  <b>1 2 / 3 4</b>
+                  <b className="key-rule">
+                    <kbd>1</kbd>
+                    <kbd>2</kbd>
+                    <kbd>3</kbd>
+                    <kbd>4</kbd>
+                  </b>
                   <span>
                     {t(
                       "押して、離して、打ち抜こう",
