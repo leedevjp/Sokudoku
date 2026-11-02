@@ -61,3 +61,4 @@ next-env.d.ts
 /scripts/save-capture.ps1
 /scripts/save-capture.cmd
 /.codex-remote-attachments/
+/docs/word-entry-guide.md
