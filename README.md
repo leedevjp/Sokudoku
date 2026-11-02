@@ -73,6 +73,8 @@ Vercelの環境変数に`NEXT_PUBLIC_SUPABASE_URL`と`NEXT_PUBLIC_SUPABASE_PUBLI
 
 ## データベースの管理
 
+単語の登録・修正時は [単語登録の基準](docs/word-entry-guide.md) を参照してください。韓国漢字音と実際の韓国語の意味は別々に保存します。
+
 Prismaは使わず、`supabase/migrations/`のSQLをスキーマの正本としてGitで管理します。適用済みのファイルは編集せず、変更ごとに新しいマイグレーションを追加します。リモートの適用履歴とファイル名のバージョンを一致させます。GitへのpushやVercelのビルドだけではDBのSQLは適用されません。
 
 現在のテーブルは`word`と`answer_log`です。直近20回の統計VIEW `word_recent_stat`も作成済みです。回答の一括保存APIも実装済みです。型は`lib/supabase/database.types.ts`に保存し、DB変更時に再生成します。
