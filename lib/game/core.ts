@@ -103,7 +103,7 @@ export function buildQuestion(
   }
   throw new Error("NOT_ENOUGH_WORDS");
 }
-// One input owns a question until release; repeat/late releases cannot answer the next question.
+// A down event atomically claims a question; held/repeated input cannot claim it again.
 export class AnswerGate {
   source: string | null = null;
   index: number | null = null;
@@ -113,19 +113,12 @@ export class AnswerGate {
     this.index = null;
     this.locked = false;
   }
-  press(source: string, index: number) {
-    if (this.locked || this.source !== null) return false;
+  claim(source: string, index: number) {
+    if (this.locked) return false;
     this.source = source;
     this.index = index;
-    return true;
-  }
-  release(source: string) {
-    if (this.locked || this.source !== source) return null;
-    const i = this.index;
     this.locked = true;
-    this.source = null;
-    this.index = null;
-    return i;
+    return true;
   }
   cancel() {
     this.source = null;

@@ -290,10 +290,7 @@ export default function AuthPanel() {
                     <kbd>4</kbd>
                   </b>
                   <span>
-                    {t(
-                      "押して、離して、打ち抜こう",
-                      "누르고, 떼서, 돌파하세요",
-                    )}
+                    {t("押した瞬間、打ち抜こう", "누르는 순간, 돌파하세요")}
                   </span>
                 </p>
               </div>

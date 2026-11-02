@@ -48,23 +48,20 @@ test("top row and numpad use numeric values", () => {
   }
   assert.equal(keyIndex("Digit5"), null);
 });
-test("one press/release; repeats, simultaneous inputs, stale releases and pause cancellations cannot answer", () => {
-  const g = new AnswerGate();
-  g.open();
-  assert.ok(g.press("Digit1", 0));
-  assert.equal(g.press("Digit1", 0), false);
-  assert.equal(g.press("p1", 1), false);
-  assert.equal(g.release("p1"), null);
-  assert.equal(g.release("Digit1"), 0);
-  assert.equal(g.release("Digit1"), null);
-  g.open();
-  assert.equal(g.release("Digit1"), null);
-  g.press("p2", 2);
-  g.cancel();
-  assert.equal(g.release("p2"), null);
-  g.close();
-  assert.equal(g.press("Digit2", 1), false);
+test("a down event claims a question once; repeated and simultaneous inputs stay locked", () => {
+  const gate = new AnswerGate();
+  gate.open();
+  assert.ok(gate.claim("Digit1", 0));
+  assert.equal(gate.claim("Digit1", 0), false);
+  assert.equal(gate.claim("p1", 1), false);
+  gate.cancel();
+  assert.equal(gate.claim("Digit2", 1), false);
+  gate.open();
+  assert.ok(gate.claim("p2", 2));
+  gate.close();
+  assert.equal(gate.claim("Digit3", 2), false);
 });
+
 test("questions contain one correct answer, disjoint choices, no kana-only reading quizzes or immediate repeats", () => {
   let previous = "";
   let reads = 0;

@@ -108,24 +108,11 @@ export class TrainingScene extends Phaser.Scene {
     this.game.canvas.setAttribute(
       "aria-label",
       this.t(
-        "単語トレーニング。数字1〜4で選び、キーを離して回答。Escapeで一時停止。",
-        "단어 훈련. 숫자 1~4를 누르고 떼서 답하기. Escape로 일시정지.",
+        "単語トレーニング。数字1〜4を押した瞬間に回答。Escapeで一時停止。",
+        "단어 훈련. 숫자 1~4를 누르는 순간 답하기. Escape로 일시정지.",
       ),
     );
     this.game.canvas.setAttribute("tabindex", "0");
-    this.input.on("pointerup", (p: Phaser.Input.Pointer) => {
-      if (
-        p.x < 0 ||
-        p.y < 0 ||
-        p.x > this.scale.width ||
-        p.y > this.scale.height
-      ) {
-        this.cancelPress();
-        return;
-      }
-      this.release("p" + p.id);
-    });
-    this.input.on("pointerupoutside", () => this.cancelPress());
     window.addEventListener("keydown", this.keyDown);
     window.addEventListener("keyup", this.keyUp);
     window.addEventListener("blur", this.hidden);
@@ -156,7 +143,7 @@ export class TrainingScene extends Phaser.Scene {
         align: "center",
         lineSpacing: 6,
       })
-      .setResolution(this.density)
+      .setResolution(Math.min(4, Math.max(2, this.density * 1.5)))
       .setOrigin(0.5);
   }
   private box(
@@ -303,7 +290,16 @@ export class TrainingScene extends Phaser.Scene {
   ) {
     const b = this.add.container(x, y);
     b.add(this.box(0, 0, width, 46, primary ? this.c.blue : this.c.panel, 13));
-    b.add(this.text(0, 0, label, 13, primary ? this.c.onBrand : this.c.ink));
+    b.add(
+      this.designText(
+        0,
+        0,
+        label,
+        Math.max(14, 16 * this.factor),
+        primary ? this.c.onBrand : this.c.ink,
+        true,
+      ),
+    );
     b.setSize(width, 46).setInteractive({ useHandCursor: true });
     b.on("pointerup", action);
     if (parent) parent.add(b);
@@ -652,7 +648,7 @@ export class TrainingScene extends Phaser.Scene {
     this.status = this.designText(
       x + 5 * s,
       footerY,
-      this.t("押して、離して、回答。", "누르고, 떼서, 답하세요."),
+      this.t("タップですぐに回答。", "누르는 순간, 바로 답하세요."),
       17 * s,
       this.c.muted,
     ).setOrigin(0, 0.5);
@@ -682,22 +678,12 @@ export class TrainingScene extends Phaser.Scene {
     if (elapsed >= this.maxTime) this.resolve(null);
   }
   private press(source: string, i: number) {
-    if (this.phase !== "play" || !this.gate.press(source, i)) return;
-    const c = this.choices[i];
-    this.tweens.add({
-      targets: c,
-      scaleX: 1.055,
-      scaleY: 1.055,
-      duration: 85,
-      ease: "Sine.Out",
-    });
-    this.paintChoice(c, true);
-  }
-  private release(source: string) {
-    if (this.phase !== "play") return;
-    const index = this.gate.release(source);
-    if (index === null) return;
-    this.resolve(index);
+    if (this.phase !== "play" || !this.gate.claim(source, i)) return;
+    const card = this.choices[i];
+    card.setScale(1.04);
+    this.paintChoice(card, true);
+    // Commit on down; the projectile is visual feedback, not part of response time.
+    this.resolve(i);
   }
   private cancelPress = () => {
     const i = this.gate.index;
@@ -726,7 +712,6 @@ export class TrainingScene extends Phaser.Scene {
     if (keyIndex(e.code) === null) return;
     e.preventDefault();
     this.held.delete(e.code);
-    this.release(e.code);
   };
   private resolve(index: number | null) {
     if (this.phase !== "play") return;
@@ -824,7 +809,7 @@ export class TrainingScene extends Phaser.Scene {
         y: this.wordView!.y,
         scaleX: 0.72,
         scaleY: 0.72,
-        duration: 100,
+        duration: 50,
         ease: "Cubic.In",
         onComplete: () => {
           flying.setVisible(false);
@@ -893,19 +878,21 @@ export class TrainingScene extends Phaser.Scene {
       ),
     );
     overlay.add(
-      this.text(
+      this.designText(
         this.w / 2,
         this.h / 2 - 100,
         this.t("ひと休み。", "잠시 쉬어가요."),
-        30,
+        Math.max(25, 30 * this.factor),
+        this.c.ink,
+        true,
       ),
     );
     overlay.add(
-      this.text(
+      this.designText(
         this.w / 2,
         this.h / 2 - 45,
         this.t("時間は止まっています", "시간은 멈춰 있습니다"),
-        14,
+        15,
         this.c.muted,
       ),
     );
