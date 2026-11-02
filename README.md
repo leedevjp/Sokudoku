@@ -31,8 +31,8 @@ Supabase Authentication > URL Configuration에서 개발 주소(http://localhost
 
 ## Vercel 배포
 
-프로젝트: leedevjps-projects/sokudoku (Next.js, Node 24). 배포 주소: https://sokudoku-weld.vercel.app
+프로젝트: leedevjps-projects/sokudoku (Next.js, Node 24). 배포 주소: https://sokudoku-jp.vercel.app
 
 CLI 배포: vercel deploy --prod --scope leedevjps-projects. GitHub 자동 배포에는 leedevjp/Sokudoku에 대한 Vercel GitHub App 접근 허용과 저장소 연결이 필요합니다.
 
-Supabase Auth의 Site URL은 위 주소, Redirect URLs에는 https://sokudoku-weld.vercel.app/auth/callback을 등록해야 합니다.
+Supabase Auth의 Site URL은 위 주소, Redirect URLs에는 https://sokudoku-jp.vercel.app/auth/callback을 등록해야 합니다.
