@@ -9,12 +9,12 @@ type PreviewWord = {
   hanja_reading: string | null;
   meaning_ko: string;
 };
-const terms = ["兄", "姉", "弟", "妹"];
+const terms = ["兄", "弟", "姉", "妹"];
 // Initial/offline display mirrors the existing DB entries; authenticated visits refresh these four rows.
 const initialWords: PreviewWord[] = [
   { term: "兄", kana: "あに", hanja_reading: "형", meaning_ko: "형, 오빠" },
-  { term: "姉", kana: "あね", hanja_reading: "자", meaning_ko: "누나, 언니" },
   { term: "弟", kana: "おとうと", hanja_reading: "제", meaning_ko: "남동생" },
+  { term: "姉", kana: "あね", hanja_reading: "자", meaning_ko: "누나, 언니" },
   { term: "妹", kana: "いもうと", hanja_reading: "매", meaning_ko: "여동생" },
 ];
 
