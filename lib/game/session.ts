@@ -1,3 +1,4 @@
+import { v7 as uuidv7 } from "uuid";
 import type { Answer, Question, Stat } from "./types";
 import { INITIAL_HEARTS } from "./rules";
 
@@ -27,7 +28,7 @@ export class TrainingSession {
         ? "correct"
         : "incorrect";
     const a: Answer = {
-      id: crypto.randomUUID(),
+      id: uuidv7(),
       word_id: question.word.id,
       question_type: question.kind,
       selected_word_id: selected?.id ?? null,
