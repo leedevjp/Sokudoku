@@ -1,9 +1,10 @@
-import type { Word, Stat, Answer } from "../types";
+import type { Word, Stat, Answer, Kind } from "../types";
 import type { Preferences } from "../preferences";
 
 export type TrainingOptions = {
   words: Word[];
   stats: Stat[];
+  kinds?: Kind[];
   preferences: Preferences;
   onPreferences: (p: Preferences) => void;
   onAnswer: (a: Answer) => void;

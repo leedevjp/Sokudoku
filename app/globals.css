@@ -1211,3 +1211,17 @@ footer span {
 .training-levels button:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
 .level-hint { color: var(--muted); font-size: 12px; margin: 0 0 10px; text-align: center; }
 .home-actions a[aria-disabled="true"] { opacity: .5; cursor: default; }
+.selection-label { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.selection-label span { font-size: 10px; font-weight: 400; }
+.training-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
+.training-kinds button { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 13px; }
+.kind-check { font-size: 15px; }
+@media (max-height: 740px) {
+  .home-shell .home-visual { flex-basis: 155px; max-height: 155px; min-height: 145px; --visual-size: 105px; margin-top: 12px; }
+  .home-visual .preview-answer { top: 100px; }
+  .training-kinds { margin-bottom: 10px; }
+}
+
+@media (min-height: 591px) and (max-height: 660px) {
+  .home-content .description { display: none; }
+}

@@ -1,4 +1,5 @@
 import type { Word, Stat, Kind, Question } from "./types";
+import { trainingKinds, wordsForKinds } from "./selection";
 
 const tokens = (s: string) =>
   s
@@ -23,8 +24,9 @@ export function buildQuestion(
   stats: Stat[],
   last?: string,
   rng: () => number = Math.random,
+  enabledKinds: Kind[] = trainingKinds,
 ): Question {
-  const pool = words.filter((w) => !w.deleted_at);
+  const pool = wordsForKinds(words, enabledKinds);
   const byId = new Map(stats.map((s) => [s.word_id, s]));
 
   let candidates = pool
@@ -53,7 +55,7 @@ export function buildQuestion(
     }
     const word = picked.word;
     const kinds = shuffle<Kind>(
-      word.has_kanji ? ["meaning", "reading"] : ["meaning"],
+      enabledKinds.filter((kind) => kind === "meaning" || word.has_kanji),
       rng,
     );
     for (const kind of kinds) {

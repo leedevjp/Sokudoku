@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { SettingsBar, useSettings } from "@/app/settings";
 import {
   defaultLevels,
+  trainingKinds,
+  parseKinds,
   trainingLevels,
   parseLevels,
   type TrainingLevel,
@@ -13,6 +15,8 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { HomeHero } from "./home-hero";
 import { HomeDialog } from "./home-dialog";
 import { TrainingDetails } from "./training-details";
+import type { Kind } from "@/lib/game/types";
+import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 
 export default function HomeScreen() {
@@ -26,10 +30,14 @@ export default function HomeScreen() {
   const account = useAccount(authenticated);
   const { user, loading, notice } = account;
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
+  const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
+  const canStart = levels.length > 0 && kinds.length > 0;
   useEffect(() => {
     // Restore after hydration so the first server/client render stays identical.
     const timer = setTimeout(() => {
       try {
+        const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
+        if (savedKinds !== null) setKinds(parseKinds(savedKinds));
         const saved = localStorage.getItem("sokudoku-levels-v1");
         if (saved !== null) setLevels(parseLevels(saved));
       } catch {
@@ -45,6 +53,17 @@ export default function HomeScreen() {
     setLevels(next);
     try {
       localStorage.setItem("sokudoku-levels-v1", next.join(","));
+    } catch {
+      /* Optional preference. */
+    }
+  }
+  function toggleKind(kind: Kind) {
+    const next = trainingKinds.filter((item) =>
+      item === kind ? !kinds.includes(item) : kinds.includes(item),
+    );
+    setKinds(next);
+    try {
+      localStorage.setItem("sokudoku-kinds-v1", next.join(","));
     } catch {
       /* Optional preference. */
     }
@@ -79,6 +98,7 @@ export default function HomeScreen() {
       </header>
       <HomeHero />
       <div className="home-actions">
+        <KindSelector kinds={kinds} onToggle={toggleKind} />
         <LevelSelector levels={levels} onToggle={toggleLevel} />
         {loading ? (
           <button className="primary" disabled>
@@ -87,17 +107,21 @@ export default function HomeScreen() {
         ) : user ? (
           <Link
             className="primary"
-            aria-disabled={!levels.length}
-            href={`/game?levels=${encodeURIComponent(levels.join(","))}`}
+            aria-disabled={!canStart}
+            href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}`}
             onClick={(event) => {
-              if (!levels.length) event.preventDefault();
+              if (!canStart) event.preventDefault();
             }}
           >
             {t("トレーニングを始める", "훈련 시작하기")}
             <span>→</span>
           </Link>
         ) : (
-          <button className="primary" onClick={() => setModal("auth")}>
+          <button
+            className="primary"
+            disabled={!canStart}
+            onClick={() => setModal("auth")}
+          >
             {t("ログインして始める", "로그인하고 시작하기")}
             <span>→</span>
           </button>

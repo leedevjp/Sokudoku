@@ -16,7 +16,7 @@ export function LevelSelector({
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   return (
     <>
-      {" "}
+      <p className="selection-label">{t("出題範囲", "출제 범위")}</p>
       <div
         className="training-levels"
         role="group"

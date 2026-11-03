@@ -130,7 +130,13 @@ export class TrainingScene extends Phaser.Scene {
   }
   private next() {
     try {
-      this.question = buildQuestion(this.options.words, this.options.stats, this.question?.word.id);
+      this.question = buildQuestion(
+        this.options.words,
+        this.options.stats,
+        this.question?.word.id,
+        undefined,
+        this.options.kinds,
+      );
     } catch {
       this.phase = "end";
       this.drawEnd();
@@ -356,6 +362,8 @@ export class TrainingScene extends Phaser.Scene {
           this.options.words,
           this.options.stats,
           this.question.word.id,
+          undefined,
+          this.options.kinds,
         );
         this.maxTime = limitFor(this.correct);
       }

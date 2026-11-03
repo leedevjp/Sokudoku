@@ -5,6 +5,7 @@ import Link from "next/link";
 import type Phaser from "phaser";
 import { useSettings } from "@/app/settings";
 import type { Word } from "@/lib/game/types";
+import { parseKinds, wordsForKinds } from "@/lib/game/selection";
 import { AnswerJournal } from "@/lib/game/data/answer-journal";
 import { GameDataLoader, type Bootstrap } from "@/lib/game/data/bootstrap";
 export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
@@ -25,6 +26,13 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       owner = "",
       ended = false;
     let journal: AnswerJournal | undefined;
+    const kinds = parseKinds(
+      new URLSearchParams(window.location.search).get("kinds"),
+    );
+    const filterWords = (data: Bootstrap): Bootstrap => ({
+      ...data,
+      words: wordsForKinds(data.words, kinds),
+    });
     const loader = new GameDataLoader(
       new URLSearchParams(window.location.search).get("levels"),
       () => router.replace("/"),
@@ -34,6 +42,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     };
     window.addEventListener("online", online);
     async function init() {
+      if (!kinds.length) throw Error("KINDS");
       let data: Bootstrap;
       if (previewWords)
         data = { words: previewWords, stats: [], user_id: "preview" };
@@ -45,6 +54,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
           data = await loader.loadOffline();
         }
       }
+      data = filterWords(data);
       owner = data.user_id;
       journal = new AnswerJournal(owner, data.words, !!previewWords);
       journal.recover();
@@ -56,6 +66,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       );
       if (cancelled || !parent.current) return;
       game = createTraining(parent.current, {
+        kinds,
         words: data.words,
         stats: data.stats,
         preferences: preferences.current,
@@ -69,10 +80,11 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         },
         onRetry: async () => {
           ended = false;
-          if (previewWords) return { words: previewWords, stats: [] };
+          if (previewWords)
+            return { words: wordsForKinds(previewWords, kinds), stats: [] };
           await journal!.sync();
           try {
-            const fresh = await loader.fetchData();
+            const fresh = filterWords(await loader.fetchData());
             if (fresh.user_id !== owner) {
               router.replace("/");
               throw Error("LOGIN");
@@ -106,15 +118,17 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
           <strong>速読 / Sokudoku</strong>
           <p role="status">
             {error
-              ? error === "WORDS"
-                ? t(
-                    "選択した範囲には少なくとも4語必要です。Pは個人単語です。",
-                    "선택한 범위에 단어가 최소 4개 필요합니다. P는 개인 단어입니다.",
-                  )
-                : t(
-                    "接続を確認して、もう一度お試しください。",
-                    "연결을 확인하고 다시 시도해주세요.",
-                  )
+              ? error === "KINDS"
+                ? t("問題タイプを選んでください。", "문제 유형을 선택해주세요.")
+                : error === "WORDS"
+                  ? t(
+                      "選択した範囲・問題タイプには少なくとも4語必要です。読み方には漢字を含む単語を使います。",
+                      "선택한 범위·유형에 단어가 최소 4개 필요합니다. 읽기에는 한자가 있는 단어를 사용합니다.",
+                    )
+                  : t(
+                      "接続を確認して、もう一度お試しください。",
+                      "연결을 확인하고 다시 시도해주세요.",
+                    )
               : t("トレーニングを準備中…", "훈련 준비 중…")}
           </p>
           {error && <Link href="/">{t("ホームへ", "홈으로")}</Link>}
