@@ -382,12 +382,13 @@ export class TrainingScene extends Phaser.Scene {
       const previous = this.phase === "paused" ? this.beforePause : this.phase;
       const active = previous === "settling" ? this.afterSettle : previous;
       const resolved = active === "flight" || active === "feedback";
-      const elapsed =
-        previous === "settling"
-          ? this.settleElapsed
-          : this.phase === "paused"
-            ? Math.max(0, this.pauseAt - this.started)
-            : Math.max(0, performance.now() - this.started);
+      // Arming has no running clock yet. PiP/viewport changes may resize the
+      // canvas before the first postrender; started is still zero at that point.
+      let elapsed = this.resizeElapsed;
+      if (previous === "settling") elapsed = this.settleElapsed;
+      else if (previous !== "arming") {
+        elapsed = Math.max(0, (this.phase === "paused" ? this.pauseAt : performance.now()) - this.started);
+      }
       this.pause();
       this.resizeElapsed = resolved ? 0 : Math.min(elapsed, this.maxTime);
       this.beforePause = "arming";
