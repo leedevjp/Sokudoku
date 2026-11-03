@@ -1,4 +1,4 @@
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import type { Account } from "./use-account";
 
 export function AuthForm({ account }: { account: Account }) {

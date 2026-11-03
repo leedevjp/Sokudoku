@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 
 export function Modal({
   open,

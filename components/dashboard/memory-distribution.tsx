@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { percentageShares } from "@/lib/dashboard/summary";
-import type { Translate } from "./dashboard-screen";
+import type { Translate } from "@/lib/dashboard/types";
 import styles from "./dashboard.module.css";
 export function MemoryDistribution({
   counts,

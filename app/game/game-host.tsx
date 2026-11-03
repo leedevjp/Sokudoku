@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type Phaser from "phaser";
 import { TrainingGuide } from "@/components/game/training-guide";
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import type { Word } from "@/lib/game/types";
 import { parseModes } from "@/lib/game/learning/types";
 import { LearningEngine } from "@/lib/game/learning/engine";

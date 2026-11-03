@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { SettingsBar, useSettings } from "./settings";
+import { SettingsBar } from "@/components/settings/settings-bar";
+import { useSettings } from "@/components/settings/settings-provider";
 export default function MessagePage({ kind }: { kind: "auth" | "missing" }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -13,7 +14,10 @@ export default function MessagePage({ kind }: { kind: "auth" | "missing" }) {
         </p>
         <h2>
           {kind === "auth"
-            ? t("自動ログインを完了できませんでした。", "자동 로그인을 완료하지 못했어요.")
+            ? t(
+                "自動ログインを完了できませんでした。",
+                "자동 로그인을 완료하지 못했어요.",
+              )
             : t("ページが見つかりません。", "페이지를 찾을 수 없어요.")}
         </h2>
         <p className="description">
@@ -28,7 +32,10 @@ export default function MessagePage({ kind }: { kind: "auth" | "missing" }) {
               )}
         </p>
         <Link className="primary" href={kind === "auth" ? "/?login=1" : "/"}>
-          {kind === "auth" ? t("ログインへ", "로그인하기") : t("ホームに戻る", "홈으로 돌아가기")} →
+          {kind === "auth"
+            ? t("ログインへ", "로그인하기")
+            : t("ホームに戻る", "홈으로 돌아가기")}{" "}
+          →
         </Link>
       </section>
     </main>

@@ -1,4 +1,4 @@
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import { trainingKinds } from "@/lib/game/selection";
 import type { Kind } from "@/lib/game/types";
 

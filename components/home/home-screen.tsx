@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { SettingsBar, useSettings } from "@/app/settings";
+import { SettingsBar } from "@/components/settings/settings-bar";
+import { useSettings } from "@/components/settings/settings-provider";
 import {
   defaultLevels,
   trainingKinds,

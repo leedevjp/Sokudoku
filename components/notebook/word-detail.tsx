@@ -1,4 +1,4 @@
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import { Modal } from "@/components/ui/modal";
 import { choiceLabel } from "@/lib/game/rules";
 import type { NotebookWord } from "@/lib/notebook/types";

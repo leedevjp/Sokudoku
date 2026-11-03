@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import {
   vocabularyLevels,
   kanaLevels,

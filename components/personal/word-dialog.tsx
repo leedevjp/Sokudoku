@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import { Modal } from "@/components/ui/modal";
 import type { PersonalWord } from "@/lib/personal/types";
 import { personalMessage } from "@/lib/personal/messages";

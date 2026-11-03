@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { SettingsBar, useSettings } from "@/app/settings";
+import { SettingsBar } from "@/components/settings/settings-bar";
+import { useSettings } from "@/components/settings/settings-provider";
 import { choiceLabel } from "@/lib/game/rules";
 import { NOTEBOOK_PAGE_SIZE, type NotebookWord } from "@/lib/notebook/types";
 import { WordDetail } from "./word-detail";

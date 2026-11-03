@@ -24,3 +24,5 @@ export type DashboardData = {
   groups: DashboardGroup[];
   activity: DashboardActivity[];
 };
+
+export type Translate = (jp: string, kr: string) => string;

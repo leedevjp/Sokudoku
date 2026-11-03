@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import { Modal } from "@/components/ui/modal";
 import { personalWordInput } from "@/lib/personal/schema";
 import { personalMessage } from "@/lib/personal/messages";

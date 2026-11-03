@@ -1,6 +1,8 @@
 import type { DashboardData, DashboardGroup } from "./types";
 import type { EntryType, Kind } from "../game/types";
 
+export type DashboardSummary = ReturnType<typeof dashboardSummary>;
+
 /** Shared filters keep headline numbers, stage rows and charts on the same scope. */
 export function dashboardSummary(
   data: DashboardData,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import { createClient } from "@/lib/supabase/client";
 import { choiceLabel } from "@/lib/game/rules";
 

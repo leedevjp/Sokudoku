@@ -1,0 +1,127 @@
+@media (min-height: 850px) {
+  .home-content {
+    padding-top: 20px;
+  }
+  .home-shell .home-visual {
+    margin-top: 30px;
+  }
+  .home-actions {
+    padding-bottom: 10px;
+  }
+}
+@media (max-height: 740px) {
+  .home-shell .site-header {
+    height: 68px;
+    min-height: 68px;
+  }
+  .home-content {
+    padding-top: 4px;
+  }
+  .home-content .eyebrow {
+    margin-bottom: 9px;
+  }
+  .home-content h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  .home-content .description {
+    font-size: 11px;
+  }
+  .home-shell .home-visual {
+    --visual-size: 135px;
+    flex-basis: 195px;
+    min-height: 120px;
+    max-height: 195px;
+    margin-top: 20px;
+  }
+  .home-actions {
+    padding-top: 6px;
+  }
+  .home-actions .primary {
+    min-height: 52px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .details-button {
+    margin-top: 4px;
+    padding: 9px;
+  }
+  .home-shell footer {
+    padding: 6px 0 11px;
+    font-size: 9px;
+  }
+}
+@media (max-height: 590px) {
+  .home-shell .site-header {
+    height: 60px;
+    min-height: 60px;
+  }
+  .home-content h1 {
+    font-size: 24px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .home-content .eyebrow {
+    font-size: 9px;
+    margin-bottom: 6px;
+  }
+  .home-content .description {
+    display: none;
+  }
+  .home-shell .home-visual {
+    --visual-size: 104px;
+    max-height: 155px;
+    min-height: 105px;
+    margin-top: 17px;
+    flex-basis: 155px;
+  }
+  .home-visual .preview-reading {
+    display: none;
+  }
+  .home-visual .preview-kind {
+    font-size: 8px;
+    padding: 3px 7px;
+    top: 7px;
+  }
+  .home-visual .preview-answer {
+    padding: 7px 10px;
+    top: 99px;
+  }
+  .home-visual .preview-answer b {
+    font-size: 11px;
+  }
+  .home-shell footer {
+    display: none;
+  }
+}
+@media (max-height: 440px) {
+  .home-shell .home-visual {
+    display: none;
+  }
+  .home-content h1 {
+    font-size: 25px;
+  }
+  .home-content {
+    padding: 4px 0;
+  }
+  .home-actions .primary {
+    min-height: 48px;
+  }
+}
+@media (max-width: 370px) {
+  .home-shell {
+    padding: 0 17px;
+  }
+  .home-shell .brand {
+    font-size: 18px;
+  }
+  .home-shell .settings-bar button {
+    padding: 7px 8px;
+  }
+  .home-content h1 {
+    font-size: 27px;
+  }
+  .dialog-content {
+    padding: 30px 20px 24px;
+  }
+}

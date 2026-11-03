@@ -1,0 +1,66 @@
+.home-dialog {
+  width: calc(100% - 36px);
+  max-width: 432px;
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  border: 2px solid var(--line);
+  border-bottom: 7px solid var(--shade);
+  border-radius: 26px;
+  background: linear-gradient(155deg, var(--card) 55%, var(--tint));
+  color: var(--text);
+  box-shadow: 0 25px 90px #0003;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.home-dialog::backdrop {
+  background: rgba(8, 18, 41, 0.42);
+  backdrop-filter: blur(8px);
+}
+.dialog-content {
+  position: relative;
+  padding: 35px 27px 27px;
+}
+.dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-bottom: 3px solid var(--shade);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 23px;
+  line-height: 1;
+}
+.dialog-content > .eyebrow {
+  margin: 6px 38px 12px 0;
+}
+.dialog-content h2 {
+  font-size: 25px;
+}
+.dialog-content .rule-list p {
+  padding: 18px 0;
+}
+.dialog-content .rule-list b {
+  min-width: 80px;
+}
+.dialog-explanation {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin: 20px 0 0;
+}
+.dialog-content .primary {
+  font-size: 13px;
+}
+.dialog-content .description {
+  font-size: 12px;
+}
+.dialog-content .notice {
+  margin-bottom: 0;
+}

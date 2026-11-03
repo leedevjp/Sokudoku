@@ -1,0 +1,87 @@
+:root {
+  color-scheme: light;
+  --bg: #f3f8ff;
+  --card: #fff;
+  --tint: #f1f6ff;
+  --text: #14264a;
+  --muted: #5b6b87;
+  --accent: #2b7bf0;
+  --accent-dark: #1b5fc4;
+  --line: #d3e1f5;
+  --shade: #b7cae8;
+  --input: #f7faff;
+  --press: #e4eeff;
+  --on-brand: #fff;
+  --heart: #f0506e;
+  --dot: rgba(43, 123, 240, 0.1);
+  --glow-a: rgba(43, 123, 240, 0.14);
+  --glow-b: rgba(120, 190, 255, 0.22);
+  --shadow: 0 28px 65px -30px rgba(43, 123, 240, 0.3);
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1530;
+  --card: #15244a;
+  --tint: #1a2c58;
+  --text: #eaf1ff;
+  --muted: #93a7cc;
+  --accent: #4a93ff;
+  --accent-dark: #2a6bd6;
+  --line: #27396b;
+  --shade: #08102a;
+  --input: #101d3d;
+  --press: #1b3266;
+  --on-brand: #06152f;
+  --heart: #ff5c7c;
+  --dot: rgba(130, 165, 255, 0.12);
+  --glow-a: rgba(74, 147, 255, 0.2);
+  --glow-b: rgba(70, 90, 230, 0.22);
+  --shadow: 0 28px 65px -20px rgba(0, 0, 0, 0.45);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  font-family:
+    var(--font-outfit), "Noto Sans JP", "Noto Sans KR", "Yu Gothic",
+    "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(var(--dot) 1.3px, transparent 1.6px),
+    radial-gradient(ellipse at 92% 3%, var(--glow-a), transparent 54%),
+    radial-gradient(ellipse at 4% 97%, var(--glow-b), transparent 50%);
+  background-size:
+    28px 28px,
+    100% 100%,
+    100% 100%;
+  background-attachment: fixed;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 5px;
+}

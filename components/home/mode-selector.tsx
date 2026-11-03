@@ -1,4 +1,4 @@
-import { useSettings } from "@/app/settings";
+import { useSettings } from "@/components/settings/settings-provider";
 import { trainingModes, type TrainingMode } from "@/lib/game/learning/types";
 
 export function ModeSelector({
