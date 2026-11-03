@@ -15,6 +15,7 @@ import type { Preferences } from "../preferences";
 import type { TrainingOptions, Phase } from "./types";
 import { TrainingView } from "./board";
 import { burst } from "./effects";
+import { resizeProgress } from "./resize-progress";
 export class TrainingScene extends Phaser.Scene {
   private options: TrainingOptions;
   private prefs: Preferences;
@@ -161,6 +162,7 @@ export class TrainingScene extends Phaser.Scene {
       return;
     }
     this.maxTime = limitFor(this.correct);
+    this.resizeElapsed = 0;
     this.phase = "arming";
     this.gate.close();
     this.drawBoard();
@@ -392,43 +394,55 @@ export class TrainingScene extends Phaser.Scene {
   }
   private resize() {
     this.syncCamera();
-    if (this.phase === "end") this.drawEnd();
-    else {
-      const previous = this.phase === "paused" ? this.beforePause : this.phase;
-      const active = previous === "settling" ? this.afterSettle : previous;
-      const resolved = active === "flight" || active === "feedback";
-      // Arming has no running clock yet. PiP/viewport changes may resize the
-      // canvas before the first postrender; started is still zero at that point.
-      let elapsed = this.resizeElapsed;
-      if (previous === "settling") elapsed = this.settleElapsed;
-      else if (previous !== "arming") {
-        elapsed = Math.max(
-          0,
-          (this.phase === "paused" ? this.pauseAt : performance.now()) -
-            this.started,
-        );
-      }
-      this.pause();
-      this.resizeElapsed = resolved ? 0 : Math.min(elapsed, this.maxTime);
-      this.beforePause = "arming";
-      this.time.removeAllEvents();
-      this.tweens.killAll();
-      if (resolved) {
-        if (this.hearts === 0) {
-          this.finish();
-          return;
-        }
-        const question = this.options.planner.next();
-        if (!question) {
-          this.finish(true);
-          return;
-        }
-        this.question = question;
-        this.maxTime = limitFor(this.correct);
-      }
-      this.drawBoard();
-      this.drawPause();
+    if (this.phase === "end") {
+      this.drawEnd();
+      return;
     }
+    if (!this.question) return;
+    const progress = resizeProgress(
+      {
+        phase: this.phase,
+        beforePause: this.beforePause,
+        afterSettle: this.afterSettle,
+        started: this.started,
+        pauseAt: this.pauseAt,
+        resizeElapsed: this.resizeElapsed,
+        settleElapsed: this.settleElapsed,
+      },
+      performance.now(),
+      this.maxTime,
+    );
+    this.gate.close();
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (progress.resolved) {
+      if (this.hearts === 0) {
+        this.finish();
+        return;
+      }
+      const question = this.options.planner.next();
+      if (!question) {
+        this.finish(true);
+        return;
+      }
+      this.question = question;
+      this.maxTime = limitFor(this.correct);
+    }
+    this.resizeElapsed = progress.elapsed;
+    this.drawBoard();
+    if (progress.paused) {
+      // Manual/visibility pauses remain paused; resizing alone never opens this overlay.
+      this.beforePause = "arming";
+      this.drawPause();
+      return;
+    }
+    this.phase = "arming";
+    const generation = this.viewGeneration;
+    this.game.events.once("postrender", () => {
+      if (this.phase === "arming" && generation === this.viewGeneration) {
+        this.settle("play", progress.elapsed);
+      }
+    });
   }
   private finish(reviewComplete = false) {
     this.reviewComplete ||= reviewComplete;

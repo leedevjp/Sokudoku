@@ -132,21 +132,7 @@ export default function HomeScreen() {
               aria-label={t("ログアウト", "로그아웃")}
               title={t("ログアウト", "로그아웃")}
             >
-              <svg
-                aria-hidden="true"
-                width="19"
-                height="19"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M9 5H5v14h4M13 8l4 4-4 4m-4-4h12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              Logout
             </button>
           )}
           <SettingsBar />
