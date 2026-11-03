@@ -40,14 +40,18 @@ export async function flushAnswers(owner: string): Promise<void> {
       if (!response.ok) throw new Error("SYNC_FAILED");
       const data = await response.json();
       if (data.user_id !== owner) throw new Error("OWNER_CHANGED");
+      const acknowledged = [
+        ...(Array.isArray(data.ids) ? data.ids : []),
+        ...(Array.isArray(data.discarded_ids) ? data.discarded_ids : []),
+      ];
       if (
         !Array.isArray(data.ids) ||
-        batch.some((a) => !data.ids.includes(a.id))
+        batch.some((a) => !acknowledged.includes(a.id))
       )
         throw new Error("ACK_MISSING");
       const allowed = new Set(batch.map((a) => a.id));
       const tx = db.transaction("answer", "readwrite");
-      for (const id of data.ids) {
+      for (const id of acknowledged) {
         if (allowed.has(id)) tx.store.delete(id);
       }
       await storageDeadline(tx.done);

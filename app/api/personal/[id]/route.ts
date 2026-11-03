@@ -33,17 +33,18 @@ async function mutate(request: Request, context: Context, remove: boolean) {
     );
   }
   const updated_at = remove ? revision.data!.updated_at : edit.data!.updated_at;
-  // IDs and learning state remain unchanged. Only content or the deletion marker is updated.
-  const changes = remove
-    ? { deleted_at: new Date().toISOString() }
-    : (() => {
-        const { updated_at: revision, ...input } = edit.data!;
-        void revision;
-        return wordChanges(input);
-      })();
-  const { data, error } = await auth.client
-    .from("personal_word")
-    .update(changes)
+  // Deletion and dependent-record cleanup are one FK-cascade transaction.
+  // Editing keeps the ID and the learning state.
+  const mutation = remove
+    ? auth.client.from("personal_word").delete()
+    : auth.client.from("personal_word").update(
+        (() => {
+          const { updated_at: revision, ...input } = edit.data!;
+          void revision;
+          return wordChanges(input);
+        })(),
+      );
+  const { data, error } = await mutation
     .eq("id", id)
     .eq("user_id", auth.user.id)
     .is("deleted_at", null)
