@@ -89,10 +89,13 @@ export class GameDataLoader {
     return response.json();
   }
   async fetchPersonal(): Promise<Bootstrap> {
-    const response = await fetch("/api/game/bootstrap?source=personal", {
-      cache: "no-store",
-      signal: AbortSignal.timeout(15000),
-    });
+    const response = await fetch(
+      "/api/game/bootstrap?source=personal&compact=1",
+      {
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      },
+    );
     if (response.status === 401) {
       this.onLoginRequired();
       throw Error("LOGIN");
@@ -113,7 +116,9 @@ export class GameDataLoader {
   }
   async fetchCommon(): Promise<Bootstrap> {
     const cached = await readWordCache().catch(() => undefined);
-    const query = cached ? `?since=${encodeURIComponent(cached.syncedAt)}` : "";
+    const query = cached
+      ? `?compact=1&since=${encodeURIComponent(cached.syncedAt)}`
+      : "?compact=1";
     const response = await fetch(`/api/game/bootstrap${query}`, {
       cache: "no-store",
       signal: AbortSignal.timeout(15000),

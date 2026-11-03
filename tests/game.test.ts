@@ -3,6 +3,8 @@ import type { Word } from "../lib/game/types";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { AnswerGate, keyIndex, limitFor } from "../lib/game/rules";
+import { TrainingPlanner } from "../lib/game/learning/planner";
+import { LearningEngine } from "../lib/game/learning/engine";
 const word = (
   id: number,
   term: string,
@@ -30,6 +32,32 @@ const words = [
   word(5, "コミュニケーション", "コミュニケーション", "의사소통", false),
   word(6, "あす", "あす", "내일", false),
 ];
+
+test("lean catalog entries preserve gameplay without audit fields or recent-20 statistics", async () => {
+  const lean: Word[] = words.map((w) => ({
+    id: w.id,
+    term: w.term,
+    kana: w.kana,
+    meaning_ko: w.meaning_ko,
+    hanja_reading: w.hanja_reading,
+    has_kanji: w.has_kanji,
+    difficulty: w.difficulty,
+    entry_type: w.entry_type,
+    deleted_at: w.deleted_at,
+  }));
+  const planner = new TrainingPlanner(
+    await LearningEngine.create(),
+    lean,
+    ["meaning"],
+    ["exploration"],
+    () => 0.4,
+  );
+  assert.equal(planner.hasQuestions(), true);
+  const question = planner.next()!;
+  assert.equal(question.options.length, 4);
+  assert.ok(question.options.some((w) => w.id === question.word.id));
+  assert.equal(question.word.note, undefined);
+});
 test("time progression is integer ms and clamps at 2 seconds", () => {
   assert.equal(limitFor(0), 10000);
   assert.equal(limitFor(1), 9800);
