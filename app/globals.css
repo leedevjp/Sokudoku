@@ -933,7 +933,12 @@ footer span {
   border-radius: 26px;
 }
 .home-visual .preview-word strong {
-  font-size: calc(var(--visual-size) * 0.52);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  line-height: 1;
+  font-size: calc(var(--visual-size) * 0.5);
 }
 .home-visual .preview-kind {
   left: 11px;
@@ -942,7 +947,10 @@ footer span {
   font-size: 9px;
 }
 .home-visual .preview-reading {
+  position: absolute;
+  bottom: 14px;
   font-size: 10px;
+  line-height: 1.3;
 }
 .home-visual .preview-answer {
   top: calc(var(--visual-size) - 3px);
@@ -1280,5 +1288,5 @@ footer span {
 @media (max-width: 370px) { .notebook-shell { padding-left: 14px; padding-right: 14px; } .notebook-shell .brand { font-size: 17px; } .notebook-row, .notebook-columns { gap: 7px; padding-left: 10px; padding-right: 10px; } }
 
 /* Keep all three selection rows above the fold on shorter mobile viewports. */
-@media (max-height: 760px) { .home-shell .home-visual { --visual-size: 90px; } }
+@media (max-height: 760px) { .home-shell .home-visual { --visual-size: clamp(144px, 23svh, 176px); } }
 @media (max-height: 650px) { .home-shell .home-content { display: none; } .home-actions { margin-top: auto; margin-bottom: auto; } }
