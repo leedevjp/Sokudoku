@@ -8,6 +8,7 @@ import {
   FLIGHT_MS,
   CORRECT_FEEDBACK_MS,
   MISTAKE_FEEDBACK_MS,
+  START_INPUT_DELAY_MS,
 } from "../rules";
 import { buildQuestion } from "../question";
 import type { Question } from "../types";
@@ -22,6 +23,9 @@ export class TrainingScene extends Phaser.Scene {
   private phase: Phase = "arming";
   private beforePause: Phase = "play";
   private resizeElapsed = 0;
+  private afterSettle: Exclude<Phase, "paused" | "settling"> = "play";
+  private settleUntil = 0;
+  private settleElapsed = 0;
   private gate = new AnswerGate();
   private question!: Question;
   private session = new TrainingSession();
@@ -126,9 +130,9 @@ export class TrainingScene extends Phaser.Scene {
     if (this.syncing) return;
     this.session.reset();
     this.syncOK = null;
-    this.next();
+    this.next(true);
   }
-  private next() {
+  private next(delayInput = false) {
     try {
       this.question = buildQuestion(
         this.options.words,
@@ -150,9 +154,12 @@ export class TrainingScene extends Phaser.Scene {
     // The timer starts only after the new question has actually been rendered.
     this.game.events.once("postrender", () => {
       if (this.phase === "arming" && generation === this.viewGeneration) {
-        this.started = performance.now();
-        this.phase = "play";
-        this.gate.open();
+        if (delayInput) this.settle("play", 0);
+        else {
+          this.started = performance.now();
+          this.phase = "play";
+          this.gate.open();
+        }
       }
     });
   }
@@ -161,6 +168,16 @@ export class TrainingScene extends Phaser.Scene {
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
   }
   update() {
+    if (this.phase === "settling") {
+      if (performance.now() < this.settleUntil) return;
+      this.phase = this.afterSettle;
+      if (this.phase === "play") {
+        this.started = performance.now() - this.settleElapsed;
+        this.gate.open();
+      }
+      this.time.paused = false;
+      this.tweens.resumeAll();
+    }
     if (this.phase !== "play") return;
     const elapsed = performance.now() - this.started;
     this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
@@ -321,33 +338,56 @@ export class TrainingScene extends Phaser.Scene {
   }
   private resume() {
     if (this.phase !== "paused") return;
-    this.started += performance.now() - this.pauseAt;
     this.overlay?.destroy();
     this.overlay = undefined;
-    if (this.beforePause === "play" || this.beforePause === "arming")
+    const target =
+      this.beforePause === "settling"
+        ? this.afterSettle
+        : this.beforePause === "arming"
+          ? "play"
+          : this.beforePause;
+    const elapsed =
+      this.beforePause === "settling"
+        ? this.settleElapsed
+        : this.beforePause === "arming"
+          ? this.resizeElapsed
+          : Math.max(0, this.pauseAt - this.started);
+    if (target === "play") {
       this.drawBoard();
-    this.phase = this.beforePause === "arming" ? "play" : this.beforePause;
-    if (this.beforePause === "arming") {
-      this.started = performance.now() - this.resizeElapsed;
-      this.resizeElapsed = 0;
+      this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
+      this.view.seconds?.setText(
+        (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
+      );
     }
-    if (this.phase === "play") this.gate.open();
-    this.time.paused = false;
-    this.tweens.resumeAll();
+    this.resizeElapsed = 0;
+    this.settle(target === "paused" ? "play" : target, elapsed);
+  }
+  private settle(
+    target: Exclude<Phase, "paused" | "settling">,
+    elapsed: number,
+  ) {
+    // Discard input during the grace period; never queue the resume tap as an answer.
+    this.phase = "settling";
+    this.afterSettle = target;
+    this.settleElapsed = elapsed;
+    this.settleUntil = performance.now() + START_INPUT_DELAY_MS;
+    this.gate.close();
+    this.time.paused = true;
+    this.tweens.pauseAll();
   }
   private resize() {
     this.syncCamera();
     if (this.phase === "end") this.drawEnd();
     else {
-      const resolved =
-        this.phase === "flight" ||
-        this.phase === "feedback" ||
-        (this.phase === "paused" &&
-          (this.beforePause === "flight" || this.beforePause === "feedback"));
+      const previous = this.phase === "paused" ? this.beforePause : this.phase;
+      const active = previous === "settling" ? this.afterSettle : previous;
+      const resolved = active === "flight" || active === "feedback";
       const elapsed =
-        this.phase === "paused"
-          ? Math.max(0, this.pauseAt - this.started)
-          : Math.max(0, performance.now() - this.started);
+        previous === "settling"
+          ? this.settleElapsed
+          : this.phase === "paused"
+            ? Math.max(0, this.pauseAt - this.started)
+            : Math.max(0, performance.now() - this.started);
       this.pause();
       this.resizeElapsed = resolved ? 0 : Math.min(elapsed, this.maxTime);
       this.beforePause = "arming";

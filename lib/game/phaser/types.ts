@@ -15,6 +15,7 @@ export type TrainingOptions = {
 };
 export type Phase =
   | "arming"
+  | "settling"
   | "play"
   | "flight"
   | "feedback"
