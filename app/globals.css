@@ -1225,3 +1225,14 @@ footer span {
 @media (min-height: 591px) and (max-height: 660px) {
   .home-content .description { display: none; }
 }
+
+/* Reserve the full preview, including the floating answer, above the controls. */
+.home-shell .home-visual {
+  --visual-size: clamp(100px, 24svh, 176px);
+  flex: 0 0 auto;
+  height: calc(var(--visual-size) + 76px);
+  min-height: calc(var(--visual-size) + 76px);
+  max-height: none;
+  margin: 0;
+}
+.home-visual .preview-answer { top: calc(var(--visual-size) - 3px); }
