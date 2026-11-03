@@ -10,6 +10,7 @@ type PauseActions = {
   changePreferences: (preferences: Preferences) => void;
 };
 type ResultData = {
+  reviewComplete?: boolean;
   answers: Answer[];
   preview?: boolean;
   syncing: boolean;
@@ -135,7 +136,9 @@ export function drawEnd(
   view.text(
     x,
     y - 220,
-    view.t("おつかれさまでした", "수고했어요"),
+    data.reviewComplete
+      ? view.t("いまの復習は完了です", "지금 할 복습을 완료했어요")
+      : view.t("おつかれさまでした", "수고했어요"),
     14,
     view.c.blue,
   );
@@ -165,17 +168,35 @@ export function drawEnd(
             "저장하지 못했습니다. 이 화면에서 재시도할 수 있어요",
           );
   view.text(x, y + 46, state, 13, data.syncOK ? view.c.green : view.c.muted);
+  if (data.reviewComplete)
+    view.text(
+      x,
+      y + 72,
+      view.t(
+        "次の復習時期まで、探索で学びましょう。",
+        "다음 복습 시점까지 탐색으로 학습해보세요.",
+      ),
+      12,
+      view.c.muted,
+    );
   view.button(
-    view.t("もう一度 →", "다시 하기 →"),
+    data.reviewComplete
+      ? view.t("ホームへ →", "메인으로 →")
+      : view.t("もう一度 →", "다시 하기 →"),
     x,
     y + 108,
     280,
-    actions.retry,
+    data.reviewComplete
+      ? () => {
+          if (!data.syncing) actions.exit();
+        }
+      : actions.retry,
     true,
   );
-  view.button(view.t("ホームへ", "홈으로"), x, y + 169, 280, () => {
-    if (!data.syncing) actions.exit();
-  });
+  if (!data.reviewComplete)
+    view.button(view.t("ホームへ", "홈으로"), x, y + 169, 280, () => {
+      if (!data.syncing) actions.exit();
+    });
   if (!data.syncOK && !data.syncing && !data.preview)
     view.button(
       view.t("同期を再試行", "동기화 재시도"),

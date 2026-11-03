@@ -45,6 +45,8 @@ export class TrainingScene extends Phaser.Scene {
   private syncing = false;
   private retryPending = false;
   private syncOK: boolean | null = null;
+  private reviewComplete = false;
+  private failed = false;
   private viewGeneration = 0;
   constructor(
     options: TrainingOptions,
@@ -86,6 +88,18 @@ export class TrainingScene extends Phaser.Scene {
       .centerOn(this.w / 2, this.h / 2);
   }
   create() {
+    try {
+      this.bootTraining();
+      this.game.events.once("postrender", () => {
+        if (!this.failed) this.options.onReady?.();
+      });
+    } catch (error) {
+      this.failed = true;
+      this.phase = "end";
+      this.options.onError?.(error);
+    }
+  }
+  private bootTraining() {
     this.syncCamera();
     this.game.canvas.setAttribute(
       "aria-label",
@@ -127,6 +141,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private startRun() {
     if (this.syncing) return;
+    this.reviewComplete = false;
     this.session.reset();
     this.options.planner.resetSet();
     this.syncOK = null;
@@ -136,13 +151,13 @@ export class TrainingScene extends Phaser.Scene {
     try {
       const question = this.options.planner.next();
       if (!question) {
-        this.finish();
+        this.finish(true);
         return;
       }
       this.question = question;
-    } catch {
+    } catch (error) {
       this.phase = "end";
-      this.drawEnd();
+      this.options.onError?.(error);
       return;
     }
     this.maxTime = limitFor(this.correct);
@@ -387,7 +402,11 @@ export class TrainingScene extends Phaser.Scene {
       let elapsed = this.resizeElapsed;
       if (previous === "settling") elapsed = this.settleElapsed;
       else if (previous !== "arming") {
-        elapsed = Math.max(0, (this.phase === "paused" ? this.pauseAt : performance.now()) - this.started);
+        elapsed = Math.max(
+          0,
+          (this.phase === "paused" ? this.pauseAt : performance.now()) -
+            this.started,
+        );
       }
       this.pause();
       this.resizeElapsed = resolved ? 0 : Math.min(elapsed, this.maxTime);
@@ -401,7 +420,7 @@ export class TrainingScene extends Phaser.Scene {
         }
         const question = this.options.planner.next();
         if (!question) {
-          this.finish();
+          this.finish(true);
           return;
         }
         this.question = question;
@@ -411,7 +430,8 @@ export class TrainingScene extends Phaser.Scene {
       this.drawPause();
     }
   }
-  private finish() {
+  private finish(reviewComplete = false) {
+    this.reviewComplete ||= reviewComplete;
     this.phase = "end";
     this.gate.close();
     this.time.removeAllEvents();
@@ -455,6 +475,7 @@ export class TrainingScene extends Phaser.Scene {
     drawEnd(
       this.view,
       {
+        reviewComplete: this.reviewComplete,
         answers: this.logs,
         preview: this.options.preview,
         syncing: this.syncing,

@@ -17,6 +17,8 @@ export type TrainingOptions = {
     planner?: TrainingPlanner;
   }>;
   onExit: () => void;
+  onReady?: () => void;
+  onError?: (error: unknown) => void;
   preview?: boolean;
 };
 export type Phase =

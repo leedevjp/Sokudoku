@@ -29,6 +29,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       owner = "",
       ended = false;
     let journal: AnswerJournal | undefined;
+    let readyTimer: ReturnType<typeof setTimeout> | undefined;
     const modes = parseModes(
       new URLSearchParams(window.location.search).get("modes"),
     );
@@ -48,6 +49,10 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     };
     window.addEventListener("online", online);
     async function init() {
+      await Promise.resolve();
+      if (cancelled) return;
+      setLoaded(false);
+      setError("");
       if (!kinds.length) throw Error("KINDS");
       if (!modes.length) throw Error("MODES");
       let data: Bootstrap;
@@ -84,7 +89,22 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         "@/lib/game/phaser/create-training"
       );
       if (cancelled || !parent.current) return;
+      readyTimer = setTimeout(() => {
+        if (!cancelled) setError("START");
+      }, 15000);
       game = createTraining(parent.current, {
+        onReady: () => {
+          clearTimeout(readyTimer);
+          if (!cancelled) {
+            setError("");
+            setLoaded(true);
+          }
+        },
+        onError: (error) => {
+          clearTimeout(readyTimer);
+          console.error("Training initialization failed", error);
+          if (!cancelled) setError("START");
+        },
         kinds,
         planner,
         words: data.words,
@@ -124,13 +144,13 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         },
         onExit: () => router.push("/"),
       });
-      setLoaded(true);
     }
     void init().catch((e) => {
       if (!cancelled) setError((e as Error).message);
     });
     return () => {
       cancelled = true;
+      clearTimeout(readyTimer);
       window.removeEventListener("online", online);
       game?.destroy(true);
     };
@@ -139,35 +159,40 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   return (
     <main className="game-viewport">
       <div className="game-canvas" ref={parent} />
-      {!loaded && (
+      {(!loaded || error) && (
         <div className="game-loading">
           <strong>速読 / Sokudoku</strong>
           <p role="status">
             {error
-              ? error === "REVIEW_EMPTY"
+              ? error === "START"
                 ? t(
-                    "いま復習する単語はありません。探索で学習するか、時間をおいてお試しください。",
-                    "지금 복습할 단어가 없어요. 탐색으로 학습하거나 나중에 다시 시도해주세요.",
+                    "ゲームを開始できませんでした。ホームからもう一度お試しください。",
+                    "게임을 시작하지 못했어요. 메인으로 돌아가 다시 시작해주세요.",
                   )
-                : error === "MODES"
+                : error === "REVIEW_EMPTY"
                   ? t(
-                      "探索・復習を選んでください。",
-                      "탐색·복습을 선택해주세요.",
+                      "いま復習する単語はありません。探索で学習するか、時間をおいてお試しください。",
+                      "지금 복습할 단어가 없어요. 탐색으로 학습하거나 나중에 다시 시도해주세요.",
                     )
-                  : error === "KINDS"
+                  : error === "MODES"
                     ? t(
-                        "問題タイプを選んでください。",
-                        "문제 유형을 선택해주세요.",
+                        "探索・復習を選んでください。",
+                        "탐색·복습을 선택해주세요.",
                       )
-                    : error === "WORDS"
+                    : error === "KINDS"
                       ? t(
-                          "選択した範囲・問題タイプには少なくとも4語必要です。読み方には漢字を含む単語を使います。",
-                          "선택한 범위·유형에 단어가 최소 4개 필요합니다. 읽기에는 한자가 있는 단어를 사용합니다.",
+                          "問題タイプを選んでください。",
+                          "문제 유형을 선택해주세요.",
                         )
-                      : t(
-                          "接続を確認して、もう一度お試しください。",
-                          "연결을 확인하고 다시 시도해주세요.",
-                        )
+                      : error === "WORDS"
+                        ? t(
+                            "選択した範囲・問題タイプには少なくとも4語必要です。読み方には漢字を含む単語を使います。",
+                            "선택한 범위·유형에 단어가 최소 4개 필요합니다. 읽기에는 한자가 있는 단어를 사용합니다.",
+                          )
+                        : t(
+                            "接続を確認して、もう一度お試しください。",
+                            "연결을 확인하고 다시 시도해주세요.",
+                          )
               : t("トレーニングを準備中…", "훈련 준비 중…")}
           </p>
           {error && <Link href="/">{t("ホームへ", "홈으로")}</Link>}
