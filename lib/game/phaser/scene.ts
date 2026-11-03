@@ -15,7 +15,8 @@ import { TrainingView } from "./board";
 import { answerImpact, burst } from "./effects";
 import { resizeProgress } from "./resize-progress";
 import { Correction } from "../correction";
-import { CorrectionCard } from "./correction-card";
+import type { CorrectionCard } from "./correction-card";
+import { showCorrection } from "./correction-presentation";
 export class TrainingScene extends Phaser.Scene {
   private options: TrainingOptions;
   private prefs: Preferences;
@@ -294,10 +295,7 @@ export class TrainingScene extends Phaser.Scene {
         this.renderCorrection(true);
         return;
       }
-      this.time.delayedCall(CORRECT_FEEDBACK_MS, () => {
-        if (this.hearts === 0) this.finish();
-        else this.next();
-      });
+      this.advanceAfterFeedback();
     };
     answerImpact(this, this.view, index, result, hit);
   }
@@ -305,40 +303,19 @@ export class TrainingScene extends Phaser.Scene {
   private renderCorrection(animate = false) {
     const correction = this.correction;
     if (!correction) return;
-    for (const choice of this.view.choices) {
-      if (animate && choice.visible)
-        burst(this, choice.x, choice.y, this.c.red);
-      choice.disableInteractive().setVisible(false);
-    }
-    this.view.keyHints?.setVisible(false);
-    const answer = this.logs.at(-1);
-    const elapsed = answer?.response_ms ?? this.maxTime;
-    this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
-    this.view.seconds?.setText(
-      (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
+    this.correctionView = showCorrection(
+      this,
+      this.view,
+      correction,
+      this.logs.at(-1),
+      this.maxTime,
+      {
+        advance: () => this.finishCorrection(),
+        toggle: () => this.toggleCorrection(),
+        enabled: () => this.phase === "correction",
+      },
+      animate,
     );
-    this.view.promptCaption?.setText(
-      answer?.result === "timeout"
-        ? this.t("時間切れ · 正解を確認しよう", "시간 초과 · 정답을 확인하세요")
-        : this.t("もう一度、覚えよう", "다시 기억해봐요"),
-    );
-    this.view.status
-      ?.setOrigin(0.5)
-      .setX(this.w / 2)
-      .setText(this.t("Space：停止 / 再開", "Space: 정지 / 재개"));
-    this.correctionView = new CorrectionCard(this, this.view, correction, {
-      advance: () => this.finishCorrection(),
-      toggle: () => this.toggleCorrection(),
-      enabled: () => this.phase === "correction",
-    });
-    if (animate) {
-      this.correctionView.root.setAlpha(0);
-      this.tweens.add({
-        targets: this.correctionView.root,
-        alpha: 1,
-        duration: 140,
-      });
-    }
   }
   private toggleCorrection() {
     if (this.phase !== "correction" || !this.correction) return;
@@ -356,6 +333,9 @@ export class TrainingScene extends Phaser.Scene {
       card.disableInteractive().setVisible(false);
       this.cameras.main.flash(90, 100, 190, 255, false);
     }
+    this.advanceAfterFeedback();
+  }
+  private advanceAfterFeedback() {
     this.time.delayedCall(CORRECT_FEEDBACK_MS, () => {
       if (this.hearts === 0) this.finish();
       else this.next();

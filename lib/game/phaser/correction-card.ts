@@ -3,11 +3,10 @@ import type { Correction } from "../correction";
 import type { TrainingView } from "./board";
 
 import { correctionText } from "./correction-text";
-type Actions = {
-  advance: () => void;
-  toggle: () => void;
-  enabled: () => boolean;
-};
+import {
+  bindCorrectionInput,
+  type CorrectionActions,
+} from "./correction-input";
 
 /** One fixed review surface replaces the four choices; it never records answers. */
 export class CorrectionCard {
@@ -24,7 +23,7 @@ export class CorrectionCard {
     scene: Phaser.Scene,
     private view: TrainingView,
     correction: Correction,
-    actions: Actions,
+    actions: CorrectionActions,
   ) {
     const { scale: s, width, top, extra } = view.boardLayout;
     const height = 272 * s,
@@ -89,8 +88,6 @@ export class CorrectionCard {
     );
     this.iconX = this.ringX;
     this.iconY = height / 2 - Math.max(24, 36 * s);
-    let drag: { id: number; y: number; offset: number; moved: boolean } | null =
-      null;
     const button = view.add
       .container(this.iconX, this.iconY)
       .setSize(44, 44)
@@ -99,28 +96,12 @@ export class CorrectionCard {
     this.pauseIcon = view.add.graphics();
     button.add(this.pauseIcon);
     this.root.add(button);
-    button.on(
-      "pointerdown",
-      (
-        pointer: Phaser.Input.Pointer,
-        _x: number,
-        _y: number,
-        event: Phaser.Types.Input.EventData,
-      ) => {
-        event.stopPropagation();
-        drag = null;
-        if ((pointer.wasTouch || pointer.leftButtonDown()) && actions.enabled())
-          actions.toggle();
-      },
-    );
-
     const textWidth = width - padding * 2 - controls - 12;
     const contentTop = -height / 2 + Math.max(33, 52 * s);
     const contentBottom = height / 2 - Math.max(18, 28 * s);
     const { rows, primarySize, secondarySize, lineHeight, slots } =
       correctionText(view, correction, textWidth, contentBottom - contentTop);
     const maxOffset = Math.max(0, rows.length - slots);
-    let offset = 0;
     const textRows = Array.from(
       { length: Math.min(slots, rows.length) },
       (_, i) => {
@@ -146,7 +127,7 @@ export class CorrectionCard {
         return row;
       },
     );
-    const drawRows = () =>
+    const drawRows = (offset: number) =>
       textRows.forEach((text, i) => {
         const row = rows[offset + i];
         text
@@ -155,7 +136,7 @@ export class CorrectionCard {
           .setFontStyle(row.secondary ? "normal" : "bold")
           .setColor(view.hex(row.secondary ? view.c.muted : view.c.ink));
       });
-    drawRows();
+    drawRows(0);
     this.root.add(
       view
         .designText(
@@ -170,75 +151,12 @@ export class CorrectionCard {
         .setOrigin(0, 0.5),
     );
 
-    this.root.setInteractive({ useHandCursor: true });
-    this.root.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      if (
-        !actions.enabled() ||
-        (!pointer.wasTouch && !pointer.leftButtonDown())
-      )
-        return;
-      // Explicitly reserve the pause hit target even if the input plugin changes
-      // child/parent ordering. A pause tap must never dismiss the card.
-      if (
-        Math.abs(pointer.worldX - x - this.iconX) <= 22 &&
-        Math.abs(pointer.worldY - y - this.iconY) <= 22
-      ) {
-        drag = null;
-        actions.toggle();
-        return;
-      }
-      if (!maxOffset) {
-        actions.advance();
-        return;
-      }
-      drag = { id: pointer.id, y: pointer.worldY, offset, moved: false };
-    });
-    const move = (pointer: Phaser.Input.Pointer) => {
-      if (!drag || drag.id !== pointer.id || !actions.enabled()) return;
-      const distance = drag.y - pointer.worldY;
-      if (Math.abs(distance) > 8) drag.moved = true;
-      offset = Phaser.Math.Clamp(
-        drag.offset + Math.round(distance / lineHeight),
-        0,
-        maxOffset,
-      );
-      drawRows();
-    };
-    const up = (pointer: Phaser.Input.Pointer) => {
-      if (!drag || drag.id !== pointer.id) return;
-      const tap = !drag.moved;
-      drag = null;
-      if (tap && actions.enabled()) actions.advance();
-    };
-    const wheel = (
-      pointer: Phaser.Input.Pointer,
-      _objects: Phaser.GameObjects.GameObject[],
-      _dx: number,
-      dy: number,
-    ) => {
-      if (
-        !maxOffset ||
-        !actions.enabled() ||
-        !this.root.getBounds().contains(pointer.worldX, pointer.worldY)
-      )
-        return;
-      offset = Phaser.Math.Clamp(offset + Math.sign(dy), 0, maxOffset);
-      drawRows();
-    };
-    const cancel = () => {
-      drag = null;
-    };
-    scene.input.on("pointermove", move);
-    scene.input.on("pointerup", up);
-    scene.input.on("wheel", wheel);
-    scene.input.on("pointerupoutside", cancel);
-    window.addEventListener("pointercancel", cancel);
-    this.root.once("destroy", () => {
-      scene.input.off("pointermove", move);
-      scene.input.off("pointerup", up);
-      scene.input.off("wheel", wheel);
-      scene.input.off("pointerupoutside", cancel);
-      window.removeEventListener("pointercancel", cancel);
+    bindCorrectionInput(scene, this.root, button, actions, {
+      pauseX: this.iconX,
+      pauseY: this.iconY,
+      maxOffset,
+      lineHeight,
+      drawRows,
     });
     this.update(correction);
   }
