@@ -1,5 +1,4 @@
 import {
-  entryType,
   type Answer,
   type Kind,
   type Question,
@@ -9,59 +8,15 @@ import { questionFor } from "../question";
 import { trainingKinds } from "../selection";
 import { LearningEngine } from "./engine";
 import { type TrainingMode, wordKey } from "./types";
+import { explorationWeights } from "./exploration";
+import { reviewCandidates } from "./review";
+
+// Preserve the existing public import used by callers and regression tests.
+export { explorationWeights } from "./exploration";
 
 type Candidate = { word: Word; kind?: Kind; weight: number };
 export type PlannedQuestion = Question & { mode: TrainingMode };
 
-/** Positive Gaussian mixture. Equal difficulty buckets avoid vocabulary-count bias. */
-export function explorationWeights(
-  words: Word[],
-  ability: number,
-  precision: number,
-  reviews: number,
-) {
-  const ordinary = words.filter((word) => entryType(word) === "word");
-  const categories = new Set(words.map(entryType));
-  const categoryShare = 1 / categories.size;
-  const counts = new Map<number, number>();
-  for (const word of ordinary)
-    counts.set(word.difficulty, (counts.get(word.difficulty) ?? 0) + 1);
-  const sigma = Math.max(1.2, Math.min(3.5, 1 + Math.sqrt(1 / precision)));
-  const curve = new Map(
-    [...counts.keys()].map((d) => [
-      d,
-      Math.exp(-0.5 * ((d - ability) / sigma) ** 2),
-    ]),
-  );
-  const sum = [...curve.values()].reduce((a, b) => a + b, 0);
-  const weighted = ordinary.map((word) => ({
-    word,
-    weight:
-      (reviews < 20
-        ? 1 / counts.size
-        : 0.1 / counts.size + (0.9 * curve.get(word.difficulty)!) / sum) /
-      counts.get(word.difficulty)!,
-  }));
-  const kanaCounts = new Map<string, number>();
-  for (const word of words)
-    if (entryType(word) !== "word")
-      kanaCounts.set(
-        entryType(word),
-        (kanaCounts.get(entryType(word)) ?? 0) + 1,
-      );
-  return [
-    ...weighted.map((item) => ({
-      ...item,
-      weight: item.weight * categoryShare,
-    })),
-    ...words
-      .filter((word) => entryType(word) !== "word")
-      .map((word) => ({
-        word,
-        weight: categoryShare / kanaCounts.get(entryType(word))!,
-      })),
-  ];
-}
 function draw(candidates: Candidate[], rng: () => number) {
   let n = rng() * candidates.reduce((sum, c) => sum + c.weight, 0);
   for (const candidate of candidates) {
@@ -156,33 +111,7 @@ export class TrainingPlanner {
   private makeSet() {
     const now = Date.now(),
       used = new Set<string>();
-    const candidates: Candidate[] = [];
-    for (const state of this.engine.words.values()) {
-      const word = this.byKey.get(wordKey(state.source, state.word_ref));
-      if (
-        !word ||
-        !this.kinds.includes(state.question_type) ||
-        (state.question_type === "reading" && !word.has_kanji)
-      )
-        continue;
-      const due = Date.parse(state.due_at) <= now;
-      const weak = state.last_result !== "correct";
-      if (!due && !weak) continue;
-      const forgotten = 1 - this.engine.retrievability(state, now);
-      const overdue = Math.max(
-        0,
-        (now - Date.parse(state.due_at)) / 86_400_000,
-      );
-      candidates.push({
-        word,
-        kind: state.question_type,
-        weight:
-          0.05 +
-          forgotten +
-          (weak ? 0.5 : 0) +
-          Math.min(2, Math.log1p(overdue)),
-      });
-    }
+    const candidates = reviewCandidates(this.engine, this.byKey, this.kinds, now);
     const review = this.modes.includes("review")
       ? this.select(candidates, used, "review")
       : [];

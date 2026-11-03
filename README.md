@@ -22,7 +22,7 @@ lib/game/
   types.ts                 単語・問題・回答の共通型
   rules.ts                 制限時間・演出時間・入力の二重確定防止
   selection.ts             1〜5・Pと内部難易度の対応
-  question.ts              統計による出題と選択肢の生成
+  question.ts              固定された問題の選択肢生成・重複回避
   session.ts               1プレイのライフ・正答数・回答・統計更新
   preferences.ts           言語・テーマ・配色
   data/
@@ -31,6 +31,14 @@ lib/game/
     word-cache.ts          単語の差分マージ・同期時刻の保存
     answer-journal.ts      プレイ中の回答保持・保存処理の調整
     answer-queue.ts        未送信回答の永続化・送信・受領確認
+  learning/
+    engine.ts              FSRSカードの更新・学習状態の管理
+    ability.ts             FSRSとは独立したユーザー能力の推定
+    exploration.ts         探索の難易度・かなカテゴリの確率配分
+    review.ts              復習候補の絞り込みと重みの計算
+    planner.ts             重み付き抽選・セット構成・交互出題
+    server.ts              サーバーでの履歴再生・状態同期
+    types.ts               保存状態・学習イベントの契約
   phaser/
     create-training.ts     高密度キャンバスの生成・リサイズ・破棄
     scene.ts               入力、タイマー、状態遷移の制御
@@ -47,7 +55,10 @@ lib/game/
 | 変更したい内容 | 主なファイル |
 | --- | --- |
 | ハート数・制限時間・50msの飛行・1.5秒の正答表示 | `lib/game/rules.ts` |
-| 出題の優先度・重複する選択肢の回避 | `lib/game/question.ts` |
+| 探索・復習の確率とセット構成 | `lib/game/learning/exploration.ts`、`review.ts`、`planner.ts` |
+| ユーザーの実力推定 | `lib/game/learning/ability.ts` |
+| FSRSの設定・正誤評価・記憶状態 | `lib/game/learning/engine.ts` |
+| 重複する選択肢の回避 | `lib/game/question.ts` |
 | 問題カード・選択肢の配置と色 | `lib/game/phaser/board.ts`、`lib/game/preferences.ts` |
 | 一時停止・再開・次の問題への移行 | `lib/game/phaser/scene.ts` |
 | キャッシュ・未送信回答の再送 | `lib/game/data/` |
@@ -80,6 +91,9 @@ pnpm dev
 ```
 
 ```sh
+pnpm lint
+pnpm typecheck
+pnpm test
 pnpm build
 pnpm start
 ```
@@ -128,7 +142,7 @@ Vercelの環境変数に`NEXT_PUBLIC_SUPABASE_URL`と`NEXT_PUBLIC_SUPABASE_PUBLI
 
 Prismaは使わず、`supabase/migrations/`のSQLをスキーマの正本としてGitで管理します。適用済みのファイルは編集せず、変更ごとに新しいマイグレーションを追加します。リモートの適用履歴とファイル名のバージョンを一致させます。GitへのpushやVercelのビルドだけではDBのSQLは適用されません。
 
-現在のテーブルは`word`と`answer_log`です。直近20回の統計VIEW `word_recent_stat`も作成済みです。回答の一括保存APIも実装済みです。型は`lib/supabase/database.types.ts`に保存し、DB変更時に再生成します。
+現在のテーブルは`word`、`personal_word`、`answer_log`、`word_learning_state`、`learner_state`です。直近20回の統計VIEW `word_recent_stat`も作成済みです。回答の一括保存APIも実装済みです。型は`lib/supabase/database.types.ts`に保存し、DB変更時に再生成します。
 
 ## 基本モード
 
@@ -143,7 +157,7 @@ Prismaは使わず、`supabase/migrations/`のSQLをスキーマの正本とし�
 - 開始・再挑戦・ポーズ解除後は500ms、回答入力とタイマーを止めます。この間の入力は破棄し、後から回答として処理しません。通常の問題間にはこの待ち時間を追加しません。
 - ホームの「読み方」「意味」で問題タイプを複数選択できます。初期値は両方で、ブラウザーに選択を保存します。「読み方」だけなら漢字を含む単語だけ、「意味」だけなら意味問題だけを出題します。両方オフ、または出題範囲が未選択の場合は開始できません。
 - 両タイプ選択時、漢字を含む単語は意味・読みを混在させ、それ以外は意味だけ出題します。意味選択肢は言語設定にかかわらず韓国語です。選択はURLでゲームに渡し、再挑戦・オフライン復元後も維持します。
-- 未学習・低正答率・応答の遅い単語を優先し、同一単語の連続出題を避けます。プレイ中はローカル結果を選定に反映し、保存後にサーバー統計を再取得します。
+- 出題は下記の探索・復習モデルを使用します。応答時間は記録しますが、FSRS評価や能力推定には使用しません。現在のセットは固定し、回答による変化は次のセットから反映します。
 
 ## データの取得と保存
 
@@ -197,10 +211,10 @@ PhaserのキャンバスはCSSサイズのまま拡大せず、端末のdevicePi
 
 回答の同期時にサーバーも同じ計算を実行します。通常はlearning_processed_atが未設定の回答だけ処理し、初回・モデル更新・古いオフライン回答の到着時には履歴を時間順で再生します。リビジョン比較とトランザクションにより状態保存と処理済みマークをまとめ、重複送信や複数端末の競合を処理します。FSRSの学習に使う履歴は最近20回に制限しません。
 
-主な実装: `lib/game/learning/engine.ts`（FSRS・能力更新）、`planner.ts`（セット・確率抽選）、`server.ts`（初期化・同期・再計算）。最新モデルの変更はこの層に閉じ込めます。
+主な実装: `lib/game/learning/engine.ts`（FSRS）、`ability.ts`（能力推定）、`exploration.ts`（探索の重み）、`review.ts`（復習候補・重み）、`planner.ts`（抽選・セット構成）、`server.ts`（初期化・同期・再計算）。同じ計算をブラウザーとサーバーで共有します。
 
 ## かなの出題範囲
 
 出題範囲は上段「ひらがな / カタカナ」、下段「1 2 3 4 5 P」の2行です。選択は従来と同じブラウザー設定とURLに保存します。かなを選ぶと意味問題でのみ出題される旨を案内し、かなだけの範囲では「意味」が未選択なら開始できません。
 
-wordとpersonal_wordにentry_type（word / hiragana / katakana）を追加しています。通常単語は難易度0〜10、かなは-1・has_kanji=false・hanja_reading=NULLです。かなのmeaning_koには韓国語の発音表記を保存します。選択肢は同じentry_typeだけから作り、読み問題には出しません。FSRS復習は意味問題として共有しますが、単語能力の推定とability_countには含めません。古いキャッシュにentry_typeがない場合はwordとして扱います。かなデータの本登録は別途行います。
+wordとpersonal_wordにentry_type（word / hiragana / katakana）を追加しています。通常単語は難易度0〜10、かなは-1・has_kanji=false・hanja_reading=NULLです。かなのmeaning_koには韓国語の発音表記を保存します。選択肢は同じentry_typeだけから作り、読み問題には出しません。FSRS復習は意味問題として共有しますが、単語能力の推定とability_countには含めません。古いキャッシュにentry_typeがない場合はwordとして扱います。登録済みのかなはひらがな104件・カタカナ104件です。
