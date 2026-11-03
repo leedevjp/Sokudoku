@@ -1314,5 +1314,24 @@ footer span {
 .home-answer-list .preview-answer b { min-width: 0; font-size: clamp(11px, calc(var(--visual-size) * .075), 13px); line-height: 1.35; overflow-wrap: anywhere; }
 .home-visual .spark { display: none; }
 
-.home-account-action { text-align: center; }
-.home-account-action .details-button { margin: 0 auto; padding: 6px 0; min-height: 36px; font-size: 11px; }
+
+.home-header-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.logout-button { display:grid; place-items:center; width:38px; height:38px; padding:0; color:var(--muted); background:var(--card); border:2px solid var(--line); border-bottom:4px solid var(--shade); border-radius:12px; }
+.logout-button:hover { color:var(--accent); background:var(--press); }
+@media(max-width:370px) {
+  .home-shell .site-header { gap:6px; }
+  .home-header-actions { gap:4px; }
+  .home-shell .brand { gap:6px; font-size:17px; }
+  .home-shell .brand-mark { width:32px; height:32px; font-size:19px; }
+  .home-shell .settings-bar { gap:4px; }
+  .home-shell .settings-bar button { padding:7px 6px; font-size:10px; }
+  .logout-button { width:34px; }
+}
+.game-loading { overflow-y:auto; justify-content:safe center; }
+.game-loading > * { flex-shrink:0; }
+.training-guide { width:100%; max-width:400px; padding:20px; background:var(--card); border:2px solid var(--line); border-bottom:5px solid var(--shade); border-radius:24px; text-align:left; }
+.training-guide h2 { margin:0 0 16px; font-size:18px; }
+.training-guide ul { list-style:none; padding:0; margin:0; display:grid; gap:16px; }
+.training-guide li b { font-size:15px; color:var(--accent); }
+.game-loading .training-guide p { font-size:13px; line-height:1.65; margin:5px 0 0; }
+.game-loading .training-guide .training-guide-note { margin-top:18px; padding-top:14px; border-top:1px dashed var(--line); }

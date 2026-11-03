@@ -79,7 +79,21 @@ export default function DashboardScreen() {
           href="/"
           aria-label={t("ホーム", "메인으로")}
         >
-          〈
+          <svg
+            aria-hidden="true"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="m14 5-7 7 7 7"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </Link>
         <h1>{t("学習状況", "학습 현황")}</h1>
         <button

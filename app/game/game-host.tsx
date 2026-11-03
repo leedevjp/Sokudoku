@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type Phaser from "phaser";
+import { TrainingGuide } from "@/components/game/training-guide";
 import { useSettings } from "@/app/settings";
 import type { Word } from "@/lib/game/types";
 import { parseModes } from "@/lib/game/learning/types";
@@ -85,9 +86,8 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
             : "WORDS",
         );
       await document.fonts.ready;
-      const { createTraining } = await import(
-        "@/lib/game/phaser/create-training"
-      );
+      const { createTraining } =
+        await import("@/lib/game/phaser/create-training");
       if (cancelled || !parent.current) return;
       readyTimer = setTimeout(() => {
         if (!cancelled) setError("START");
@@ -195,6 +195,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
                           )
               : t("トレーニングを準備中…", "훈련 준비 중…")}
           </p>
+          {!error && <TrainingGuide lang={prefs.lang} />}
           {error && <Link href="/">{t("ホームへ", "홈으로")}</Link>}
         </div>
       )}

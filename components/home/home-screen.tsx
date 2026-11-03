@@ -14,7 +14,6 @@ import { useAccount } from "@/components/auth/use-account";
 import { AuthForm } from "@/components/auth/auth-form";
 import { HomeHero } from "./home-hero";
 import { Modal } from "@/components/ui/modal";
-import { TrainingDetails } from "./training-details";
 import type { Kind } from "@/lib/game/types";
 import { ModeSelector } from "./mode-selector";
 import {
@@ -28,7 +27,7 @@ import { LevelSelector } from "./level-selector";
 export default function HomeScreen() {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
-  const [modal, setModal] = useState<"details" | "auth" | null>(null);
+  const [modal, setModal] = useState<"auth" | null>(null);
   const authenticated = useCallback(
     () => setModal((current) => (current === "auth" ? null : current)),
     [],
@@ -124,7 +123,34 @@ export default function HomeScreen() {
           <span className="brand-mark">速</span>Sokudoku
           <span className="brand-dot">.</span>
         </Link>
-        <SettingsBar />
+        <div className="home-header-actions">
+          {user && (
+            <button
+              className="logout-button"
+              disabled={account.busy}
+              onClick={account.logout}
+              aria-label={t("ログアウト", "로그아웃")}
+              title={t("ログアウト", "로그아웃")}
+            >
+              <svg
+                aria-hidden="true"
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M9 5H5v14h4M13 8l4 4-4 4m-4-4h12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          <SettingsBar />
+        </div>
       </header>
       <HomeHero authenticated={!!user} />
       <div className="home-actions">
@@ -193,15 +219,6 @@ export default function HomeScreen() {
             <span aria-hidden="true">↗</span>
           </Link>
         </div>
-        <div className="home-account-action">
-          <button
-            className="details-button"
-            onClick={() => setModal("details")}
-          >
-            {t("遊び方・アカウント", "상세 설명 · 계정")}
-            <span>↗</span>
-          </button>
-        </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">
             {notices[notice]}
@@ -216,15 +233,7 @@ export default function HomeScreen() {
         onClose={() => setModal(null)}
         titleId="home-dialog-title"
       >
-        {modal === "details" ? (
-          <TrainingDetails
-            account={account}
-            onClose={() => setModal(null)}
-            onLogin={() => setModal("auth")}
-          />
-        ) : (
-          <AuthForm account={account} />
-        )}
+        <AuthForm account={account} />
         {notice && modal !== null && (
           <p className="notice" role="status" aria-live="polite">
             {notices[notice]}
