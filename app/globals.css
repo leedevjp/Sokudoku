@@ -1335,3 +1335,7 @@ footer span {
 .training-guide li b { font-size:15px; color:var(--accent); }
 .game-loading .training-guide p { font-size:13px; line-height:1.65; margin:5px 0 0; }
 .game-loading .training-guide .training-guide-note { margin-top:18px; padding-top:14px; border-top:1px dashed var(--line); }
+
+.level-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.level-heading a { color:var(--muted); font-size:11px; font-weight:700; padding:4px 0; }
+.level-heading a:hover { color:var(--accent); }

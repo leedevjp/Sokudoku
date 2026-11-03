@@ -323,6 +323,10 @@ export type Database = {
       learning_history: { Args: { pending_only?: boolean }; Returns: Json }
       learning_snapshot: { Args: never; Returns: Json }
       personal_game_bootstrap: { Args: never; Returns: Json }
+      personal_word_list: {
+        Args: { p_page?: number; p_query?: string }
+        Returns: Json
+      }
       recent_mistake_word: {
         Args: never
         Returns: {

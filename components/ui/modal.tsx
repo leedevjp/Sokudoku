@@ -6,11 +6,13 @@ export function Modal({
   onClose,
   children,
   titleId,
+  dismissDisabled = false,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   titleId: string;
+  dismissDisabled?: boolean;
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -35,7 +37,7 @@ export function Modal({
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (!dismissDisabled) onClose();
       }}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -46,13 +48,14 @@ export function Modal({
           event.clientY < r.top ||
           event.clientY > r.bottom
         )
-          onClose();
+          if (!dismissDisabled) onClose();
       }}
     >
       <div className="dialog-content">
         <button
           className="dialog-close"
           autoFocus
+          disabled={dismissDisabled}
           aria-label={t("閉じる", "닫기")}
           onClick={() => onClose()}
         >

@@ -1,0 +1,78 @@
+import { useEffect, useState } from "react";
+import type { PersonalWordList } from "@/lib/personal/types";
+
+export function usePersonalWords() {
+  const [query, setQuery] = useState("");
+  const [request, setRequest] = useState({ q: "", page: 1, revision: 0 });
+  const [result, setResult] = useState<{
+    key: string;
+    data: PersonalWordList | null;
+    error: string | null;
+  }>({ key: "", data: null, error: null });
+  const key = JSON.stringify(request);
+  useEffect(() => {
+    const timer = setTimeout(
+      () =>
+        setRequest((old) =>
+          old.q === query.trim() ? old : { ...old, q: query.trim(), page: 1 },
+        ),
+      300,
+    );
+    return () => clearTimeout(timer);
+  }, [query]);
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    async function load() {
+      try {
+        const response = await fetch(
+          "/api/personal?q=" +
+            encodeURIComponent(request.q) +
+            "&page=" +
+            request.page,
+          { cache: "no-store", signal: controller.signal },
+        );
+        if (!response.ok) {
+          if (active)
+            setResult((old) => ({
+              ...old,
+              key,
+              error: response.status === 401 ? "unauthorized" : "load_failed",
+            }));
+          return;
+        }
+        const data: PersonalWordList = await response.json();
+        if (active) setResult({ key, data, error: null });
+      } catch {
+        if (active) setResult((old) => ({ ...old, key, error: "load_failed" }));
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    void load();
+    return () => {
+      active = false;
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [key, request.q, request.page]);
+  function refresh(reset = false) {
+    if (reset) setQuery("");
+    setRequest((old) => ({
+      ...old,
+      q: reset ? "" : old.q,
+      page: reset ? 1 : old.page,
+      revision: old.revision + 1,
+    }));
+  }
+  return {
+    query,
+    setQuery,
+    data: result.data,
+    error: result.key === key ? result.error : null,
+    loading: result.key !== key,
+    refresh,
+    setPage: (page: number) => setRequest((old) => ({ ...old, page })),
+  };
+}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useSettings } from "@/app/settings";
 import {
   vocabularyLevels,
@@ -17,7 +18,10 @@ export function LevelSelector({
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   return (
     <>
-      <p className="selection-label">{t("出題範囲", "출제 범위")}</p>
+      <div className="level-heading">
+        <p className="selection-label">{t("出題範囲", "출제 범위")}</p>
+        <Link href="/personal">{t("マイ単語帳", "내 단어장")} ↗</Link>
+      </div>
       <div
         className="training-levels training-kinds kana-levels"
         role="group"
