@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { SettingsBar, useSettings } from "./settings";
+import { defaultLevels, trainingLevels, levelDifficulty, parseLevels, type TrainingLevel } from "@/lib/game/selection";
 export default function AuthPanel() {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -17,6 +18,12 @@ export default function AuthPanel() {
       "sent" | "error" | "unconfirmed" | "rate" | "logout" | null
     >(null);
   const lock = useRef(false);
+  const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
+  function toggleLevel(level: TrainingLevel) {
+    const next = trainingLevels.filter(item => item === level ? !levels.includes(item) : levels.includes(item));
+    setLevels(next);
+    try { localStorage.setItem("sokudoku-levels-v1", next.join(",")); } catch { /* Optional preference. */ }
+  }
   const [modal, setModal] = useState<"details" | "auth" | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -33,9 +40,6 @@ export default function AuthPanel() {
     if (element.open) element.close();
   }, [modal]);
   useEffect(() => {
-    if (user && modal === "auth") setModal(null);
-  }, [user, modal]);
-  useEffect(() => {
     let active = true;
     const client = createClient();
     const {
@@ -43,6 +47,7 @@ export default function AuthPanel() {
     } = client.auth.onAuthStateChange((_e, s) => {
       if (active) {
         setUser(s?.user ?? null);
+        if (s?.user) setModal(current => current === "auth" ? null : current);
         setLoading(false);
       }
     });
@@ -50,6 +55,10 @@ export default function AuthPanel() {
       .getUser()
       .then(({ data }) => {
         if (active) {
+          try {
+            const saved = localStorage.getItem("sokudoku-levels-v1");
+            if (saved !== null) setLevels(parseLevels(saved));
+          } catch { /* Storage can be unavailable. */ }
           setUser(data.user);
           setLoading(false);
         }
@@ -98,7 +107,7 @@ export default function AuthPanel() {
               : "error",
         );
       else {
-        if (data.session) setUser(data.user);
+        if (data.session) { setUser(data.user); setModal(null); }
         else setNotice("sent");
         setPassword("");
       }
@@ -201,12 +210,21 @@ export default function AuthPanel() {
         </div>
       </section>
       <div className="home-actions">
+        <div className="training-levels" role="group" aria-label={t("出題範囲（複数選択可）", "출제 범위 (복수 선택 가능)")}>
+          {trainingLevels.map(level => (
+            <button key={level} type="button" aria-pressed={levels.includes(level)}
+              title={level === "P" ? t("個人単語", "개인 단어") : `${t("難易度", "난이도")} ${levelDifficulty[level].join(", ")}`}
+              aria-label={level === "P" ? t("個人単語", "개인 단어") : `${level}: ${t("難易度", "난이도")} ${levelDifficulty[level].join(", ")}`}
+              onClick={() => toggleLevel(level)}>{level}</button>
+          ))}
+        </div>
+        {levels.length === 0 && <p className="level-hint" role="status">{t("出題範囲を選んでください。", "출제 범위를 선택해주세요.")}</p>}
         {loading ? (
           <button className="primary" disabled>
             {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
           </button>
         ) : user ? (
-          <Link className="primary" href="/game">
+          <Link className="primary" aria-disabled={!levels.length} href={`/game?levels=${encodeURIComponent(levels.join(","))}`} onClick={event => { if (!levels.length) event.preventDefault(); }}>
             {t("トレーニングを始める", "훈련 시작하기")}
             <span>→</span>
           </Link>

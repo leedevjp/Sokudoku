@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 const answer = z
   .object({
     id: z.uuid(),
+    source: z.enum(["word", "personal"]).optional(),
+    selected_source: z.enum(["word", "personal"]).optional(),
     word_id: z.uuid(),
     question_type: z.enum(["meaning", "reading"]),
     selected_word_id: z.uuid().nullable(),
@@ -50,7 +52,13 @@ export async function POST(request: Request) {
   const parsed = z.array(answer).min(1).max(200).safeParse(input);
   if (!parsed.success)
     return Response.json({ error: "invalid_batch" }, { status: 400, headers });
-  const rows = parsed.data.map((a) => ({ ...a, user_id: user.id }));
+  const rows = parsed.data.map(({ source, selected_source, ...a }) => ({
+    ...a, user_id: user.id,
+    word_id: source === "personal" ? null : a.word_id,
+    personal_word_id: source === "personal" ? a.word_id : null,
+    selected_word_id: selected_source === "personal" ? null : a.selected_word_id,
+    selected_personal_word_id: selected_source === "personal" ? a.selected_word_id : null,
+  }));
   const { error } = await client
     .from("answer_log")
     .upsert(rows, { onConflict: "id", ignoreDuplicates: true });

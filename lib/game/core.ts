@@ -1,9 +1,11 @@
 import type { Tables } from "@/lib/supabase/database.types";
-export type Word = Tables<"word">;
+export type Word = Tables<"word"> & { source?: "personal" };
 export type Stat = Tables<"word_recent_stat">;
 export type Kind = "meaning" | "reading";
 export type Result = "correct" | "incorrect" | "timeout";
 export type Answer = {
+  source?: "word" | "personal";
+  selected_source?: "word" | "personal";
   id: string;
   word_id: string;
   question_type: Kind;
