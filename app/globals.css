@@ -1304,3 +1304,12 @@ footer span {
   .home-visual .preview-answer > span { width: 20px; height: 20px; font-size: 10px; }
   .home-visual .spark { display: none; }
 }
+
+/* Home preview: one target on the left, four compact choices on the right. */
+.home-shell .home-visual { height: calc(var(--visual-size) + 24px); min-height: calc(var(--visual-size) + 24px); }
+.home-visual .preview-target { left: 25%; }
+.home-answer-list { position: absolute; left: 52%; right: 0; top: 3px; display: grid; grid-template-columns: 1fr; gap: 6px; }
+.home-answer-list .preview-answer { position: relative; left: auto; top: auto; width: 100%; min-width: 0; min-height: clamp(32px, calc(var(--visual-size) * .24), 42px); transform: none; padding: 5px 8px; gap: 7px; border-radius: 11px; border-bottom-width: 3px; box-shadow: 0 3px 0 var(--shade); white-space: normal; }
+.home-answer-list .preview-answer > span { width: 19px; height: 19px; flex: 0 0 19px; border-radius: 6px; font-size: 10px; }
+.home-answer-list .preview-answer b { min-width: 0; font-size: clamp(11px, calc(var(--visual-size) * .075), 13px); line-height: 1.35; overflow-wrap: anywhere; }
+.home-visual .spark { display: none; }

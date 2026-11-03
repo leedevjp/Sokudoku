@@ -123,7 +123,7 @@ export default function HomeScreen() {
         </Link>
         <SettingsBar />
       </header>
-      <HomeHero />
+      <HomeHero authenticated={!!user} />
       <div className="home-actions">
         <ModeSelector modes={modes} onToggle={toggleMode} />
         <KindSelector kinds={kinds} onToggle={toggleKind} />
