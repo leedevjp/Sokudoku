@@ -5,17 +5,17 @@ import {
   AnswerGate,
   keyIndex,
   limitFor,
-  FLIGHT_MS,
   CORRECT_FEEDBACK_MS,
-  MISTAKE_FEEDBACK_MS,
   START_INPUT_DELAY_MS,
 } from "../rules";
 import type { Question } from "../types";
 import type { Preferences } from "../preferences";
 import type { TrainingOptions, Phase } from "./types";
 import { TrainingView } from "./board";
-import { burst } from "./effects";
+import { answerImpact, burst } from "./effects";
 import { resizeProgress } from "./resize-progress";
+import { Correction } from "../correction";
+import { CorrectionCard } from "./correction-card";
 export class TrainingScene extends Phaser.Scene {
   private options: TrainingOptions;
   private prefs: Preferences;
@@ -49,6 +49,8 @@ export class TrainingScene extends Phaser.Scene {
   private reviewComplete = false;
   private failed = false;
   private viewGeneration = 0;
+  private correction?: Correction;
+  private correctionView?: CorrectionCard;
   constructor(
     options: TrainingOptions,
     private density: number,
@@ -129,6 +131,7 @@ export class TrainingScene extends Phaser.Scene {
     this.viewGeneration++;
     this.children.removeAll(true);
     this.view.clear();
+    this.correctionView = undefined;
     this.overlay = undefined;
     this.cameras.main.setBackgroundColor(this.c.bg);
     this.view.backdrop();
@@ -143,12 +146,14 @@ export class TrainingScene extends Phaser.Scene {
   private startRun() {
     if (this.syncing) return;
     this.reviewComplete = false;
+    this.correction = undefined;
     this.session.reset();
     this.options.planner.resetSet();
     this.syncOK = null;
     this.next(true);
   }
   private next(delayInput = false) {
+    this.correction = undefined;
     try {
       const question = this.options.planner.next();
       if (!question) {
@@ -183,7 +188,7 @@ export class TrainingScene extends Phaser.Scene {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
   }
-  update() {
+  update(_time: number, delta: number) {
     if (this.phase === "settling") {
       if (performance.now() < this.settleUntil) return;
       this.phase = this.afterSettle;
@@ -193,6 +198,12 @@ export class TrainingScene extends Phaser.Scene {
       }
       this.time.paused = false;
       this.tweens.resumeAll();
+    }
+    if (this.phase === "correction" && this.correction) {
+      const expired = this.correction.tick(delta);
+      this.correctionView?.update(this.correction);
+      if (expired) this.finishCorrection();
+      return;
     }
     if (this.phase !== "play") return;
     const elapsed = performance.now() - this.started;
@@ -226,7 +237,13 @@ export class TrainingScene extends Phaser.Scene {
       e.preventDefault();
       if (e.repeat || this.held.has(e.code)) return;
       this.held.add(e.code);
-      this.press(e.code, index);
+      if (this.phase === "correction") this.finishCorrection(index);
+      else this.press(e.code, index);
+    } else if (e.code === "Space" && this.phase === "correction") {
+      e.preventDefault();
+      if (e.repeat || this.held.has(e.code)) return;
+      this.held.add(e.code);
+      this.toggleCorrection();
     } else if (e.code === "Escape") {
       e.preventDefault();
       if (this.phase === "paused") this.resume();
@@ -234,7 +251,7 @@ export class TrainingScene extends Phaser.Scene {
     }
   };
   private keyUp = (e: KeyboardEvent) => {
-    if (keyIndex(e.code) === null) return;
+    if (keyIndex(e.code) === null && e.code !== "Space") return;
     e.preventDefault();
     this.held.delete(e.code);
   };
@@ -255,6 +272,8 @@ export class TrainingScene extends Phaser.Scene {
     this.options.planner.record(a, this.question.word);
     this.options.onAnswer(a);
     const result = a.result;
+    this.correction =
+      result === "correct" ? undefined : new Correction(this.question);
     const hit = () => {
       this.phase = "feedback";
       this.view.updateHearts(this.hearts);
@@ -263,16 +282,6 @@ export class TrainingScene extends Phaser.Scene {
       this.view.status
         ?.setOrigin(0.5)
         .setPosition(this.w / 2, this.view.status.y);
-      const at = this.view.wordView!;
-      if (result === "correct") {
-        burst(this, at.x, at.y, this.c.blue);
-        at.setVisible(false);
-        this.cameras.main.flash(90, 100, 190, 255, false);
-      } else {
-        burst(this, at.x, at.y, this.c.red);
-        if (index !== null) this.view.choices[index]?.setVisible(false);
-        this.cameras.main.shake(110, 0.004);
-      }
       this.view.status?.setText(
         result === "correct"
           ? `${this.t("正解", "정답")} · ${a.response_ms} ms`
@@ -280,44 +289,77 @@ export class TrainingScene extends Phaser.Scene {
             ? this.t("時間切れ", "시간 초과")
             : this.t("もう一度、覚えよう", "다시 기억해봐요"),
       );
-      if (result !== "correct") {
-        const correctIndex = this.question.options.findIndex(
-          (option) => option.id === this.question.word.id,
-        );
-        const correctChoice = this.view.choices[correctIndex];
-        if (correctChoice) {
-          this.view.highlightCorrect(correctIndex);
-        }
+      if (this.correction) {
+        this.phase = "correction";
+        this.renderCorrection(true);
+        return;
       }
-      this.time.delayedCall(
-        result === "correct" ? CORRECT_FEEDBACK_MS : MISTAKE_FEEDBACK_MS,
-        () => {
-          if (this.hearts === 0) this.finish();
-          else this.next();
-        },
-      );
+      this.time.delayedCall(CORRECT_FEEDBACK_MS, () => {
+        if (this.hearts === 0) this.finish();
+        else this.next();
+      });
     };
-    if (timeout) {
-      this.view.drawTime(0);
-      hit();
-    } else {
-      const flying = this.view.choices[index!];
-      this.tweens.killTweensOf(flying);
-      flying.setDepth(10);
+    answerImpact(this, this.view, index, result, hit);
+  }
+
+  private renderCorrection(animate = false) {
+    const correction = this.correction;
+    if (!correction) return;
+    for (const choice of this.view.choices) {
+      if (animate && choice.visible)
+        burst(this, choice.x, choice.y, this.c.red);
+      choice.disableInteractive().setVisible(false);
+    }
+    this.view.keyHints?.setVisible(false);
+    const answer = this.logs.at(-1);
+    const elapsed = answer?.response_ms ?? this.maxTime;
+    this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
+    this.view.seconds?.setText(
+      (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
+    );
+    this.view.promptCaption?.setText(
+      answer?.result === "timeout"
+        ? this.t("時間切れ · 正解を確認しよう", "시간 초과 · 정답을 확인하세요")
+        : this.t("もう一度、覚えよう", "다시 기억해봐요"),
+    );
+    this.view.status
+      ?.setOrigin(0.5)
+      .setX(this.w / 2)
+      .setText(this.t("Space：停止 / 再開", "Space: 정지 / 재개"));
+    this.correctionView = new CorrectionCard(this, this.view, correction, {
+      advance: () => this.finishCorrection(),
+      toggle: () => this.toggleCorrection(),
+      enabled: () => this.phase === "correction",
+    });
+    if (animate) {
+      this.correctionView.root.setAlpha(0);
       this.tweens.add({
-        targets: flying,
-        x: this.view.wordView!.x,
-        y: this.view.wordView!.y,
-        scaleX: 0.72,
-        scaleY: 0.72,
-        duration: FLIGHT_MS,
-        ease: "Cubic.In",
-        onComplete: () => {
-          flying.setVisible(false);
-          hit();
-        },
+        targets: this.correctionView.root,
+        alpha: 1,
+        duration: 140,
       });
     }
+  }
+  private toggleCorrection() {
+    if (this.phase !== "correction" || !this.correction) return;
+    this.correction.toggle();
+    this.correctionView?.update(this.correction);
+  }
+  private finishCorrection(index?: number) {
+    if (this.phase !== "correction" || !this.correction?.complete(index))
+      return;
+    this.phase = "feedback";
+    this.correction = undefined;
+    const card = this.correctionView?.root;
+    if (card) {
+      burst(this, card.x, card.y, this.c.blue);
+      card.disableInteractive().setVisible(false);
+      this.cameras.main.flash(90, 100, 190, 255, false);
+    }
+    this.time.delayedCall(CORRECT_FEEDBACK_MS, () => {
+      if (this.hearts === 0) this.finish();
+      else this.next();
+    });
   }
   private hidden = () => {
     this.held.clear();
@@ -357,8 +399,9 @@ export class TrainingScene extends Phaser.Scene {
     if (this.phase !== "paused") return;
     this.overlay?.destroy();
     this.overlay = undefined;
-    const target =
-      this.beforePause === "settling"
+    const target = this.correction
+      ? "correction"
+      : this.beforePause === "settling"
         ? this.afterSettle
         : this.beforePause === "arming"
           ? "play"
@@ -375,6 +418,10 @@ export class TrainingScene extends Phaser.Scene {
       this.view.seconds?.setText(
         (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
       );
+    } else if (target === "correction") {
+      this.tweens.killAll();
+      this.drawBoard();
+      this.renderCorrection();
     }
     this.resizeElapsed = 0;
     this.settle(target === "paused" ? "play" : target, elapsed);
@@ -399,6 +446,21 @@ export class TrainingScene extends Phaser.Scene {
       return;
     }
     if (!this.question) return;
+    // Keep the same wrong answer, remaining review time and local pause state
+    // through rotation, browser chrome changes, and global pause/resume.
+    if (this.correction) {
+      const paused = this.phase === "paused";
+      this.gate.close();
+      this.time.removeAllEvents();
+      this.tweens.killAll();
+      this.drawBoard();
+      this.renderCorrection();
+      if (paused) {
+        this.beforePause = "correction";
+        this.drawPause();
+      } else this.settle("correction", 0);
+      return;
+    }
     const progress = resizeProgress(
       {
         phase: this.phase,
@@ -445,6 +507,7 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
   private finish(reviewComplete = false) {
+    this.correction = undefined;
     this.reviewComplete ||= reviewComplete;
     this.phase = "end";
     this.gate.close();
@@ -486,6 +549,14 @@ export class TrainingScene extends Phaser.Scene {
   }
   private drawEnd() {
     this.clear();
+    this.game.canvas.setAttribute(
+      "aria-label",
+      [
+        this.t("結果", "결과"),
+        this.t("正答", "정답") + " " + this.correct,
+        this.t("回答", "답변") + " " + this.logs.length,
+      ].join(" / "),
+    );
     drawEnd(
       this.view,
       {

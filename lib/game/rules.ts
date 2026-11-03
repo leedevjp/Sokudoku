@@ -3,7 +3,7 @@ import type { Word, Kind } from "./types";
 export const INITIAL_HEARTS = 5;
 export const FLIGHT_MS = 50;
 export const CORRECT_FEEDBACK_MS = 320;
-export const MISTAKE_FEEDBACK_MS = 1500;
+export const MISTAKE_FEEDBACK_MS = 2000;
 export const START_INPUT_DELAY_MS = 500;
 
 export const limitFor = (correct: number) =>

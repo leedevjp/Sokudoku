@@ -27,5 +27,6 @@ export type Phase =
   | "play"
   | "flight"
   | "feedback"
+  | "correction"
   | "paused"
   | "end";

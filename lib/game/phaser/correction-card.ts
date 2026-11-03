@@ -1,0 +1,286 @@
+import Phaser from "phaser";
+import type { Correction } from "../correction";
+import type { TrainingView } from "./board";
+
+import { correctionText } from "./correction-text";
+type Actions = {
+  advance: () => void;
+  toggle: () => void;
+  enabled: () => boolean;
+};
+
+/** One fixed review surface replaces the four choices; it never records answers. */
+export class CorrectionCard {
+  readonly root: Phaser.GameObjects.Container;
+  private ring: Phaser.GameObjects.Graphics;
+  private pauseIcon: Phaser.GameObjects.Graphics;
+  private ringX: number;
+  private ringY: number;
+  private radius: number;
+  private iconX: number;
+  private iconY: number;
+  private lastPaused?: boolean;
+  constructor(
+    scene: Phaser.Scene,
+    private view: TrainingView,
+    correction: Correction,
+    actions: Actions,
+  ) {
+    const { scale: s, width, top, extra } = view.boardLayout;
+    const height = 272 * s,
+      padding = Math.max(12, 22 * s),
+      controls = Math.max(48, 86 * s);
+    const x = view.w / 2,
+      y = top + 644 * s + extra + height / 2;
+    this.root = view.add.container(x, y).setSize(width, height).setDepth(5);
+    this.root.add(view.box(0, 0, width, height, view.c.panel, 22 * s));
+    const badge = Math.max(21, 32 * s),
+      badgeX = -width / 2 + padding + badge / 2;
+    const headerY = -height / 2 + Math.max(16, 24 * s);
+    this.root.add(
+      view.add
+        .graphics()
+        .fillStyle(view.c.press)
+        .fillRoundedRect(
+          badgeX - badge / 2,
+          headerY - badge / 2,
+          badge,
+          badge,
+          9 * s,
+        ),
+    );
+    this.root.add(
+      view.designText(
+        badgeX,
+        headerY,
+        String(correction.content.index + 1),
+        Math.max(12, 18 * s),
+        view.c.blue,
+        true,
+      ),
+    );
+    this.root.add(
+      view
+        .designText(
+          badgeX + badge / 2 + 8,
+          headerY,
+          view.t("正解", "정답"),
+          Math.max(11, 16 * s),
+          view.c.blue,
+          true,
+        )
+        .setOrigin(0, 0.5),
+    );
+
+    this.ringX = width / 2 - padding - controls / 2;
+    this.ringY = -height / 2 + Math.max(22, 38 * s);
+    this.radius = Math.max(13, 22 * s);
+    this.ring = view.add.graphics();
+    this.root.add(this.ring);
+    this.root.add(
+      view.designText(
+        this.ringX,
+        this.ringY,
+        "→",
+        Math.max(14, 22 * s),
+        view.c.blue,
+        true,
+      ),
+    );
+    this.iconX = this.ringX;
+    this.iconY = height / 2 - Math.max(24, 36 * s);
+    let drag: { id: number; y: number; offset: number; moved: boolean } | null =
+      null;
+    const button = view.add
+      .container(this.iconX, this.iconY)
+      .setSize(44, 44)
+      .setInteractive({ useHandCursor: true });
+    button.add(view.box(0, 0, 40, 40, view.c.press, 12));
+    this.pauseIcon = view.add.graphics();
+    button.add(this.pauseIcon);
+    this.root.add(button);
+    button.on(
+      "pointerdown",
+      (
+        pointer: Phaser.Input.Pointer,
+        _x: number,
+        _y: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+        drag = null;
+        if ((pointer.wasTouch || pointer.leftButtonDown()) && actions.enabled())
+          actions.toggle();
+      },
+    );
+
+    const textWidth = width - padding * 2 - controls - 12;
+    const contentTop = -height / 2 + Math.max(33, 52 * s);
+    const contentBottom = height / 2 - Math.max(18, 28 * s);
+    const { rows, primarySize, secondarySize, lineHeight, slots } =
+      correctionText(view, correction, textWidth, contentBottom - contentTop);
+    const maxOffset = Math.max(0, rows.length - slots);
+    let offset = 0;
+    const textRows = Array.from(
+      { length: Math.min(slots, rows.length) },
+      (_, i) => {
+        const row = view
+          .designText(
+            -width / 2 + padding,
+            contentTop +
+              Math.max(
+                0,
+                (contentBottom -
+                  contentTop -
+                  Math.min(slots, rows.length) * lineHeight) /
+                  2,
+              ) +
+              i * lineHeight,
+            "",
+            primarySize,
+            view.c.ink,
+            true,
+          )
+          .setOrigin(0, 0);
+        this.root.add(row);
+        return row;
+      },
+    );
+    const drawRows = () =>
+      textRows.forEach((text, i) => {
+        const row = rows[offset + i];
+        text
+          .setText(row.text)
+          .setFontSize(row.secondary ? secondarySize : primarySize)
+          .setFontStyle(row.secondary ? "normal" : "bold")
+          .setColor(view.hex(row.secondary ? view.c.muted : view.c.ink));
+      });
+    drawRows();
+    this.root.add(
+      view
+        .designText(
+          -width / 2 + padding,
+          height / 2 - Math.max(9, 13 * s),
+          maxOffset
+            ? view.t("スクロール可 · タップで次へ", "스크롤 가능 · 누르면 다음")
+            : view.t("タップ・正解番号で次へ", "터치·정답 번호로 다음"),
+          Math.max(9, 13 * s),
+          view.c.muted,
+        )
+        .setOrigin(0, 0.5),
+    );
+
+    this.root.setInteractive({ useHandCursor: true });
+    this.root.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (
+        !actions.enabled() ||
+        (!pointer.wasTouch && !pointer.leftButtonDown())
+      )
+        return;
+      // Explicitly reserve the pause hit target even if the input plugin changes
+      // child/parent ordering. A pause tap must never dismiss the card.
+      if (
+        Math.abs(pointer.worldX - x - this.iconX) <= 22 &&
+        Math.abs(pointer.worldY - y - this.iconY) <= 22
+      ) {
+        drag = null;
+        actions.toggle();
+        return;
+      }
+      if (!maxOffset) {
+        actions.advance();
+        return;
+      }
+      drag = { id: pointer.id, y: pointer.worldY, offset, moved: false };
+    });
+    const move = (pointer: Phaser.Input.Pointer) => {
+      if (!drag || drag.id !== pointer.id || !actions.enabled()) return;
+      const distance = drag.y - pointer.worldY;
+      if (Math.abs(distance) > 8) drag.moved = true;
+      offset = Phaser.Math.Clamp(
+        drag.offset + Math.round(distance / lineHeight),
+        0,
+        maxOffset,
+      );
+      drawRows();
+    };
+    const up = (pointer: Phaser.Input.Pointer) => {
+      if (!drag || drag.id !== pointer.id) return;
+      const tap = !drag.moved;
+      drag = null;
+      if (tap && actions.enabled()) actions.advance();
+    };
+    const wheel = (
+      pointer: Phaser.Input.Pointer,
+      _objects: Phaser.GameObjects.GameObject[],
+      _dx: number,
+      dy: number,
+    ) => {
+      if (
+        !maxOffset ||
+        !actions.enabled() ||
+        !this.root.getBounds().contains(pointer.worldX, pointer.worldY)
+      )
+        return;
+      offset = Phaser.Math.Clamp(offset + Math.sign(dy), 0, maxOffset);
+      drawRows();
+    };
+    const cancel = () => {
+      drag = null;
+    };
+    scene.input.on("pointermove", move);
+    scene.input.on("pointerup", up);
+    scene.input.on("wheel", wheel);
+    scene.input.on("pointerupoutside", cancel);
+    window.addEventListener("pointercancel", cancel);
+    this.root.once("destroy", () => {
+      scene.input.off("pointermove", move);
+      scene.input.off("pointerup", up);
+      scene.input.off("wheel", wheel);
+      scene.input.off("pointerupoutside", cancel);
+      window.removeEventListener("pointercancel", cancel);
+    });
+    this.update(correction);
+  }
+  update(correction: Correction) {
+    const { ringX: x, ringY: y, radius: r } = this;
+    this.ring.clear().lineStyle(3, this.view.c.line).strokeCircle(x, y, r);
+    this.ring
+      .lineStyle(3, this.view.c.blue)
+      .beginPath()
+      .arc(
+        x,
+        y,
+        r,
+        -Math.PI / 2,
+        -Math.PI / 2 + 2 * Math.PI * correction.ratio,
+        false,
+      )
+      .strokePath();
+    if (this.lastPaused === correction.paused) return;
+    this.lastPaused = correction.paused;
+    const { index, primary, secondary } = correction.content;
+    this.view.game.canvas.setAttribute(
+      "aria-label",
+      [
+        correction.term,
+        this.view.t("正解", "정답") + " " + (index + 1),
+        primary,
+        secondary,
+        correction.paused
+          ? this.view.t("自動送り停止中", "자동 진행 정지 중")
+          : this.view.t("2秒後に次へ", "2초 후 다음"),
+        this.view.t(
+          "正解番号で次へ。Spaceで停止・再開。",
+          "정답 번호로 다음. Space로 정지·재개.",
+        ),
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    );
+    const icon = this.pauseIcon.clear().fillStyle(this.view.c.blue);
+    if (correction.paused) icon.fillTriangle(-5, -8, -5, 8, 8, 0);
+    else
+      icon.fillRoundedRect(-7, -8, 5, 16, 1).fillRoundedRect(2, -8, 5, 16, 1);
+  }
+}

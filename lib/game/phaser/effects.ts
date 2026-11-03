@@ -1,4 +1,51 @@
 import Phaser from "phaser";
+import type { TrainingView } from "./board";
+import type { Result } from "../types";
+import { FLIGHT_MS } from "../rules";
+
+/** Projectile and impact visuals are independent from scoring and progression. */
+export function answerImpact(
+  scene: Phaser.Scene,
+  view: TrainingView,
+  index: number | null,
+  result: Result,
+  onImpact: () => void,
+) {
+  const hit = () => {
+    const at = view.wordView!;
+    if (result === "correct") {
+      burst(scene, at.x, at.y, view.c.blue);
+      at.setVisible(false);
+      scene.cameras.main.flash(90, 100, 190, 255, false);
+    } else {
+      burst(scene, at.x, at.y, view.c.red);
+      if (index !== null) view.choices[index]?.setVisible(false);
+      scene.cameras.main.shake(110, 0.004);
+    }
+    onImpact();
+  };
+  if (result === "timeout" || index === null) {
+    view.drawTime(0);
+    hit();
+    return;
+  }
+  const flying = view.choices[index];
+  scene.tweens.killTweensOf(flying);
+  flying.setDepth(10);
+  scene.tweens.add({
+    targets: flying,
+    x: view.wordView!.x,
+    y: view.wordView!.y,
+    scaleX: 0.72,
+    scaleY: 0.72,
+    duration: FLIGHT_MS,
+    ease: "Cubic.In",
+    onComplete: () => {
+      flying.setVisible(false);
+      hit();
+    },
+  });
+}
 
 export function burst(
   scene: Phaser.Scene,
