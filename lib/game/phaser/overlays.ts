@@ -167,15 +167,16 @@ export function drawEnd(
             "保存できませんでした。この画面で再試行できます",
             "저장하지 못했습니다. 이 화면에서 재시도할 수 있어요",
           );
-  view.text(
-    x, y + 46, state, 13,
+  view.designText(
+    x, y + 44, state, 18,
     data.syncOK ? view.c.green : data.syncing ? view.c.blue : view.c.muted,
-  );
+    true,
+  ).setWordWrapWidth(Math.min(view.cw - 32, 440));
   if (data.syncing)
-    view.text(
-      x, y + 72,
-      view.t("保存が終わるまでお待ちください。", "저장이 끝날 때까지 잠시 기다려주세요."),
-      12, view.c.muted,
+    view.designText(
+      x, y + 73,
+      view.t("保存完了までお待ちください。", "저장 완료까지 잠시 기다려주세요."),
+      16, view.c.ink, true,
     );
   if (data.reviewComplete && !data.syncing)
     view.text(

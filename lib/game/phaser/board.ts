@@ -264,7 +264,7 @@ export class TrainingView {
     const b = this.add.container(x, y);
     b.add(
       this.box(0, 0, width, 46,
-        disabled ? this.c.tint : primary ? this.c.blue : this.c.panel, 13),
+        disabled ? this.c.disabledBg : primary ? this.c.blue : this.c.panel, 13),
     );
     b.add(
       this.designText(
@@ -272,7 +272,7 @@ export class TrainingView {
         0,
         label,
         Math.max(14, 16 * this.factor),
-        disabled ? this.c.muted : primary ? this.c.onBrand : this.c.ink,
+        disabled ? this.c.disabledInk : primary ? this.c.onBrand : this.c.ink,
         true,
       ),
     );
