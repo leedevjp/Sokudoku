@@ -1,5 +1,12 @@
 import type { Tables } from "@/lib/supabase/database.types";
-export type Word = Tables<"word"> & { source?: "personal" };
+export type EntryType = "word" | "hiragana" | "katakana";
+// Optional for older incremental-cache entries; absent means ordinary vocabulary.
+export type Word = Omit<Tables<"word">, "entry_type"> & {
+  source?: "personal";
+  entry_type?: EntryType;
+};
+export const entryType = (word: Pick<Word, "entry_type">): EntryType =>
+  word.entry_type ?? "word";
 export type Stat = Tables<"word_recent_stat">;
 export type Kind = "meaning" | "reading";
 export type Result = "correct" | "incorrect" | "timeout";
@@ -15,4 +22,9 @@ export type Answer = {
   time_limit_ms: number;
   answered_at: string;
 };
-export type Question = { word: Word; kind: Kind; options: Word[]; mode?: "exploration" | "review" };
+export type Question = {
+  word: Word;
+  kind: Kind;
+  options: Word[];
+  mode?: "exploration" | "review";
+};

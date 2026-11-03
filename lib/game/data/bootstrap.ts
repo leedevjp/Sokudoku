@@ -1,5 +1,10 @@
 import type { Word, Stat } from "../types";
-import { parseLevels, selectedDifficulty } from "../selection";
+import {
+  parseLevels,
+  selectedDifficulty,
+  wordMatchesLevels,
+  type TrainingLevel,
+} from "../selection";
 import { readWords, readWordCache, mergeWords } from "./word-cache";
 import { createClient } from "@/lib/supabase/client";
 import { database, storageDeadline } from "./database";
@@ -16,16 +21,20 @@ export type Bootstrap = {
 export class GameDataLoader {
   private difficulties: Set<number>;
   private includePersonal: boolean;
+  private levels: TrainingLevel[];
   constructor(
     levels: string | null,
     private onLoginRequired: () => void,
   ) {
     const selected = parseLevels(levels);
+    this.levels = selected;
     this.difficulties = selectedDifficulty(selected);
     this.includePersonal = selected.includes("P");
   }
   private filterCommon(words: Word[]) {
-    return words.filter((word) => this.difficulties.has(word.difficulty));
+    return words.filter((word) =>
+      wordMatchesLevels(word, this.levels, this.difficulties),
+    );
   }
   async fetchData(): Promise<Bootstrap> {
     const [sets, state] = await Promise.all([

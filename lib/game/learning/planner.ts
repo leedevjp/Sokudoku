@@ -1,4 +1,10 @@
-import type { Answer, Kind, Question, Word } from "../types";
+import {
+  entryType,
+  type Answer,
+  type Kind,
+  type Question,
+  type Word,
+} from "../types";
 import { questionFor } from "../question";
 import { trainingKinds } from "../selection";
 import { LearningEngine } from "./engine";
@@ -14,8 +20,11 @@ export function explorationWeights(
   precision: number,
   reviews: number,
 ) {
+  const ordinary = words.filter((word) => entryType(word) === "word");
+  const categories = new Set(words.map(entryType));
+  const categoryShare = 1 / categories.size;
   const counts = new Map<number, number>();
-  for (const word of words)
+  for (const word of ordinary)
     counts.set(word.difficulty, (counts.get(word.difficulty) ?? 0) + 1);
   const sigma = Math.max(1.2, Math.min(3.5, 1 + Math.sqrt(1 / precision)));
   const curve = new Map(
@@ -25,7 +34,7 @@ export function explorationWeights(
     ]),
   );
   const sum = [...curve.values()].reduce((a, b) => a + b, 0);
-  return words.map((word) => ({
+  const weighted = ordinary.map((word) => ({
     word,
     weight:
       (reviews < 20
@@ -33,6 +42,25 @@ export function explorationWeights(
         : 0.1 / counts.size + (0.9 * curve.get(word.difficulty)!) / sum) /
       counts.get(word.difficulty)!,
   }));
+  const kanaCounts = new Map<string, number>();
+  for (const word of words)
+    if (entryType(word) !== "word")
+      kanaCounts.set(
+        entryType(word),
+        (kanaCounts.get(entryType(word)) ?? 0) + 1,
+      );
+  return [
+    ...weighted.map((item) => ({
+      ...item,
+      weight: item.weight * categoryShare,
+    })),
+    ...words
+      .filter((word) => entryType(word) !== "word")
+      .map((word) => ({
+        word,
+        weight: categoryShare / kanaCounts.get(entryType(word))!,
+      })),
+  ];
 }
 function draw(candidates: Candidate[], rng: () => number) {
   let n = rng() * candidates.reduce((sum, c) => sum + c.weight, 0);
@@ -59,7 +87,10 @@ export class TrainingPlanner {
       words.map((word) => [wordKey(word.source, word.id), word]),
     );
   }
-  resetSet() { this.queue = []; this.lastWord = undefined; }
+  resetSet() {
+    this.queue = [];
+    this.lastWord = undefined;
+  }
   next(): PlannedQuestion | null {
     if (!this.queue.length) this.makeSet();
     const question = this.queue.shift() ?? null;
@@ -162,7 +193,7 @@ export class TrainingPlanner {
             this.words,
             learner.ability,
             learner.precision,
-            learner.review_count,
+            learner.ability_count ?? learner.review_count,
           ),
           used,
           "exploration",

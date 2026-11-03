@@ -1,7 +1,7 @@
 import type { DefaultSchedulerCard } from "ts-fsrs";
 import type { Answer, Kind } from "../types";
 
-export const LEARNING_VERSION = "ts-fsrs@6.0.0/FSRS-7/again-good-v1";
+export const LEARNING_VERSION = "ts-fsrs@6.0.0/FSRS-7/again-good-kana-v2";
 export type TrainingMode = "exploration" | "review";
 export const trainingModes: TrainingMode[] = ["exploration", "review"];
 export function parseModes(value: string | null): TrainingMode[] {
@@ -33,6 +33,7 @@ export type Learner = {
   ability: number;
   precision: number;
   review_count: number;
+  ability_count: number;
   last_answered_at: string | null;
   last_answer_id: string | null;
   revision: number;

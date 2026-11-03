@@ -38,12 +38,14 @@ export class LearningEngine {
         ability: 5,
         precision: 0.4,
         review_count: 0,
+        ability_count: 0,
         last_answered_at: null,
         last_answer_id: null,
         revision: 0,
         model_version: LEARNING_VERSION,
       }),
     };
+    this.learner.ability_count ??= this.learner.review_count;
     for (const word of snapshot.words)
       this.words.set(
         cardKey(word.source, word.word_ref, word.question_type),
@@ -107,6 +109,12 @@ export class LearningEngine {
     this.dirty.set(key, word);
     // Chance-corrected logistic ability model; difficulty 0..10 is separate from FSRS difficulty.
     const learner = this.learner;
+    learner.review_count++;
+    learner.last_answered_at = event.answered_at;
+    learner.last_answer_id = event.id;
+    learner.model_version = LEARNING_VERSION;
+    if (event.difficulty < 0) return;
+    learner.ability_count++;
     const sigmoid =
       1 / (1 + Math.exp(-(learner.ability + 0.97 - event.difficulty) / 1.4));
     const probability = 0.25 + 0.75 * sigmoid;
@@ -122,9 +130,5 @@ export class LearningEngine {
       10,
     );
     learner.precision = precision;
-    learner.review_count++;
-    learner.last_answered_at = event.answered_at;
-    learner.last_answer_id = event.id;
-    learner.model_version = LEARNING_VERSION;
   }
 }

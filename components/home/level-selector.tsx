@@ -1,6 +1,7 @@
 import { useSettings } from "@/app/settings";
 import {
-  trainingLevels,
+  vocabularyLevels,
+  kanaLevels,
   levelDifficulty,
   type TrainingLevel,
 } from "@/lib/game/selection";
@@ -18,11 +19,29 @@ export function LevelSelector({
     <>
       <p className="selection-label">{t("出題範囲", "출제 범위")}</p>
       <div
+        className="training-levels training-kinds kana-levels"
+        role="group"
+        aria-label={t("かな（複数選択可）", "가나 (복수 선택 가능)")}
+      >
+        {kanaLevels.map((level) => (
+          <button
+            key={level}
+            type="button"
+            aria-pressed={levels.includes(level)}
+            onClick={() => onToggle(level)}
+          >
+            {level === "H"
+              ? t("ひらがな", "히라가나")
+              : t("カタカナ", "가타카나")}
+          </button>
+        ))}
+      </div>
+      <div
         className="training-levels"
         role="group"
         aria-label={t("出題範囲（複数選択可）", "출제 범위 (복수 선택 가능)")}
       >
-        {trainingLevels.map((level) => (
+        {vocabularyLevels.map((level) => (
           <button
             key={level}
             type="button"
@@ -43,6 +62,14 @@ export function LevelSelector({
           </button>
         ))}
       </div>
+      {levels.some((level) => level === "H" || level === "K") && (
+        <p className="level-hint kana-hint" role="status">
+          {t(
+            "かなは「意味」問題でのみ出題されます。",
+            "가나는 뜻 맞추기에서만 출제돼요.",
+          )}
+        </p>
+      )}
       {levels.length === 0 && (
         <p className="level-hint" role="status">
           {t("出題範囲を選んでください。", "출제 범위를 선택해주세요.")}

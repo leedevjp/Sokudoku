@@ -431,7 +431,9 @@ export class TrainingView {
         badgeY,
         this.question.kind === "reading"
           ? this.t("読み", "읽기")
-          : this.t("意味", "의미"),
+          : this.question.word.difficulty === -1
+            ? this.t("かな", "가나")
+            : this.t("意味", "의미"),
         14 * s,
         this.c.blue,
         true,
@@ -462,7 +464,9 @@ export class TrainingView {
         : this.t("探索 · ", "탐색 · ")) +
         (this.question.kind === "reading"
           ? this.t("読み方を選んでください", "읽기를 고르세요")
-          : this.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요")),
+          : this.question.word.difficulty === -1
+            ? this.t("発音を選んでください", "발음 표기를 고르세요")
+            : this.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요")),
       20 * s,
       this.c.muted,
     ).setWordWrapWidth(cw, true);

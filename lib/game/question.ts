@@ -1,4 +1,10 @@
-import type { Word, Stat, Kind, Question } from "./types";
+import {
+  entryType,
+  type Word,
+  type Stat,
+  type Kind,
+  type Question,
+} from "./types";
 import { trainingKinds, wordsForKinds } from "./selection";
 
 const tokens = (s: string) =>
@@ -26,9 +32,11 @@ export function questionFor(
   pool: Word[],
   rng = Math.random,
 ): Question | null {
+  if (entryType(word) !== "word" && kind !== "meaning") return null;
   const options: Word[] = [];
   for (const other of shuffle(pool, rng)) {
     if (
+      entryType(other) !== entryType(word) ||
       other.id === word.id ||
       overlaps(word, other, kind) ||
       options.some((option) => overlaps(option, other, kind))

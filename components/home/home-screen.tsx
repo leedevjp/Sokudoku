@@ -38,7 +38,14 @@ export default function HomeScreen() {
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(trainingModes);
-  const canStart = levels.length > 0 && kinds.length > 0 && modes.length > 0;
+  const kanaOnly =
+    levels.length > 0 &&
+    levels.every((level) => level === "H" || level === "K");
+  const canStart =
+    levels.length > 0 &&
+    kinds.length > 0 &&
+    modes.length > 0 &&
+    (!kanaOnly || kinds.includes("meaning"));
   useEffect(() => {
     // Restore after hydration so the first server/client render stays identical.
     const timer = setTimeout(() => {
@@ -121,6 +128,14 @@ export default function HomeScreen() {
         <ModeSelector modes={modes} onToggle={toggleMode} />
         <KindSelector kinds={kinds} onToggle={toggleKind} />
         <LevelSelector levels={levels} onToggle={toggleLevel} />
+        {kanaOnly && !kinds.includes("meaning") && (
+          <p className="level-hint" role="status">
+            {t(
+              "かなの学習には「意味」を選んでください。",
+              "가나를 학습하려면 뜻 맞추기를 선택해주세요.",
+            )}
+          </p>
+        )}
         {loading ? (
           <button className="primary" disabled>
             {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}

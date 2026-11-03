@@ -1290,3 +1290,17 @@ footer span {
 /* Keep all three selection rows above the fold on shorter mobile viewports. */
 @media (max-height: 760px) { .home-shell .home-visual { --visual-size: clamp(144px, 23svh, 176px); } }
 @media (max-height: 650px) { .home-shell .home-content { display: none; } .home-actions { margin-top: auto; margin-bottom: auto; } }
+
+.kana-levels { margin-bottom: 8px; }
+.kana-hint { line-height: 1.5; margin-top: -3px; margin-bottom: 10px; }
+/* Give the two-row range selector room without covering the controls. */
+@media (min-height: 651px) and (max-height: 820px) {
+  .home-shell footer { display: none; }
+  .home-shell .home-visual { --visual-size: 128px; height: 152px; min-height: 152px; }
+  .home-visual .preview-target { left: 26%; }
+  .home-visual .preview-answer { left: 51%; top: 53px; transform: rotate(-3deg); padding: 8px; gap: 6px; }
+  .home-visual .preview-answer b { font-size: 10px; }
+  .home-visual .preview-answer i { font-size: 18px; margin-left: 0; }
+  .home-visual .preview-answer > span { width: 20px; height: 20px; font-size: 10px; }
+  .home-visual .spark { display: none; }
+}

@@ -100,6 +100,7 @@ export type Database = {
       learner_state: {
         Row: {
           ability: number
+          ability_count: number
           last_answer_id: string
           last_answered_at: string
           model_version: string
@@ -111,6 +112,7 @@ export type Database = {
         }
         Insert: {
           ability: number
+          ability_count?: number
           last_answer_id: string
           last_answered_at: string
           model_version: string
@@ -122,6 +124,7 @@ export type Database = {
         }
         Update: {
           ability?: number
+          ability_count?: number
           last_answer_id?: string
           last_answered_at?: string
           model_version?: string
@@ -138,6 +141,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           difficulty: number
+          entry_type: string
           hanja_reading: string | null
           has_kanji: boolean
           id: string
@@ -152,6 +156,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
+          entry_type?: string
           hanja_reading?: string | null
           has_kanji: boolean
           id?: string
@@ -166,6 +171,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
+          entry_type?: string
           hanja_reading?: string | null
           has_kanji?: boolean
           id?: string
@@ -183,6 +189,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           difficulty: number
+          entry_type: string
           hanja_reading: string | null
           has_kanji: boolean
           id: string
@@ -196,6 +203,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
+          entry_type?: string
           hanja_reading?: string | null
           has_kanji: boolean
           id?: string
@@ -209,6 +217,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
+          entry_type?: string
           hanja_reading?: string | null
           has_kanji?: boolean
           id?: string
