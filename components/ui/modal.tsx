@@ -1,14 +1,16 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useSettings } from "@/app/settings";
 
-export function HomeDialog({
+export function Modal({
   open,
   onClose,
   children,
+  titleId,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  titleId: string;
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -30,7 +32,7 @@ export function HomeDialog({
     <dialog
       ref={dialog}
       className="home-dialog"
-      aria-labelledby="home-dialog-title"
+      aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

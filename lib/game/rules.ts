@@ -11,7 +11,10 @@ export function keyIndex(code: string) {
   const match = /^(?:Digit|Numpad)([1-4])$/.exec(code);
   return match ? Number(match[1]) - 1 : null;
 }
-export function choiceLabel(w: Word, kind: Kind) {
+export function choiceLabel(
+  w: Pick<Word, "kana" | "hanja_reading" | "meaning_ko">,
+  kind: Kind,
+) {
   return kind === "reading"
     ? w.kana
     : w.hanja_reading

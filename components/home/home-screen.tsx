@@ -13,7 +13,7 @@ import {
 import { useAccount } from "@/components/auth/use-account";
 import { AuthForm } from "@/components/auth/auth-form";
 import { HomeHero } from "./home-hero";
-import { HomeDialog } from "./home-dialog";
+import { Modal } from "@/components/ui/modal";
 import { TrainingDetails } from "./training-details";
 import type { Kind } from "@/lib/game/types";
 import { KindSelector } from "./kind-selector";
@@ -126,10 +126,28 @@ export default function HomeScreen() {
             <span>→</span>
           </button>
         )}
-        <button className="details-button" onClick={() => setModal("details")}>
-          {t("遊び方・アカウント", "상세 설명 · 계정")}
-          <span>↗</span>
-        </button>
+        <div className="home-secondary-actions">
+          <Link
+            className="notebook-link"
+            href="/notebook"
+            onClick={(event) => {
+              if (!user) {
+                event.preventDefault();
+                setModal("auth");
+              }
+            }}
+          >
+            <span aria-hidden="true">▤</span> {t("まちがいノート", "오답노트")}
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <button
+            className="details-button"
+            onClick={() => setModal("details")}
+          >
+            {t("遊び方・アカウント", "상세 설명 · 계정")}
+            <span>↗</span>
+          </button>
+        </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">
             {notices[notice]}
@@ -139,7 +157,11 @@ export default function HomeScreen() {
       <footer>
         {t("毎日の「わかった」を、もっと速く。", "매일의 이해를, 더 빠르게.")}
       </footer>
-      <HomeDialog open={modal !== null} onClose={() => setModal(null)}>
+      <Modal
+        open={modal !== null}
+        onClose={() => setModal(null)}
+        titleId="home-dialog-title"
+      >
         {modal === "details" ? (
           <TrainingDetails
             account={account}
@@ -154,7 +176,7 @@ export default function HomeScreen() {
             {notices[notice]}
           </p>
         )}
-      </HomeDialog>
+      </Modal>
     </main>
   );
 }

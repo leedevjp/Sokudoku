@@ -194,6 +194,20 @@ export type Database = {
       game_bootstrap: { Args: never; Returns: Json }
       game_sync: { Args: { since?: string }; Returns: Json }
       personal_game_bootstrap: { Args: never; Returns: Json }
+      recent_mistake_word: {
+        Args: never
+        Returns: {
+          difficulty: number
+          hanja_reading: string
+          id: string
+          kana: string
+          last_incorrect_at: string
+          meaning_ko: string
+          note: string
+          source: string
+          term: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
