@@ -160,15 +160,24 @@ export function drawEnd(
   const state = data.preview
     ? view.t("プレビュー · 保存しません", "미리보기 · 저장하지 않습니다")
     : data.syncing
-      ? view.t("記録を同期中…", "기록 동기화 중…")
+      ? view.t("記録を保存中…", "기록 저장 중…")
       : data.syncOK
         ? view.t("記録を保存しました ✓", "기록 저장 완료 ✓")
         : view.t(
             "保存できませんでした。この画面で再試行できます",
             "저장하지 못했습니다. 이 화면에서 재시도할 수 있어요",
           );
-  view.text(x, y + 46, state, 13, data.syncOK ? view.c.green : view.c.muted);
-  if (data.reviewComplete)
+  view.text(
+    x, y + 46, state, 13,
+    data.syncOK ? view.c.green : data.syncing ? view.c.blue : view.c.muted,
+  );
+  if (data.syncing)
+    view.text(
+      x, y + 72,
+      view.t("保存が終わるまでお待ちください。", "저장이 끝날 때까지 잠시 기다려주세요."),
+      12, view.c.muted,
+    );
+  if (data.reviewComplete && !data.syncing)
     view.text(
       x,
       y + 72,
@@ -192,11 +201,14 @@ export function drawEnd(
         }
       : actions.retry,
     true,
+    undefined,
+    data.syncing,
   );
   if (!data.reviewComplete)
-    view.button(view.t("ホームへ", "홈으로"), x, y + 169, 280, () => {
-      if (!data.syncing) actions.exit();
-    });
+    view.button(
+      view.t("ホームへ", "홈으로"), x, y + 169, 280,
+      actions.exit, false, undefined, data.syncing,
+    );
   if (!data.syncOK && !data.syncing && !data.preview)
     view.button(
       view.t("同期を再試行", "동기화 재시도"),

@@ -259,21 +259,28 @@ export class TrainingView {
     action: () => void,
     primary = false,
     parent?: Phaser.GameObjects.Container,
+    disabled = false,
   ) {
     const b = this.add.container(x, y);
-    b.add(this.box(0, 0, width, 46, primary ? this.c.blue : this.c.panel, 13));
+    b.add(
+      this.box(0, 0, width, 46,
+        disabled ? this.c.tint : primary ? this.c.blue : this.c.panel, 13),
+    );
     b.add(
       this.designText(
         0,
         0,
         label,
         Math.max(14, 16 * this.factor),
-        primary ? this.c.onBrand : this.c.ink,
+        disabled ? this.c.muted : primary ? this.c.onBrand : this.c.ink,
         true,
       ),
     );
-    b.setSize(width, 46).setInteractive({ useHandCursor: true });
-    b.on("pointerup", action);
+    b.setSize(width, 46);
+    if (!disabled) {
+      b.setInteractive({ useHandCursor: true });
+      b.on("pointerup", action);
+    }
     if (parent) parent.add(b);
     return b;
   }
