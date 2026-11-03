@@ -168,6 +168,19 @@ export default function HomeScreen() {
         <div className="home-secondary-actions">
           <Link
             className="notebook-link"
+            href="/dashboard"
+            onClick={(event) => {
+              if (!user) {
+                event.preventDefault();
+                setModal("auth");
+              }
+            }}
+          >
+            <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link
+            className="notebook-link"
             href="/notebook"
             onClick={(event) => {
               if (!user) {
@@ -179,6 +192,8 @@ export default function HomeScreen() {
             <span aria-hidden="true">▤</span> {t("まちがいノート", "오답노트")}
             <span aria-hidden="true">↗</span>
           </Link>
+        </div>
+        <div className="home-account-action">
           <button
             className="details-button"
             onClick={() => setModal("details")}

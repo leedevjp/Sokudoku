@@ -319,6 +319,7 @@ export type Database = {
       }
       game_bootstrap: { Args: never; Returns: Json }
       game_sync: { Args: { since?: string }; Returns: Json }
+      learning_dashboard: { Args: { p_timezone?: string }; Returns: Json }
       learning_history: { Args: { pending_only?: boolean }; Returns: Json }
       learning_snapshot: { Args: never; Returns: Json }
       personal_game_bootstrap: { Args: never; Returns: Json }

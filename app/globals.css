@@ -1313,3 +1313,6 @@ footer span {
 .home-answer-list .preview-answer > span { width: 19px; height: 19px; flex: 0 0 19px; border-radius: 6px; font-size: 10px; }
 .home-answer-list .preview-answer b { min-width: 0; font-size: clamp(11px, calc(var(--visual-size) * .075), 13px); line-height: 1.35; overflow-wrap: anywhere; }
 .home-visual .spark { display: none; }
+
+.home-account-action { text-align: center; }
+.home-account-action .details-button { margin: 0 auto; padding: 6px 0; min-height: 36px; font-size: 11px; }
