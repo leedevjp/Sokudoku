@@ -210,7 +210,11 @@ export class TrainingScene extends Phaser.Scene {
       for (let y = step / 2; y < this.h; y += step)
         g.fillCircle(x, y, Math.max(0.8, 1.5 * this.boardLayout.scale));
   }
-  private paintChoice(c: Phaser.GameObjects.Container, pressed = false) {
+  private paintChoice(
+    c: Phaser.GameObjects.Container,
+    pressed = false,
+    correct = false,
+  ) {
     const g = c.list[0] as Phaser.GameObjects.Graphics;
     const { scale: s } = this.boardLayout;
     const w = c.width,
@@ -219,7 +223,9 @@ export class TrainingScene extends Phaser.Scene {
     g.clear()
       .fillStyle(pressed ? this.c.blueDark : this.c.shade)
       .fillRoundedRect(-w / 2, -h / 2 + (pressed ? 3 : 6) * s, w, h, r);
-    g.fillStyle(pressed ? this.c.press : this.c.panel).fillRoundedRect(
+    g.fillStyle(
+      correct ? this.c.green : pressed ? this.c.press : this.c.panel,
+    ).fillRoundedRect(
       -w / 2,
       -h / 2,
       w,
@@ -228,7 +234,7 @@ export class TrainingScene extends Phaser.Scene {
     );
     g.lineStyle(
       Math.max(1, 2 * s),
-      pressed ? this.c.blue : this.c.line,
+      correct ? this.c.green : pressed ? this.c.blue : this.c.line,
     ).strokeRoundedRect(-w / 2, -h / 2, w, h, r);
   }
   private drawHearts() {
@@ -780,8 +786,6 @@ export class TrainingScene extends Phaser.Scene {
         if (index !== null) this.choices[index]?.setVisible(false);
         this.cameras.main.shake(110, 0.004);
       }
-      const answer =
-        this.q.word.kana + " · " + choiceLabel(this.q.word, "meaning");
       this.status?.setText(
         result === "correct"
           ? `${this.t("正解", "정답")} · ${a.response_ms} ms`
@@ -789,9 +793,17 @@ export class TrainingScene extends Phaser.Scene {
             ? this.t("時間切れ", "시간 초과")
             : this.t("もう一度、覚えよう", "다시 기억해봐요"),
       );
-      if (result !== "correct")
-        this.promptCaption?.setText(answer).setColor(this.hex(this.c.blue));
-      this.time.delayedCall(result === "correct" ? 320 : 1000, () => {
+      if (result !== "correct") {
+        const correctIndex = this.q.options.findIndex(
+          (option) => option.id === this.q.word.id,
+        );
+        const correctChoice = this.choices[correctIndex];
+        if (correctChoice) {
+          this.paintChoice(correctChoice, false, true);
+          (correctChoice.list[3] as Phaser.GameObjects.Text).setColor("#06152f");
+        }
+      }
+      this.time.delayedCall(result === "correct" ? 320 : 1500, () => {
         if (this.hearts === 0) this.finish();
         else this.next();
       });
