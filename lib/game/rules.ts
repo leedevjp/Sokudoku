@@ -16,11 +16,10 @@ export function choiceLabel(
   w: Pick<Word, "kana" | "hanja_reading" | "meaning_ko">,
   kind: Kind,
 ) {
-  return kind === "reading"
-    ? w.kana
-    : w.hanja_reading
-      ? `${w.hanja_reading}(${w.meaning_ko})`
-      : w.meaning_ko;
+  if (kind === "reading") return w.kana;
+  const meaning = w.meaning_ko.trim();
+  const hanja = w.hanja_reading?.trim();
+  return hanja && hanja !== meaning ? `${hanja}(${meaning})` : meaning;
 }
 // A down event atomically claims a question; held/repeated input cannot claim it again.
 export class AnswerGate {
