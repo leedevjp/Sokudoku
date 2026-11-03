@@ -1,12 +1,8 @@
+import { buildQuestion } from "../lib/game/question";
+import type { Word } from "../lib/game/types";
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  AnswerGate,
-  buildQuestion,
-  keyIndex,
-  limitFor,
-  type Word,
-} from "../lib/game/core";
+import { AnswerGate, keyIndex, limitFor } from "../lib/game/rules";
 const word = (
   id: number,
   term: string,

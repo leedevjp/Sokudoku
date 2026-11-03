@@ -4,17 +4,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type Phaser from "phaser";
 import { useSettings } from "@/app/settings";
-import type { Answer, Stat, Word } from "@/lib/game/core";
-import {
-  flushAnswers,
-  queueAnswer,
-  readWords,
-  readWordCache,
-  mergeWords,
-} from "@/lib/game/storage";
-import { createClient } from "@/lib/supabase/client";
-import { parseLevels, selectedDifficulty } from "@/lib/game/selection";
-type Bootstrap = { words: Word[]; stats: Stat[]; user_id: string };
+import type { Word } from "@/lib/game/types";
+import { AnswerJournal } from "@/lib/game/data/answer-journal";
+import { GameDataLoader, type Bootstrap } from "@/lib/game/data/bootstrap";
 export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   const { prefs, change } = useSettings();
   const router = useRouter();
@@ -32,63 +24,13 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       game: Phaser.Game | undefined,
       owner = "",
       ended = false;
-    const answers: Answer[] = [];
-    const writes: Promise<unknown>[] = [];
-    const levels = parseLevels(new URLSearchParams(window.location.search).get("levels"));
-    const difficulties = selectedDifficulty(levels);
-    const includePersonal = levels.includes("P");
-    const filterCommon = (words: Word[]) => words.filter(word => difficulties.has(word.difficulty));
-    async function fetchData(): Promise<Bootstrap> {
-      const sets = await Promise.all([
-        difficulties.size ? fetchCommon() : Promise.resolve(null),
-        includePersonal ? fetchPersonal() : Promise.resolve(null),
-      ]);
-      const present = sets.filter((set): set is Bootstrap => set !== null);
-      if (!present.length) throw Error("WORDS");
-      if (present.some(set => set.user_id !== present[0].user_id)) throw Error("LOGIN");
-      return { user_id: present[0].user_id, words: present.flatMap(set => set.words),
-        stats: [...new Map(present.flatMap(set => set.stats).map(stat => [stat.word_id, stat])).values()] };
-    }
-    async function fetchPersonal(): Promise<Bootstrap> {
-      const response = await fetch("/api/game/bootstrap?source=personal", { cache: "no-store", signal: AbortSignal.timeout(15000) });
-      if (response.status === 401) { router.replace("/"); throw Error("LOGIN"); }
-      if (!response.ok) throw Error("LOAD");
-      const data = await response.json() as Bootstrap & { synced_at: string };
-      const personal = data.words.map(word => ({ ...word, source: "personal" as const }));
-      const words = await mergeWords(undefined, personal, data.synced_at, `personal-word-v1:${data.user_id}`);
-      return { ...data, words };
-    }
-    async function fetchCommon(): Promise<Bootstrap> {
-      const cached = await readWordCache().catch(() => undefined);
-      const query = cached ? `?since=${encodeURIComponent(cached.syncedAt)}` : "";
-      const response = await fetch(`/api/game/bootstrap${query}`, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(15000),
-      });
-      if (response.status === 401) {
-        router.replace("/");
-        throw Error("LOGIN");
-      }
-      if (!response.ok) throw Error("LOAD");
-      const data = await response.json() as Bootstrap & { synced_at: string; reset: boolean };
-      const words = await mergeWords(data.reset ? undefined : cached, data.words, data.synced_at);
-      return { ...data, words: filterCommon(words) };
-    }
-    async function sync() {
-      if (previewWords) return true;
-      try {
-        await Promise.allSettled(writes);
-        await Promise.all(answers.map((a) => queueAnswer(owner, a)));
-        await flushAnswers(owner);
-        answers.length = 0;
-        writes.length = 0;
-        return true;
-      } catch {
-        return false;
-      }
-    }
+    let journal: AnswerJournal | undefined;
+    const loader = new GameDataLoader(
+      new URLSearchParams(window.location.search).get("levels"),
+      () => router.replace("/"),
+    );
     const online = () => {
-      if (ended) void sync();
+      if (ended) void journal?.sync();
     };
     window.addEventListener("online", online);
     async function init() {
@@ -97,32 +39,21 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         data = { words: previewWords, stats: [], user_id: "preview" };
       else {
         try {
-          data = await fetchData();
+          data = await loader.fetchData();
         } catch (e) {
           if ((e as Error).message === "LOGIN") return;
-          const {
-            data: { session },
-          } = await createClient().auth.getSession();
-          if (!session) throw Error("LOAD");
-          const [common, personal] = await Promise.all([
-            difficulties.size ? readWords().catch(() => undefined) : Promise.resolve([]),
-            includePersonal ? readWordCache(`personal-word-v1:${session.user.id}`).then(cache => cache?.words).catch(() => undefined) : Promise.resolve([]),
-          ]);
-          if (!common || !personal) throw Error("LOAD");
-          data = { words: [...filterCommon(common), ...personal], stats: [], user_id: session.user.id };
+          data = await loader.loadOffline();
         }
       }
       owner = data.user_id;
-      let sources = new Map(data.words.map(word => [word.id, word.source]));
-      if (!previewWords) {
-        // Recovery after a killed tab must never gate creation of the next game.
-        // Only acknowledged answers are removed; failed uploads remain queued.
-        void flushAnswers(owner).catch(() => {});
-      }
+      journal = new AnswerJournal(owner, data.words, !!previewWords);
+      journal.recover();
       if (cancelled || !parent.current) return;
       if (data.words.length < 4) throw Error("WORDS");
       await document.fonts.ready;
-      const { createTraining } = await import("@/lib/game/scene");
+      const { createTraining } = await import(
+        "@/lib/game/phaser/create-training"
+      );
       if (cancelled || !parent.current) return;
       game = createTraining(parent.current, {
         words: data.words,
@@ -130,34 +61,24 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         preferences: preferences.current,
         preview: !!previewWords,
         onPreferences: (p) => changeRef.current(p),
-        onAnswer: (a) => {
-          const answer: Answer = { ...a,
-            source: sources.get(a.word_id) === "personal" ? "personal" : "word",
-            selected_source: a.selected_word_id && sources.get(a.selected_word_id) === "personal" ? "personal" : "word" };
-          answers.push(answer);
-          if (!previewWords) {
-            const write = queueAnswer(owner, answer);
-            writes.push(write);
-            void write.catch(() => {});
-          }
-        },
+        onAnswer: (answer) => journal!.record(answer),
         onFinish: async () => {
           ended = true;
-          const ok = await sync();
+          const ok = await journal!.sync();
           return ok;
         },
         onRetry: async () => {
           ended = false;
           if (previewWords) return { words: previewWords, stats: [] };
-          await sync();
+          await journal!.sync();
           try {
-            const fresh = await fetchData();
+            const fresh = await loader.fetchData();
             if (fresh.user_id !== owner) {
               router.replace("/");
               throw Error("LOGIN");
             }
             data = fresh;
-            sources = new Map(data.words.map(word => [word.id, word.source]));
+            journal!.setWords(data.words);
             return { words: fresh.words, stats: fresh.stats };
           } catch {
             return { words: data.words, stats: [] };

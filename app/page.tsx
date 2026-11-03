@@ -1,2 +1,5 @@
-import AuthPanel from './auth-panel';
-export default function Home(){return <AuthPanel/>;}
+import HomeScreen from "@/components/home/home-screen";
+
+export default function Home() {
+  return <HomeScreen />;
+}

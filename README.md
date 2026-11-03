@@ -4,6 +4,56 @@
 
 公開サイト: https://sokudoku-jp.vercel.app
 
+## コードの構成
+
+画面、ゲームのルール、描画、データの取得・保存を分離しています。`app/`はページとAPIの入口です。ホームのUIは`components/`、ゲームの処理は`lib/game/`に置きます。
+
+```text
+app/
+  page.tsx                  ホームの入口
+  game/game-host.tsx        ReactとPhaserの接続・生成・破棄
+  api/game/                認証済みの単語取得・回答保存API
+components/
+  home/                    ホーム、出題範囲、説明、ダイアログ
+  auth/                    認証フォームと認証状態・操作のフック
+lib/game/
+  types.ts                 単語・問題・回答の共通型
+  rules.ts                 制限時間・演出時間・入力の二重確定防止
+  selection.ts             1〜5・Pと内部難易度の対応
+  question.ts              統計による出題と選択肢の生成
+  session.ts               1プレイのライフ・正答数・回答・統計更新
+  preferences.ts           言語・テーマ・配色
+  data/
+    bootstrap.ts           単語・統計の取得とオフライン復元
+    database.ts            IndexedDBの接続・タイムアウト
+    word-cache.ts          単語の差分マージ・同期時刻の保存
+    answer-journal.ts      プレイ中の回答保持・保存処理の調整
+    answer-queue.ts        未送信回答の永続化・送信・受領確認
+  phaser/
+    create-training.ts     高密度キャンバスの生成・リサイズ・破棄
+    scene.ts               入力、タイマー、状態遷移の制御
+    board.ts               問題・選択肢・ライフ・時間バーの描画
+    overlays.ts            ポーズ・設定・結果の描画
+    effects.ts             衝突時の破片演出
+    types.ts               ReactとPhaser間のコールバック契約
+```
+
+開始時は`GameHost → GameDataLoader → API / IndexedDB`で単語を準備し、Phaserを動的に読み込みます。プレイ中は`TrainingScene → TrainingSession`で回答を確定し、描画を更新します。回答はコールバックで`AnswerJournal`へ渡し、IndexedDBに保存してからAPIへ同期します。描画側から直接APIを呼びません。
+
+変更箇所の目安:
+
+| 変更したい内容 | 主なファイル |
+| --- | --- |
+| ハート数・制限時間・50msの飛行・1.5秒の正答表示 | `lib/game/rules.ts` |
+| 出題の優先度・重複する選択肢の回避 | `lib/game/question.ts` |
+| 問題カード・選択肢の配置と色 | `lib/game/phaser/board.ts`、`lib/game/preferences.ts` |
+| 一時停止・再開・次の問題への移行 | `lib/game/phaser/scene.ts` |
+| キャッシュ・未送信回答の再送 | `lib/game/data/` |
+| ホームとログイン画面 | `components/home/`、`components/auth/` |
+| DBスキーマ・RLS・統計SQL | `supabase/migrations/` |
+
+ブラウザー側のキャッシュは表示・練習の継続に使用します。ユーザーの検証とデータアクセス制御は引き続きAPIとDBが担当します。ゲームの進行状態は`arming → play → flight / feedback → arming`で遷移し、`paused`から元の状態へ復帰、ライフがなくなると`end`へ進みます。
+
 ## 実装状況
 
 - メールアドレスとパスワードによる新規登録・ログイン

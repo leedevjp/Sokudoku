@@ -1,34 +1,5 @@
-import type { Tables } from "@/lib/supabase/database.types";
-export type Word = Tables<"word"> & { source?: "personal" };
-export type Stat = Tables<"word_recent_stat">;
-export type Kind = "meaning" | "reading";
-export type Result = "correct" | "incorrect" | "timeout";
-export type Answer = {
-  source?: "word" | "personal";
-  selected_source?: "word" | "personal";
-  id: string;
-  word_id: string;
-  question_type: Kind;
-  selected_word_id: string | null;
-  result: Result;
-  response_ms: number;
-  time_limit_ms: number;
-  answered_at: string;
-};
-export type Question = { word: Word; kind: Kind; options: Word[] };
-export const limitFor = (correct: number) =>
-  Math.max(2000, 10000 - correct * 200);
-export function keyIndex(code: string) {
-  const match = /^(?:Digit|Numpad)([1-4])$/.exec(code);
-  return match ? Number(match[1]) - 1 : null;
-}
-export function choiceLabel(w: Word, kind: Kind) {
-  return kind === "reading"
-    ? w.kana
-    : w.hanja_reading
-      ? `${w.hanja_reading}(${w.meaning_ko})`
-      : w.meaning_ko;
-}
+import type { Word, Stat, Kind, Question } from "./types";
+
 const tokens = (s: string) =>
   s
     .split(/[,，、;·()（）]/)
@@ -104,30 +75,4 @@ export function buildQuestion(
     if (!candidates.length) break;
   }
   throw new Error("NOT_ENOUGH_WORDS");
-}
-// A down event atomically claims a question; held/repeated input cannot claim it again.
-export class AnswerGate {
-  source: string | null = null;
-  index: number | null = null;
-  locked = true;
-  open() {
-    this.source = null;
-    this.index = null;
-    this.locked = false;
-  }
-  claim(source: string, index: number) {
-    if (this.locked) return false;
-    this.source = source;
-    this.index = index;
-    this.locked = true;
-    return true;
-  }
-  cancel() {
-    this.source = null;
-    this.index = null;
-  }
-  close() {
-    this.cancel();
-    this.locked = true;
-  }
 }

@@ -1,13 +1,19 @@
 export const trainingLevels = ["1", "2", "3", "4", "5", "P"] as const;
-export type TrainingLevel = typeof trainingLevels[number];
+export type TrainingLevel = (typeof trainingLevels)[number];
 export const defaultLevels: TrainingLevel[] = ["1", "2", "3", "4", "5"];
 export const levelDifficulty: Record<Exclude<TrainingLevel, "P">, number[]> = {
-  "1": [0, 1], "2": [2, 3], "3": [4, 5], "4": [6, 7], "5": [8, 9, 10],
+  "1": [0, 1],
+  "2": [2, 3],
+  "3": [4, 5],
+  "4": [6, 7],
+  "5": [8, 9, 10],
 };
 export function parseLevels(value: string | null): TrainingLevel[] {
   if (value === null) return [...defaultLevels];
-  return trainingLevels.filter(level => value.split(",").includes(level));
+  return trainingLevels.filter((level) => value.split(",").includes(level));
 }
 export function selectedDifficulty(levels: TrainingLevel[]) {
-  return new Set(levels.flatMap(level => level === "P" ? [] : levelDifficulty[level]));
+  return new Set(
+    levels.flatMap((level) => (level === "P" ? [] : levelDifficulty[level])),
+  );
 }
