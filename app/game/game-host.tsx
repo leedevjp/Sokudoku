@@ -5,6 +5,9 @@ import Link from "next/link";
 import type Phaser from "phaser";
 import { useSettings } from "@/app/settings";
 import type { Word } from "@/lib/game/types";
+import { parseModes } from "@/lib/game/learning/types";
+import { LearningEngine } from "@/lib/game/learning/engine";
+import { TrainingPlanner } from "@/lib/game/learning/planner";
 import { parseKinds, wordsForKinds } from "@/lib/game/selection";
 import { AnswerJournal } from "@/lib/game/data/answer-journal";
 import { GameDataLoader, type Bootstrap } from "@/lib/game/data/bootstrap";
@@ -26,6 +29,9 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       owner = "",
       ended = false;
     let journal: AnswerJournal | undefined;
+    const modes = parseModes(
+      new URLSearchParams(window.location.search).get("modes"),
+    );
     const kinds = parseKinds(
       new URLSearchParams(window.location.search).get("kinds"),
     );
@@ -43,6 +49,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     window.addEventListener("online", online);
     async function init() {
       if (!kinds.length) throw Error("KINDS");
+      if (!modes.length) throw Error("MODES");
       let data: Bootstrap;
       if (previewWords)
         data = { words: previewWords, stats: [], user_id: "preview" };
@@ -60,6 +67,18 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       journal.recover();
       if (cancelled || !parent.current) return;
       if (data.words.length < 4) throw Error("WORDS");
+      let planner = new TrainingPlanner(
+        await LearningEngine.create(data.learning),
+        data.words,
+        kinds,
+        modes,
+      );
+      if (!planner.hasQuestions())
+        throw Error(
+          modes.length === 1 && modes[0] === "review"
+            ? "REVIEW_EMPTY"
+            : "WORDS",
+        );
       await document.fonts.ready;
       const { createTraining } = await import(
         "@/lib/game/phaser/create-training"
@@ -67,6 +86,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       if (cancelled || !parent.current) return;
       game = createTraining(parent.current, {
         kinds,
+        planner,
         words: data.words,
         stats: data.stats,
         preferences: preferences.current,
@@ -91,9 +111,15 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
             }
             data = fresh;
             journal!.setWords(data.words);
-            return { words: fresh.words, stats: fresh.stats };
+            planner = new TrainingPlanner(
+              await LearningEngine.create(fresh.learning),
+              fresh.words,
+              kinds,
+              modes,
+            );
+            return { words: fresh.words, stats: fresh.stats, planner };
           } catch {
-            return { words: data.words, stats: [] };
+            return { words: data.words, stats: [], planner };
           }
         },
         onExit: () => router.push("/"),
@@ -118,17 +144,30 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
           <strong>速読 / Sokudoku</strong>
           <p role="status">
             {error
-              ? error === "KINDS"
-                ? t("問題タイプを選んでください。", "문제 유형을 선택해주세요.")
-                : error === "WORDS"
+              ? error === "REVIEW_EMPTY"
+                ? t(
+                    "いま復習する単語はありません。探索で学習するか、時間をおいてお試しください。",
+                    "지금 복습할 단어가 없어요. 탐색으로 학습하거나 나중에 다시 시도해주세요.",
+                  )
+                : error === "MODES"
                   ? t(
-                      "選択した範囲・問題タイプには少なくとも4語必要です。読み方には漢字を含む単語を使います。",
-                      "선택한 범위·유형에 단어가 최소 4개 필요합니다. 읽기에는 한자가 있는 단어를 사용합니다.",
+                      "探索・復習を選んでください。",
+                      "탐색·복습을 선택해주세요.",
                     )
-                  : t(
-                      "接続を確認して、もう一度お試しください。",
-                      "연결을 확인하고 다시 시도해주세요.",
-                    )
+                  : error === "KINDS"
+                    ? t(
+                        "問題タイプを選んでください。",
+                        "문제 유형을 선택해주세요.",
+                      )
+                    : error === "WORDS"
+                      ? t(
+                          "選択した範囲・問題タイプには少なくとも4語必要です。読み方には漢字を含む単語を使います。",
+                          "선택한 범위·유형에 단어가 최소 4개 필요합니다. 읽기에는 한자가 있는 단어를 사용합니다.",
+                        )
+                      : t(
+                          "接続を確認して、もう一度お試しください。",
+                          "연결을 확인하고 다시 시도해주세요.",
+                        )
               : t("トレーニングを準備中…", "훈련 준비 중…")}
           </p>
           {error && <Link href="/">{t("ホームへ", "홈으로")}</Link>}

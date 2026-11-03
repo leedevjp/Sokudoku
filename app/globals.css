@@ -1278,3 +1278,7 @@ footer span {
 .notebook-detail dd { margin: 0; font-size: 17px; line-height: 1.8; overflow-wrap: anywhere; }
 .notebook-detail .notebook-note { white-space: pre-wrap; font-size: 14px; }
 @media (max-width: 370px) { .notebook-shell { padding-left: 14px; padding-right: 14px; } .notebook-shell .brand { font-size: 17px; } .notebook-row, .notebook-columns { gap: 7px; padding-left: 10px; padding-right: 10px; } }
+
+/* Keep all three selection rows above the fold on shorter mobile viewports. */
+@media (max-height: 760px) { .home-shell .home-visual { --visual-size: 90px; } }
+@media (max-height: 650px) { .home-shell .home-content { display: none; } .home-actions { margin-top: auto; margin-bottom: auto; } }

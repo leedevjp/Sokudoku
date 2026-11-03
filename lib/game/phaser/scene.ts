@@ -10,7 +10,6 @@ import {
   MISTAKE_FEEDBACK_MS,
   START_INPUT_DELAY_MS,
 } from "../rules";
-import { buildQuestion } from "../question";
 import type { Question } from "../types";
 import type { Preferences } from "../preferences";
 import type { TrainingOptions, Phase } from "./types";
@@ -129,18 +128,18 @@ export class TrainingScene extends Phaser.Scene {
   private startRun() {
     if (this.syncing) return;
     this.session.reset();
+    this.options.planner.resetSet();
     this.syncOK = null;
     this.next(true);
   }
   private next(delayInput = false) {
     try {
-      this.question = buildQuestion(
-        this.options.words,
-        this.options.stats,
-        this.question?.word.id,
-        undefined,
-        this.options.kinds,
-      );
+      const question = this.options.planner.next();
+      if (!question) {
+        this.finish();
+        return;
+      }
+      this.question = question;
     } catch {
       this.phase = "end";
       this.drawEnd();
@@ -236,6 +235,7 @@ export class TrainingScene extends Phaser.Scene {
       this.options.stats,
     );
     this.options.stats = stats;
+    this.options.planner.record(a, this.question.word);
     this.options.onAnswer(a);
     const result = a.result;
     const hit = () => {
@@ -398,13 +398,12 @@ export class TrainingScene extends Phaser.Scene {
           this.finish();
           return;
         }
-        this.question = buildQuestion(
-          this.options.words,
-          this.options.stats,
-          this.question.word.id,
-          undefined,
-          this.options.kinds,
-        );
+        const question = this.options.planner.next();
+        if (!question) {
+          this.finish();
+          return;
+        }
+        this.question = question;
         this.maxTime = limitFor(this.correct);
       }
       this.drawBoard();
@@ -441,6 +440,7 @@ export class TrainingScene extends Phaser.Scene {
       .then((data) => {
         this.options.words = data.words;
         this.options.stats = data.stats;
+        if (data.planner) this.options.planner = data.planner;
         this.retryPending = false;
         this.startRun();
       })

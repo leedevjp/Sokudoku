@@ -457,9 +457,12 @@ export class TrainingView {
     this.promptCaption = this.designText(
       x,
       cardTop + 359 * s,
-      this.question.kind === "reading"
-        ? this.t("読み方を選んでください", "읽기를 고르세요")
-        : this.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요"),
+      (this.question.mode === "review"
+        ? this.t("復習 · ", "복습 · ")
+        : this.t("探索 · ", "탐색 · ")) +
+        (this.question.kind === "reading"
+          ? this.t("読み方を選んでください", "읽기를 고르세요")
+          : this.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요")),
       20 * s,
       this.c.muted,
     ).setWordWrapWidth(cw, true);

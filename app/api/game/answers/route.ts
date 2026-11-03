@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { synchronizeLearning } from "@/lib/game/learning/server";
 const answer = z
   .object({
     id: z.uuid(),
@@ -53,17 +54,29 @@ export async function POST(request: Request) {
   if (!parsed.success)
     return Response.json({ error: "invalid_batch" }, { status: 400, headers });
   const rows = parsed.data.map(({ source, selected_source, ...a }) => ({
-    ...a, user_id: user.id,
+    ...a,
+    user_id: user.id,
     word_id: source === "personal" ? null : a.word_id,
     personal_word_id: source === "personal" ? a.word_id : null,
-    selected_word_id: selected_source === "personal" ? null : a.selected_word_id,
-    selected_personal_word_id: selected_source === "personal" ? a.selected_word_id : null,
+    selected_word_id:
+      selected_source === "personal" ? null : a.selected_word_id,
+    selected_personal_word_id:
+      selected_source === "personal" ? a.selected_word_id : null,
   }));
   const { error } = await client
     .from("answer_log")
     .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
   if (error)
     return Response.json({ error: "save_failed" }, { status: 400, headers });
+  // Acknowledge only after canonical processing commits; retrying a UUID is safe.
+  try {
+    await synchronizeLearning(client);
+  } catch {
+    return Response.json(
+      { error: "learning_sync_failed" },
+      { status: 503, headers },
+    );
+  }
   // A conflicting UUID owned by somebody else must never acknowledge this user's queue.
   const { data: stored, error: checkError } = await client
     .from("answer_log")

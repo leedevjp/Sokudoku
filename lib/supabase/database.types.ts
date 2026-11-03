@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           answered_at: string
           id: string
+          learning_processed_at: string | null
+          learning_rating: number | null
+          learning_version: string | null
           personal_word_id: string | null
           question_type: string
           received_at: string
@@ -32,6 +35,9 @@ export type Database = {
         Insert: {
           answered_at: string
           id: string
+          learning_processed_at?: string | null
+          learning_rating?: number | null
+          learning_version?: string | null
           personal_word_id?: string | null
           question_type: string
           received_at?: string
@@ -46,6 +52,9 @@ export type Database = {
         Update: {
           answered_at?: string
           id?: string
+          learning_processed_at?: string | null
+          learning_rating?: number | null
+          learning_version?: string | null
           personal_word_id?: string | null
           question_type?: string
           received_at?: string
@@ -87,6 +96,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      learner_state: {
+        Row: {
+          ability: number
+          last_answer_id: string
+          last_answered_at: string
+          model_version: string
+          precision: number
+          review_count: number
+          revision: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ability: number
+          last_answer_id: string
+          last_answered_at: string
+          model_version: string
+          precision: number
+          review_count: number
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          ability?: number
+          last_answer_id?: string
+          last_answered_at?: string
+          model_version?: string
+          precision?: number
+          review_count?: number
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       personal_word: {
         Row: {
@@ -175,6 +220,69 @@ export type Database = {
         }
         Relationships: []
       }
+      word_learning_state: {
+        Row: {
+          card: Json
+          due_at: string
+          last_answer_id: string
+          last_result: string
+          last_review_at: string
+          model_version: string
+          personal_word_id: string | null
+          question_type: string
+          source: string
+          updated_at: string
+          user_id: string
+          word_id: string | null
+          word_ref: string
+        }
+        Insert: {
+          card: Json
+          due_at: string
+          last_answer_id: string
+          last_result: string
+          last_review_at: string
+          model_version: string
+          personal_word_id?: string | null
+          question_type: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+          word_id?: string | null
+          word_ref?: string
+        }
+        Update: {
+          card?: Json
+          due_at?: string
+          last_answer_id?: string
+          last_result?: string
+          last_review_at?: string
+          model_version?: string
+          personal_word_id?: string | null
+          question_type?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+          word_id?: string | null
+          word_ref?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_learning_state_user_id_personal_word_id_fkey"
+            columns: ["user_id", "personal_word_id"]
+            isOneToOne: false
+            referencedRelation: "personal_word"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "word_learning_state_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       word_recent_stat: {
@@ -191,8 +299,19 @@ export type Database = {
       }
     }
     Functions: {
+      commit_learning: {
+        Args: {
+          expected_revision: number
+          learner: Json
+          processed_ids: string[]
+          states: Json
+        }
+        Returns: boolean
+      }
       game_bootstrap: { Args: never; Returns: Json }
       game_sync: { Args: { since?: string }; Returns: Json }
+      learning_history: { Args: { pending_only?: boolean }; Returns: Json }
+      learning_snapshot: { Args: never; Returns: Json }
       personal_game_bootstrap: { Args: never; Returns: Json }
       recent_mistake_word: {
         Args: never

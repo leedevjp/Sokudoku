@@ -15,4 +15,4 @@ export type Answer = {
   time_limit_ms: number;
   answered_at: string;
 };
-export type Question = { word: Word; kind: Kind; options: Word[] };
+export type Question = { word: Word; kind: Kind; options: Word[]; mode?: "exploration" | "review" };

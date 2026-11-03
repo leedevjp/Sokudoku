@@ -2,8 +2,15 @@ import type { Word, Stat } from "../types";
 import { parseLevels, selectedDifficulty } from "../selection";
 import { readWords, readWordCache, mergeWords } from "./word-cache";
 import { createClient } from "@/lib/supabase/client";
+import { database, storageDeadline } from "./database";
+import { emptyLearning, type LearningSnapshot } from "../learning/types";
 
-export type Bootstrap = { words: Word[]; stats: Stat[]; user_id: string };
+export type Bootstrap = {
+  words: Word[];
+  stats: Stat[];
+  user_id: string;
+  learning?: LearningSnapshot;
+};
 
 /** One loader per game route. Owns selected sources, incremental cache and offline fallback. */
 export class GameDataLoader {
@@ -21,16 +28,32 @@ export class GameDataLoader {
     return words.filter((word) => this.difficulties.has(word.difficulty));
   }
   async fetchData(): Promise<Bootstrap> {
-    const sets = await Promise.all([
-      this.difficulties.size ? this.fetchCommon() : Promise.resolve(null),
-      this.includePersonal ? this.fetchPersonal() : Promise.resolve(null),
+    const [sets, state] = await Promise.all([
+      Promise.all([
+        this.difficulties.size ? this.fetchCommon() : Promise.resolve(null),
+        this.includePersonal ? this.fetchPersonal() : Promise.resolve(null),
+      ]),
+      this.fetchLearning(),
     ]);
     const present = sets.filter((set): set is Bootstrap => set !== null);
     if (!present.length) throw Error("WORDS");
     if (present.some((set) => set.user_id !== present[0].user_id))
       throw Error("LOGIN");
+    if (state.user_id !== present[0].user_id) throw Error("LOGIN");
+    try {
+      await storageDeadline(
+        (await database()).put(
+          "cache",
+          state.learning,
+          `learning-v1:${state.user_id}`,
+        ),
+      );
+    } catch {
+      /* Optional offline snapshot. */
+    }
     return {
       user_id: present[0].user_id,
+      learning: state.learning,
       words: present.flatMap((set) => set.words),
       stats: [
         ...new Map(
@@ -40,6 +63,21 @@ export class GameDataLoader {
         ).values(),
       ],
     };
+  }
+  private async fetchLearning(): Promise<{
+    user_id: string;
+    learning: LearningSnapshot;
+  }> {
+    const response = await fetch("/api/game/learning", {
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+    if (response.status === 401) {
+      this.onLoginRequired();
+      throw Error("LOGIN");
+    }
+    if (!response.ok) throw Error("LOAD");
+    return response.json();
   }
   async fetchPersonal(): Promise<Bootstrap> {
     const response = await fetch("/api/game/bootstrap?source=personal", {
@@ -108,6 +146,10 @@ export class GameDataLoader {
       words: [...this.filterCommon(common), ...personal],
       stats: [],
       user_id: session.user.id,
+      learning:
+        (await storageDeadline(
+          (await database()).get("cache", `learning-v1:${session.user.id}`),
+        ).catch(() => undefined)) ?? emptyLearning(),
     };
   }
 }

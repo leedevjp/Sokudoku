@@ -19,6 +19,27 @@ function shuffle<T>(items: T[], rng: () => number) {
   }
   return a;
 }
+/** Build choices for a fixed, already selected word/type. No scheduling decisions. */
+export function questionFor(
+  word: Word,
+  kind: Kind,
+  pool: Word[],
+  rng = Math.random,
+): Question | null {
+  const options: Word[] = [];
+  for (const other of shuffle(pool, rng)) {
+    if (
+      other.id === word.id ||
+      overlaps(word, other, kind) ||
+      options.some((option) => overlaps(option, other, kind))
+    )
+      continue;
+    options.push(other);
+    if (options.length === 3)
+      return { word, kind, options: shuffle([word, ...options], rng) };
+  }
+  return null;
+}
 export function buildQuestion(
   words: Word[],
   stats: Stat[],
@@ -59,19 +80,8 @@ export function buildQuestion(
       rng,
     );
     for (const kind of kinds) {
-      const options: Word[] = [];
-      for (const other of shuffle(pool, rng)) {
-        if (
-          other.id === word.id ||
-          overlaps(word, other, kind) ||
-          options.some((x) => overlaps(x, other, kind))
-        )
-          continue;
-        options.push(other);
-        if (options.length === 3) break;
-      }
-      if (options.length === 3)
-        return { word, kind, options: shuffle([word, ...options], rng) };
+      const question = questionFor(word, kind, pool, rng);
+      if (question) return question;
     }
     candidates = candidates.filter((c) => c.word.id !== word.id);
     if (!candidates.length) break;

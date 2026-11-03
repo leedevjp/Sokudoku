@@ -16,6 +16,12 @@ import { HomeHero } from "./home-hero";
 import { Modal } from "@/components/ui/modal";
 import { TrainingDetails } from "./training-details";
 import type { Kind } from "@/lib/game/types";
+import { ModeSelector } from "./mode-selector";
+import {
+  parseModes,
+  trainingModes,
+  type TrainingMode,
+} from "@/lib/game/learning/types";
 import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 
@@ -31,11 +37,14 @@ export default function HomeScreen() {
   const { user, loading, notice } = account;
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
-  const canStart = levels.length > 0 && kinds.length > 0;
+  const [modes, setModes] = useState<TrainingMode[]>(trainingModes);
+  const canStart = levels.length > 0 && kinds.length > 0 && modes.length > 0;
   useEffect(() => {
     // Restore after hydration so the first server/client render stays identical.
     const timer = setTimeout(() => {
       try {
+        const savedModes = localStorage.getItem("sokudoku-modes-v1");
+        if (savedModes !== null) setModes(parseModes(savedModes));
         const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
         if (savedKinds !== null) setKinds(parseKinds(savedKinds));
         const saved = localStorage.getItem("sokudoku-levels-v1");
@@ -64,6 +73,17 @@ export default function HomeScreen() {
     setKinds(next);
     try {
       localStorage.setItem("sokudoku-kinds-v1", next.join(","));
+    } catch {
+      /* Optional preference. */
+    }
+  }
+  function toggleMode(mode: TrainingMode) {
+    const next = trainingModes.filter((item) =>
+      item === mode ? !modes.includes(item) : modes.includes(item),
+    );
+    setModes(next);
+    try {
+      localStorage.setItem("sokudoku-modes-v1", next.join(","));
     } catch {
       /* Optional preference. */
     }
@@ -98,6 +118,7 @@ export default function HomeScreen() {
       </header>
       <HomeHero />
       <div className="home-actions">
+        <ModeSelector modes={modes} onToggle={toggleMode} />
         <KindSelector kinds={kinds} onToggle={toggleKind} />
         <LevelSelector levels={levels} onToggle={toggleLevel} />
         {loading ? (
@@ -108,7 +129,7 @@ export default function HomeScreen() {
           <Link
             className="primary"
             aria-disabled={!canStart}
-            href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}`}
+            href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}`}
             onClick={(event) => {
               if (!canStart) event.preventDefault();
             }}
