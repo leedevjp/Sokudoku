@@ -49,6 +49,9 @@ export default function HomeScreen() {
   useEffect(() => {
     // Restore after hydration so the first server/client render stays identical.
     const timer = setTimeout(() => {
+      if (new URLSearchParams(window.location.search).get("login") === "1") {
+        setModal("auth");
+      }
       try {
         const savedModes = localStorage.getItem("sokudoku-modes-v1");
         if (savedModes !== null) setModes(parseModes(savedModes));
