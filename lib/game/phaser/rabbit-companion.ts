@@ -1,6 +1,6 @@
 import { paintHearts } from "./reward-effects";
 import Phaser from "phaser";
-import { petFrame, type PetMotion } from "../pet-motion";
+import { petPose, type PetMotion } from "../pet-motion";
 const TEXTURE = "sokudoku-rabbit-v1";
 export function preloadRabbit(scene: Phaser.Scene) {
   if (!scene.textures.exists(TEXTURE))
@@ -12,6 +12,7 @@ export class RabbitCompanion {
   private hearts?: Phaser.GameObjects.Graphics;
   private size = 0;
   private sprite?: Phaser.GameObjects.Image;
+  private nextSprite?: Phaser.GameObjects.Image;
   private maskShape?: Phaser.GameObjects.Graphics;
   private mask?: Phaser.Display.Masks.GeometryMask;
   constructor(scene: Phaser.Scene, x: number, y: number, size: number) {
@@ -39,7 +40,14 @@ export class RabbitCompanion {
     this.root.add(scene.add.circle(0, 0, size / 2, 0xfffcf8));
     this.sprite = scene.add
       .image(0, 0, TEXTURE, "0")
-      .setDisplaySize(size, size);
+      .setDisplaySize(size, size)
+      .setOrigin(0.5, 0.82)
+      .setY(size * 0.32);
+    this.nextSprite = scene.add
+      .image(0, size * 0.32, TEXTURE, "0")
+      .setDisplaySize(size, size)
+      .setOrigin(0.5, 0.82)
+      .setAlpha(0);
     if (scene.game.renderer.type === Phaser.WEBGL) {
       const key = "sokudoku-rabbit-circle";
       if (!scene.textures.exists(key)) {
@@ -50,26 +58,43 @@ export class RabbitCompanion {
       }
       this.sprite.enableFilters();
       this.sprite.filters!.internal.addMask(key);
+      this.nextSprite.enableFilters();
+      this.nextSprite.filters!.internal.addMask(key);
     } else {
       this.maskShape = scene.make.graphics({ x: 0, y: 0 });
       this.maskShape.fillStyle(0xffffff).fillCircle(x, y, size / 2);
       this.mask = this.maskShape.createGeometryMask();
       this.sprite.setMask(this.mask);
+      this.nextSprite.setMask(this.mask);
     }
-    this.root.add(this.sprite);
+    this.root.add([this.sprite, this.nextSprite]);
     this.root.add(
       scene.add.circle(0, 0, size / 2).setStrokeStyle(1, 0xb6a3c4, 0.35),
     );
     this.hearts = scene.add.graphics();
     this.root.add(this.hearts);
     this.root.once("destroy", () => {
-      if (this.mask) this.sprite?.clearMask();
+      if (this.mask) {
+        this.sprite?.clearMask();
+        this.nextSprite?.clearMask();
+      }
       this.mask?.destroy();
       this.maskShape?.destroy();
     });
   }
   show(motion: PetMotion, elapsed: number, reduced: boolean) {
-    this.sprite?.setFrame(String(petFrame(motion, elapsed, reduced)));
+    const pose = petPose(motion, elapsed, reduced);
+    for (const [image, frame, alpha] of [
+      [this.sprite, pose.frame, 1 - pose.mix],
+      [this.nextSprite, pose.next, pose.mix],
+    ] as const) {
+      image
+        ?.setFrame(String(frame))
+        .setDisplaySize(this.size * pose.scaleX, this.size * pose.scaleY)
+        .setPosition(this.size * pose.x, this.size * (0.32 + pose.y))
+        .setAngle(pose.angle)
+        .setAlpha(alpha);
+    }
     if (this.hearts) {
       this.hearts.clear();
       if (motion === "happy" || motion === "celebrate")

@@ -22,3 +22,7 @@ Preview all motions at /pets/rabbit-preview.html; this page uses no account or l
 ## Generation prompt
 
 Create a 4-column, 4-row sprite sheet of the original ivory-white quadrupedal rabbit, pink inner ears, plum eyes and lavender shading. Fixed left-facing three-quarter camera, consistent scale, centered cells, full ears and paws visible. Row 1 idle/breath/blink, row 2 crouch/push-off/airborne/landing, row 3 happy hop, row 4 two encouraging poses and two resting loaf poses. No text, props, grid or human anatomy. A follow-up requested removal of background noise while preserving all sixteen poses. The clean ivory-backed version was selected over the noisy transparency outputs.
+
+## Continuous motion
+
+The original PNG remains byte-for-byte unchanged. petPose samples subtle breathing, body sway and short hop arcs every render frame, anchored near the feet. Subtle resting poses crossfade over 35–65 ms; large hopping poses use a continuous arc without crossfading to avoid double-image ghosts; these are procedural in-between motions, not new drawn frames. Reduced-motion is static. The preview embeds the transpiled pure motion sampler and must be refreshed when pet-motion.ts changes.

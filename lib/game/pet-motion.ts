@@ -46,3 +46,53 @@ export class PetMotionState {
     if (this.elapsed >= PET_CLIPS[this.motion].duration) this.play("idle");
   }
 }
+
+/** Sub-frame animation keeps the original atlas intact. Values are size-relative. */
+export function petPose(motion: PetMotion, elapsed: number, reduced = false) {
+  const frame = petFrame(motion, elapsed, reduced);
+  if (reduced)
+    return {
+      frame,
+      next: frame,
+      mix: 0,
+      x: 0,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+      angle: 0,
+    };
+  const t = Math.max(0, elapsed),
+    clip = PET_CLIPS[motion];
+  const index = Math.floor(t / clip.step) % clip.frames.length;
+  const next = clip.frames[(index + 1) % clip.frames.length];
+  const blendWindow = motion === "idle" ? 35 : 65;
+  const fraction = Math.max(
+    0,
+    ((t % clip.step) - (clip.step - blendWindow)) / blendWindow,
+  );
+  const mix =
+    next === frame || ["hop", "happy", "celebrate"].includes(motion)
+      ? 0
+      : fraction * fraction * (3 - 2 * fraction);
+  const breath = (1 - Math.cos((t * Math.PI * 2) / 2200)) / 2;
+  const sway = Math.sin((t * Math.PI * 2) / 3800);
+  const jumping =
+    motion === "hop" || motion === "happy" || motion === "celebrate";
+  const jumpDuration = clip.step * 4;
+  const jumpTime =
+    motion === "celebrate" ? t % (clip.step * clip.frames.length) : t;
+  const jump =
+    jumping && jumpTime < jumpDuration
+      ? Math.pow(Math.sin((jumpTime / jumpDuration) * Math.PI), 2)
+      : 0;
+  return {
+    frame,
+    next,
+    mix,
+    x: motion === "rest" ? 0 : sway * 0.012,
+    y: -jump * 0.035,
+    scaleX: 1 + breath * 0.012 - jump * 0.025,
+    scaleY: 1 + breath * 0.035 + jump * 0.025,
+    angle: motion === "rest" ? 0 : sway * 1.6,
+  };
+}
