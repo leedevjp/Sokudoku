@@ -161,3 +161,34 @@
     font-size: 10px;
   }
 }
+/* Fill tall browser windows and scale the launch controls with the viewport. */
+@media (min-height: 921px) {
+  .home-shell {
+    max-height: none;
+    max-width: clamp(480px, 52svh, 680px);
+  }
+  .home-shell .home-visual {
+    --visual-size: min(clamp(176px, 20svh, 260px), 40vw);
+  }
+  .home-actions .training-levels button {
+    min-height: clamp(44px, 4.8svh, 64px);
+    font-size: clamp(14px, 1.5svh, 18px);
+  }
+  .home-actions .selection-label,
+  .home-actions .level-heading a {
+    font-size: clamp(12px, 1.15svh, 15px);
+  }
+  .home-actions .selection-label span {
+    font-size: clamp(11px, 1.05svh, 13px);
+  }
+  .home-actions .primary {
+    min-height: clamp(60px, 6svh, 80px);
+    font-size: clamp(16px, 1.5svh, 19px);
+  }
+  .home-answer-list .preview-answer {
+    min-height: calc(var(--visual-size) * 0.23);
+  }
+  .home-answer-list .preview-answer b {
+    font-size: clamp(13px, 1.25svh, 16px);
+  }
+}
