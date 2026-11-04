@@ -8,7 +8,7 @@ import { WordEditor } from "./word-editor";
 import { WordDialog } from "./word-dialog";
 import { WordSearch } from "./word-search";
 import { WordList } from "./word-list";
-import styles from "./personal.module.css";
+import styles from "./personal-styles";
 
 type Dialog =
   | { mode: "create" }

@@ -1,0 +1,65 @@
+.tile {
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--tint);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.progress {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--press);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.stage {
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--tint);
+}
+.stage summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.stage summary::-webkit-details-marker {
+  display: none;
+}
+.badge {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--press);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+.chevron {
+  color: var(--muted);
+}
+.stage[open] .chevron {
+  transform: rotate(180deg);
+}
+.stageDetails {
+  border-top: 1px dashed var(--line);
+  margin-top: 12px;
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}

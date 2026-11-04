@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import type { PersonalWord } from "@/lib/personal/types";
 import { personalMessage } from "@/lib/personal/messages";
 import { choiceLabel } from "@/lib/game/rules";
-import styles from "./personal.module.css";
+import styles from "./personal-styles";
 export function WordDialog({
   word,
   mode,

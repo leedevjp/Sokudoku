@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Translate } from "@/lib/dashboard/types";
 import type { DashboardSummary } from "@/lib/dashboard/summary";
-import styles from "./dashboard.module.css";
+import styles from "./dashboard-styles";
 
 export function DashboardState({
   error,

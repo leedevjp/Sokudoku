@@ -6,9 +6,9 @@ import { TrainingSurface } from "./surface";
 import { drawHud, drawInputHint } from "./board-hud";
 import {
   drawChoices,
-  drawQuestionCard,
   paintChoice as paintChoiceBackground,
-} from "./board-cards";
+} from "./board-choices";
+import { drawQuestionCard } from "./board-cards";
 
 type BoardActions = {
   pause: () => void;

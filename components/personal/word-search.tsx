@@ -1,6 +1,6 @@
 import { useSettings } from "@/components/settings/settings-provider";
 import type { PersonalWordList } from "@/lib/personal/types";
-import styles from "./personal.module.css";
+import styles from "./personal-styles";
 
 export function WordSearch({
   query,

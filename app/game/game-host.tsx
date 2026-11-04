@@ -1,19 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type Phaser from "phaser";
-import { TrainingGuide } from "@/components/game/training-guide";
+import { GameLoading } from "@/components/game/game-loading";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { Word } from "@/lib/game/types";
 import { parseModes } from "@/lib/game/learning/types";
-import { LearningEngine } from "@/lib/game/learning/engine";
-import { recoverLearning } from "@/lib/game/learning/recovery";
-import { TrainingPlanner } from "@/lib/game/learning/planner";
-import { parseKinds, wordsForKinds } from "@/lib/game/selection";
-import { AnswerJournal } from "@/lib/game/data/answer-journal";
-import { GameDataLoader, type Bootstrap } from "@/lib/game/data/bootstrap";
-import { database, storageDeadline } from "@/lib/game/data/database";
+import { parseKinds } from "@/lib/game/selection";
+import { TrainingRuntime } from "@/lib/game/data/training-runtime";
+
+/** Connects React lifecycle and preferences to the dynamically loaded game. */
 export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   const { prefs, change } = useSettings();
   const router = useRouter();
@@ -27,86 +23,39 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     changeRef.current = change;
   }, [prefs, change]);
   useEffect(() => {
-    let cancelled = false,
-      game: Phaser.Game | undefined,
-      owner = "",
-      ended = false;
-    let journal: AnswerJournal | undefined;
+    let cancelled = false;
+    let game: Phaser.Game | undefined;
     let readyTimer: ReturnType<typeof setTimeout> | undefined;
-    const modes = parseModes(
-      new URLSearchParams(window.location.search).get("modes"),
-    );
-    const kinds = parseKinds(
-      new URLSearchParams(window.location.search).get("kinds"),
-    );
-    const filterWords = (data: Bootstrap): Bootstrap => ({
-      ...data,
-      words: wordsForKinds(data.words, kinds),
+    const query = new URLSearchParams(window.location.search);
+    const kinds = parseKinds(query.get("kinds"));
+    const runtime = new TrainingRuntime({
+      levels: query.get("levels"),
+      kinds,
+      modes: parseModes(query.get("modes")),
+      previewWords,
+      onLoginRequired: () => router.replace("/"),
     });
-    const loader = new GameDataLoader(
-      new URLSearchParams(window.location.search).get("levels"),
-      () => router.replace("/"),
-    );
-    const online = () => {
-      if (ended) void journal?.sync();
-    };
+    const online = () => runtime.online();
     window.addEventListener("online", online);
     async function init() {
       await Promise.resolve();
       if (cancelled) return;
       setLoaded(false);
       setError("");
-      if (!kinds.length) throw Error("KINDS");
-      if (!modes.length) throw Error("MODES");
-      let data: Bootstrap;
-      if (previewWords)
-        data = { words: previewWords, stats: [], user_id: "preview" };
-      else {
-        try {
-          data = await loader.fetchData();
-        } catch (e) {
-          if ((e as Error).message === "LOGIN") return;
-          data = await loader.loadOffline();
-        }
-      }
-      data = filterWords(data);
-      owner = data.user_id;
-      journal = new AnswerJournal(owner, data.words, !!previewWords);
-      const pending = await journal.recover();
-      if (pending.length && !previewWords) {
-        try {
-          const fresh = filterWords(await loader.fetchData());
-          if (fresh.user_id !== owner) throw Error("LOGIN");
-          data = fresh;
-          journal.setWords(data.words);
-        } catch (e) {
-          if ((e as Error).message === "LOGIN") throw e;
-          // Local replay below protects exploration even while offline.
-        }
-      }
-      if (cancelled || !parent.current) return;
-      if (!data.words.length) throw Error("WORDS");
-      const engine = await recoverLearning(data.learning, pending, data.words);
-      if (pending.length) {
-        try {
-          await storageDeadline((await database()).put("cache", engine.snapshot(), `learning-v1:${owner}`));
-        } catch { /* Durable answer queue remains the fallback if caching is unavailable. */ }
-      }
-      let planner = new TrainingPlanner(
-        engine,
-        data.words,
-        kinds,
-        modes,
-      );
-      planner.hasQuestions(); // Empty is a normal completion; construction failure throws.
+      const data = await runtime.load();
       await document.fonts.ready;
-      const { createTraining } =
-        await import("@/lib/game/phaser/create-training");
+      const { createTraining } = await import(
+        "@/lib/game/phaser/create-training"
+      );
       if (cancelled || !parent.current) return;
       readyTimer = setTimeout(() => {
         if (!cancelled) setError("START");
       }, 15000);
       game = createTraining(parent.current, {
+        ...data,
+        kinds,
+        preferences: preferences.current,
+        preview: !!previewWords,
         onReady: () => {
           clearTimeout(readyTimer);
           if (!cancelled) {
@@ -117,51 +66,22 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         onError: (error) => {
           clearTimeout(readyTimer);
           console.error("Training initialization failed", error);
-          if (!cancelled) setError((error as Error)?.message === "QUESTION_BUILD_FAILED" ? "QUESTION_BUILD_FAILED" : "START");
-        },
-        kinds,
-        planner,
-        words: data.words,
-        stats: data.stats,
-        preferences: preferences.current,
-        preview: !!previewWords,
-        onPreferences: (p) => changeRef.current(p),
-        onAnswer: (answer) => journal!.record(answer),
-        onFinish: async () => {
-          ended = true;
-          const ok = await journal!.sync();
-          return ok;
-        },
-        onRetry: async () => {
-          ended = false;
-          if (previewWords)
-            return { words: wordsForKinds(previewWords, kinds), stats: [] };
-          if (!(await journal!.sync()))
-            return { words: data.words, stats: [], planner };
-          try {
-            const fresh = filterWords(await loader.fetchData());
-            if (fresh.user_id !== owner) {
-              router.replace("/");
-              throw Error("LOGIN");
-            }
-            data = fresh;
-            journal!.setWords(data.words);
-            planner = new TrainingPlanner(
-              await LearningEngine.create(fresh.learning),
-              fresh.words,
-              kinds,
-              modes,
+          if (!cancelled)
+            setError(
+              (error as Error)?.message === "QUESTION_BUILD_FAILED"
+                ? "QUESTION_BUILD_FAILED"
+                : "START",
             );
-            return { words: fresh.words, stats: fresh.stats, planner };
-          } catch {
-            return { words: data.words, stats: [], planner };
-          }
         },
+        onPreferences: (p) => changeRef.current(p),
+        onAnswer: (answer) => runtime.record(answer),
+        onFinish: () => runtime.finish(),
+        onRetry: () => runtime.retry(),
         onExit: () => router.push("/"),
       });
     }
-    void init().catch((e) => {
-      if (!cancelled) setError((e as Error).message);
+    void init().catch((error) => {
+      if (!cancelled) setError((error as Error).message);
     });
     return () => {
       cancelled = true;
@@ -170,55 +90,10 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       game?.destroy(true);
     };
   }, [previewWords, router]);
-  const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   return (
     <main className="game-viewport">
       <div className="game-canvas" ref={parent} />
-      {(!loaded || error) && (
-        <div className="game-loading">
-          <strong>速読 / Sokudoku</strong>
-          <p role="status">
-            {error
-              ? error === "START"
-                ? t(
-                    "ゲームを開始できませんでした。ホームからもう一度お試しください。",
-                    "게임을 시작하지 못했어요. 메인으로 돌아가 다시 시작해주세요.",
-                  )
-                : error === "QUESTION_BUILD_FAILED"
-                  ? t(
-                      "候補はありますが、重複しない4択を作れませんでした。範囲を広げるか単語の意味を確認してください。",
-                      "남은 단어는 있지만 겹치지 않는 4지선다를 만들지 못했어요. 범위를 넓히거나 단어 뜻을 확인해주세요.",
-                    )
-                : error === "REVIEW_EMPTY"
-                  ? t(
-                      "いま復習する単語はありません。探索で学習するか、時間をおいてお試しください。",
-                      "지금 복습할 단어가 없어요. 탐색으로 학습하거나 나중에 다시 시도해주세요.",
-                    )
-                  : error === "MODES"
-                    ? t(
-                        "探索・復習を選んでください。",
-                        "탐색·복습을 선택해주세요.",
-                      )
-                    : error === "KINDS"
-                      ? t(
-                          "問題タイプを選んでください。",
-                          "문제 유형을 선택해주세요.",
-                        )
-                      : error === "WORDS"
-                        ? t(
-                            "選択した範囲・問題タイプには少なくとも4語必要です。読み方には漢字を含む単語を使います。",
-                            "선택한 범위·유형에 단어가 최소 4개 필요합니다. 읽기에는 한자가 있는 단어를 사용합니다.",
-                          )
-                        : t(
-                            "接続を確認して、もう一度お試しください。",
-                            "연결을 확인하고 다시 시도해주세요.",
-                          )
-              : t("トレーニングを準備中…", "훈련 준비 중…")}
-          </p>
-          {!error && <TrainingGuide lang={prefs.lang} />}
-          {error && <Link href="/">{t("ホームへ", "홈으로")}</Link>}
-        </div>
-      )}
+      {(!loaded || error) && <GameLoading error={error} lang={prefs.lang} />}
     </main>
   );
 }

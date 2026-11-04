@@ -8,7 +8,7 @@ import { dashboardSummary } from "@/lib/dashboard/summary";
 import { MemoryDistribution } from "./memory-distribution";
 import { ActivityChart } from "./activity-chart";
 import { StageProgress } from "./stage-progress";
-import styles from "./dashboard.module.css";
+import styles from "./dashboard-styles";
 import { useDashboardData } from "./use-dashboard-data";
 import { DashboardFilters } from "./dashboard-filters";
 import { DashboardState } from "./dashboard-state";

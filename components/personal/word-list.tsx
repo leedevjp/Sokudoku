@@ -3,7 +3,7 @@ import { useSettings } from "@/components/settings/settings-provider";
 import { choiceLabel } from "@/lib/game/rules";
 import { personalMessage } from "@/lib/personal/messages";
 import type { PersonalWord, PersonalWordList } from "@/lib/personal/types";
-import styles from "./personal.module.css";
+import styles from "./personal-styles";
 
 export function WordList({
   data,

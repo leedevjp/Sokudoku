@@ -1,7 +1,7 @@
 import type { dashboardSummary } from "@/lib/dashboard/summary";
 import type { EntryType } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
-import styles from "./dashboard.module.css";
+import styles from "./dashboard-styles";
 export function StageProgress({
   summary,
   entry,

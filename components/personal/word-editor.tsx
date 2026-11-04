@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { personalMessage } from "@/lib/personal/messages";
 import { useSettings } from "@/components/settings/settings-provider";
 import { Modal } from "@/components/ui/modal";
-import { personalWordInput } from "@/lib/personal/schema";
-import { personalMessage } from "@/lib/personal/messages";
+import { useWordEditor } from "./use-word-editor";
+import { WordEditorField, type WordEditorFieldName } from "./word-editor-field";
 import type { PersonalWord } from "@/lib/personal/types";
 import { choiceLabel } from "@/lib/game/rules";
-import styles from "./personal.module.css";
+import styles from "./personal-styles";
 
 export function WordEditor({
   word,
@@ -19,124 +19,27 @@ export function WordEditor({
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
-  const [form, setForm] = useState(() => ({
-    term: word?.term ?? "",
-    kana: word?.kana ?? "",
-    meaning_ko: word?.meaning_ko ?? "",
-    hanja_reading: word?.hanja_reading ?? "",
-    difficulty: word?.difficulty ?? 6,
-    note: word?.note ?? "",
-  }));
-  const baseline = useRef(JSON.stringify(form));
-  const [busy, setBusy] = useState(false);
-  const lock = useRef(false);
-  const [discard, setDiscard] = useState(false);
-  const [error, setError] = useState("");
-  const [fields, setFields] = useState<string[]>([]);
-  const dirty = JSON.stringify(form) !== baseline.current;
-  useEffect(() => {
-    if (!dirty || busy) return;
-    const prevent = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", prevent);
-    return () => window.removeEventListener("beforeunload", prevent);
-  }, [dirty, busy]);
-  function close() {
-    if (lock.current) return;
-    if (dirty) setDiscard(true);
-    else onClose();
-  }
-  function field(name: keyof typeof form, value: string | number) {
-    setForm((old) => ({ ...old, [name]: value }));
-    setFields((old) => old.filter((f) => f !== name));
-  }
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    if (lock.current) return;
-    const parsed = personalWordInput.safeParse(form);
-    if (!parsed.success) {
-      setFields([
-        ...new Set(parsed.error.issues.map((i) => String(i.path[0]))),
-      ]);
-      setError("invalid_input");
-      return;
-    }
-    lock.current = true;
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch(
-        "/api/personal" + (word ? "/" + word.id : ""),
-        {
-          method: word ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(15000),
-          body: JSON.stringify({
-            ...parsed.data,
-            ...(word ? { updated_at: word.updated_at } : {}),
-          }),
-        },
-      );
-      if (!response.ok) {
-        const result = await response.json();
-        setError(result.error ?? "save_failed");
-        setFields(Object.keys(result.fields ?? {}));
-        return;
-      }
-      onSaved(!word);
-    } catch {
-      setError("save_failed");
-    } finally {
-      lock.current = false;
-      setBusy(false);
-    }
-  }
+  const { form, busy, discard, setDiscard, error, fields, close, field, save } =
+    useWordEditor(word, onClose, onSaved);
   const input = (
-    name: "term" | "kana" | "meaning_ko" | "hanja_reading",
+    name: WordEditorFieldName,
     label: string,
     placeholder: string,
     maxLength: number,
   ) => (
-    <label className={styles.field} htmlFor={"personal-" + name}>
-      {label}
-      <input
-        id={"personal-" + name}
-        value={form[name]}
-        onChange={(e) => field(name, e.target.value)}
-        maxLength={maxLength}
-        placeholder={placeholder}
-        disabled={busy}
-        aria-invalid={fields.includes(name)}
-        aria-describedby={fields.includes(name) ? "error-" + name : undefined}
-        lang={name === "term" || name === "kana" ? "ja" : "ko"}
-      />
-      {fields.includes(name) && (
-        <small className={styles.fieldError} id={"error-" + name}>
-          {name === "kana"
-            ? t(
-                "かなで入力してください。数字・記号・改行は使えません。",
-                "히라가나·가타카나로 입력해주세요. 숫자·특수문자·줄바꿈은 쓸 수 없어요.",
-              )
-            : name === "hanja_reading"
-              ? t(
-                  "韓国語の漢字音だけを入力してください。",
-                  "한국 한자음만 한글로 입력해주세요.",
-                )
-              : name === "term"
-                ? t(
-                    "100文字以内で、文字・数字・単語に必要な記号だけを入力してください。",
-                    "100자 이내로 문자·숫자와 단어에 필요한 기호만 입력해주세요.",
-                  )
-                : t(
-                    "1,000文字以内の文章を入力してください。HTML・制御文字は使えません。",
-                    "1,000자 이내 문장을 입력해주세요. HTML·제어문자는 쓸 수 없어요.",
-                  )}
-        </small>
-      )}
-    </label>
+    <WordEditorField
+      name={name}
+      value={form[name]}
+      label={label}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      busy={busy}
+      invalid={fields.includes(name)}
+      lang={prefs.lang}
+      onChange={field}
+    />
   );
+
   return (
     <Modal
       open

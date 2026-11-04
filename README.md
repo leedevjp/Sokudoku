@@ -38,6 +38,8 @@ supabase/migrations/  スキーマ・RLS・集計SQL
 tests/                ロジックとSQLの回帰テスト
 ```
 
+詳しい責務の分割は [Architecture](docs/architecture.md) を参照してください。
+
 ## 開発
 
 Node.js 24 / pnpm 11

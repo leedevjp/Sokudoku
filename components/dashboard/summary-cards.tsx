@@ -1,7 +1,7 @@
 import type { EntryType } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
 import type { DashboardSummary } from "@/lib/dashboard/summary";
-import styles from "./dashboard.module.css";
+import styles from "./dashboard-styles";
 
 export function SummaryCards({
   summary,

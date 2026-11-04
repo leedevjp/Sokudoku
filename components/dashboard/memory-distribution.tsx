@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { percentageShares } from "@/lib/dashboard/summary";
 import type { Translate } from "@/lib/dashboard/types";
-import styles from "./dashboard.module.css";
+import styles from "./dashboard-styles";
 export function MemoryDistribution({
   counts,
   scope,

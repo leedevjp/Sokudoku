@@ -1,0 +1,103 @@
+.help {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--accent-dark) !important;
+  font-weight: 700;
+  position: relative;
+}
+.help::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.helpBox {
+  background: var(--press);
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  display: grid;
+  gap: 8px;
+}
+.memoryBar {
+  display: flex;
+  gap: 3px;
+  height: 26px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.memoryBar > span {
+  min-width: 2px;
+  border-radius: 5px;
+  transition: opacity 0.15s;
+}
+.memory0 {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--memory-first) 0,
+    var(--memory-first) 4px,
+    var(--press) 4px,
+    var(--press) 8px
+  );
+  box-shadow: inset 0 0 0 2px var(--memory-first);
+}
+.memory1 {
+  background: var(--accent);
+}
+.memory2 {
+  background: var(--memory-last);
+}
+.memoryRow {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto 38px;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+}
+.memoryRow[aria-pressed="true"] {
+  background: var(--press);
+}
+.memoryRow i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+.memoryRow > span {
+  font-weight: 700;
+}
+.memoryRow small {
+  text-align: right;
+  color: var(--muted);
+  font-size: 13px;
+}
+.memoryRow b {
+  font-variant-numeric: tabular-nums;
+}
+.totalLine {
+  border-top: 2px dashed var(--line);
+  padding-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .memoryBar > span {
+    transition: none;
+  }
+}
+@media (max-width: 350px) {
+  .memoryRow {
+    font-size: 12px;
+    gap: 6px;
+  }
+}

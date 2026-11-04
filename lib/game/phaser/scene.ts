@@ -1,9 +1,12 @@
-import { drawPause, drawEnd } from "./overlays";
+import { RunPersistence } from "./run-persistence";
+import { paintAnswerFeedback } from "./answer-feedback";
+import { TrainingInput } from "./training-input";
+import { drawPause } from "./pause-overlay";
+import { drawEnd } from "./result-overlay";
 import { TrainingSession } from "../session";
 import Phaser from "phaser";
 import {
   AnswerGate,
-  keyIndex,
   limitFor,
   CORRECT_FEEDBACK_MS,
   START_INPUT_DELAY_MS,
@@ -43,10 +46,17 @@ export class TrainingScene extends Phaser.Scene {
   private pauseAt = 0;
   private maxTime = 10000;
   private overlay?: Phaser.GameObjects.Container;
-  private held = new Set<string>();
-  private syncing = false;
-  private retryPending = false;
-  private syncOK: boolean | null = null;
+  private trainingInput = new TrainingInput({
+    phase: () => this.phase,
+    press: (source, index) => this.press(source, index),
+    correct: (index) => this.finishCorrection(index),
+    toggleCorrection: () => this.toggleCorrection(),
+    pause: () => this.pause(),
+    resume: () => this.resume(),
+    hidden: () => this.hidden(),
+    cancel: () => this.cancelPress(),
+  });
+  private persistence = new RunPersistence();
   private reviewComplete = false;
   private failed = false;
   private viewGeneration = 0;
@@ -113,19 +123,9 @@ export class TrainingScene extends Phaser.Scene {
       ),
     );
     this.game.canvas.setAttribute("tabindex", "0");
-    window.addEventListener("keydown", this.keyDown);
-    window.addEventListener("keyup", this.keyUp);
-    window.addEventListener("blur", this.hidden);
-    document.addEventListener("visibilitychange", this.visibility);
-    window.addEventListener("pointercancel", this.cancelPress);
+    this.trainingInput.attach();
     this.scale.on("resize", this.resize, this);
-    this.events.once("shutdown", () => {
-      window.removeEventListener("keydown", this.keyDown);
-      window.removeEventListener("keyup", this.keyUp);
-      window.removeEventListener("blur", this.hidden);
-      document.removeEventListener("visibilitychange", this.visibility);
-      window.removeEventListener("pointercancel", this.cancelPress);
-    });
+    this.events.once("shutdown", () => this.trainingInput.detach());
     this.startRun();
   }
   private clear() {
@@ -145,12 +145,12 @@ export class TrainingScene extends Phaser.Scene {
     }
   }
   private startRun() {
-    if (this.syncing) return;
+    if (this.persistence.saving) return;
     this.reviewComplete = false;
     this.correction = undefined;
     this.session.reset();
     this.options.planner.resetSet();
-    this.syncOK = null;
+    this.persistence.reset();
     this.next(true);
   }
   private next(delayInput = false) {
@@ -232,30 +232,6 @@ export class TrainingScene extends Phaser.Scene {
       this.view.paintChoice(c);
     }
   };
-  private keyDown = (e: KeyboardEvent) => {
-    const index = keyIndex(e.code);
-    if (index !== null) {
-      e.preventDefault();
-      if (e.repeat || this.held.has(e.code)) return;
-      this.held.add(e.code);
-      if (this.phase === "correction") this.finishCorrection(index);
-      else this.press(e.code, index);
-    } else if (e.code === "Space" && this.phase === "correction") {
-      e.preventDefault();
-      if (e.repeat || this.held.has(e.code)) return;
-      this.held.add(e.code);
-      this.toggleCorrection();
-    } else if (e.code === "Escape") {
-      e.preventDefault();
-      if (this.phase === "paused") this.resume();
-      else this.pause();
-    }
-  };
-  private keyUp = (e: KeyboardEvent) => {
-    if (keyIndex(e.code) === null && e.code !== "Space") return;
-    e.preventDefault();
-    this.held.delete(e.code);
-  };
   private resolve(index: number | null) {
     if (this.phase !== "play") return;
     const rawElapsed = Math.max(0, performance.now() - this.started);
@@ -277,19 +253,7 @@ export class TrainingScene extends Phaser.Scene {
       result === "correct" ? undefined : new Correction(this.question);
     const hit = () => {
       this.phase = "feedback";
-      this.view.updateHearts(this.hearts);
-      this.view.scoreView?.setText(String(this.correct));
-      this.view.keyHints?.setVisible(false);
-      this.view.status
-        ?.setOrigin(0.5)
-        .setPosition(this.w / 2, this.view.status.y);
-      this.view.status?.setText(
-        result === "correct"
-          ? `${this.t("正解", "정답")} · ${a.response_ms} ms`
-          : result === "timeout"
-            ? this.t("時間切れ", "시간 초과")
-            : this.t("もう一度、覚えよう", "다시 기억해봐요"),
-      );
+      paintAnswerFeedback(this.view, a, this.hearts, this.correct);
       if (this.correction) {
         this.phase = "correction";
         this.renderCorrection(true);
@@ -342,11 +306,8 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
   private hidden = () => {
-    this.held.clear();
+    this.trainingInput.clear();
     this.pause();
-  };
-  private visibility = () => {
-    if (document.hidden) this.hidden();
   };
   private pause() {
     if (this.phase === "paused" || this.phase === "end") return;
@@ -501,38 +462,23 @@ export class TrainingScene extends Phaser.Scene {
     this.time.removeAllEvents();
     this.tweens.killAll();
     this.time.paused = false;
-    this.syncing = true;
-    this.drawEnd();
-    void this.options
-      .onFinish()
-      .then((ok) => {
-        if (!this.sys.isActive()) return;
-        this.syncOK = ok;
-        this.syncing = false;
-        this.drawEnd();
-      })
-      .catch(() => {
-        this.syncOK = false;
-        this.syncing = false;
-        this.drawEnd();
-      });
+    this.persistence.save(
+      this.options.onFinish,
+      () => this.sys.isActive(),
+      () => this.drawEnd(),
+    );
   }
   private retry() {
-    if (this.syncing || this.retryPending) return;
-    this.retryPending = true;
-    void this.options
-      .onRetry()
-      .then((data) => {
+    this.persistence.retry(
+      this.options.onRetry,
+      (data) => {
         this.options.words = data.words;
         this.options.stats = data.stats;
         if (data.planner) this.options.planner = data.planner;
-        this.retryPending = false;
         this.startRun();
-      })
-      .catch(() => {
-        this.retryPending = false;
-        this.startRun();
-      });
+      },
+      () => this.startRun(),
+    );
   }
   private drawEnd() {
     this.clear();
@@ -551,8 +497,8 @@ export class TrainingScene extends Phaser.Scene {
         progress: this.options.planner.progress(),
         answers: this.logs,
         preview: this.options.preview,
-        syncing: this.syncing,
-        syncOK: this.syncOK,
+        syncing: this.persistence.saving,
+        syncOK: this.persistence.saved,
       },
       {
         retry: () => this.retry(),

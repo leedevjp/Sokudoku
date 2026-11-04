@@ -1,6 +1,6 @@
 import type { EntryType, Kind } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
-import styles from "./dashboard.module.css";
+import styles from "./dashboard-styles";
 
 export function DashboardFilters({
   entry,
