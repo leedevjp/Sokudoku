@@ -1,8 +1,13 @@
 import Phaser from "phaser";
 import type { Result } from "../types";
 import { petFrame } from "../pet-motion";
-import { paintHearts } from "./reward-effects";
-import { burst } from "./effects";
+import {
+  CHARGE_MS,
+  HIT_STOP_MS,
+  chargeProgress,
+  knockbackProgress,
+} from "../battle-timing";
+import { paintContact, paintSpeed } from "./battle-impact";
 import type { TrainingView } from "./board";
 
 const MEADOW = "battle-meadow-v1";
@@ -43,7 +48,7 @@ function frames(
 export class MeadowBattle {
   private rabbit?: Phaser.GameObjects.Image;
   private slime?: Phaser.GameObjects.Image;
-  private hearts: Phaser.GameObjects.Graphics;
+  private effects: Phaser.GameObjects.Graphics;
   private elapsed = 0;
   private result?: Result;
   private impact?: () => void;
@@ -53,10 +58,7 @@ export class MeadowBattle {
   private startX: number;
   private enemyX: number;
   private baseline: number;
-  constructor(
-    private scene: Phaser.Scene,
-    view: TrainingView,
-  ) {
+  constructor(scene: Phaser.Scene, view: TrainingView) {
     const { scale: s, left, width, top, extra } = view.boardLayout;
     this.s = s;
     const y = top + 466 * s + extra;
@@ -85,9 +87,10 @@ export class MeadowBattle {
       this.slime = scene.add
         .image(this.enemyX, this.baseline, SLIME, "0")
         .setOrigin(0.5, 0.88)
-        .setDisplaySize(105 * s, 105 * s);
+        .setDisplaySize(105 * s, 105 * s)
+        .setFlipX(true);
     }
-    this.hearts = scene.add.graphics();
+    this.effects = scene.add.graphics();
   }
   attack(result: Result, reduced: boolean, impact: () => void) {
     this.result = result;
@@ -102,61 +105,92 @@ export class MeadowBattle {
     this.impacted = true;
     if (this.result === "correct") {
       this.slime?.setVisible(!reduced).setFrame("4");
-      if (!reduced)
-        burst(this.scene, this.enemyX, this.baseline - 32 * this.s, 0xf29ab3);
     } else this.slime?.setFrame("2");
     const callback = this.impact;
     this.impact = undefined;
     callback?.();
   }
+
   update(delta: number, paused: boolean, reduced: boolean) {
     if (paused) return;
-    this.idleElapsed += delta;
+    this.effects.clear().setPosition(0, 0);
+    this.idleElapsed += Math.max(0, delta);
     if (!this.result) {
       this.rabbit
-        ?.setFrame(String(petFrame("idle", this.idleElapsed, reduced)))
+        ?.setFrame(String(petFrame("hop", this.idleElapsed * 1.4, reduced)))
         .setDisplaySize(142 * this.s, 142 * this.s);
+      this.slime
+        ?.setFrame(
+          String(
+            reduced ? 0 : [0, 1, 2, 3][Math.floor(this.idleElapsed / 110) % 4],
+          ),
+        )
+        .setDisplaySize(105 * this.s, 105 * this.s);
       return;
     }
-    this.elapsed += delta;
+    this.elapsed += Math.max(0, delta);
     const t = this.elapsed;
     if (!this.impacted) {
-      const progress = Math.min(1, t / 280);
-      this.rabbit?.setX(
-        this.startX + (this.enemyX - 72 * this.s - this.startX) * progress,
-      );
-      this.rabbit?.setFrame(
-        String([4, 5, 6, 7][Math.min(3, Math.floor(t / 70))]),
-      );
-      if (this.result === "incorrect" && t >= 140) {
+      const progress = chargeProgress(t);
+      // The nose overlaps the slime silhouette at contact, rather than stopping short.
+      const target = this.enemyX + 14 * this.s - 44 * this.s;
+      this.rabbit?.setX(this.startX + (target - this.startX) * progress);
+      this.rabbit?.setFrame(t < 20 ? "4" : "6");
+      this.slime?.setX(this.enemyX + 14 * this.s * progress);
+      if (this.result === "incorrect" && t >= 75) {
         this.slime
-          ?.setFrame(t < 220 ? "2" : "3")
-          .setX(this.enemyX + 35 * this.s);
+          ?.setFrame("3")
+          .setX(this.enemyX + 62 * this.s * Math.min(1, (t - 75) / 85));
       }
-      if (t >= 280) this.land(reduced);
-    } else {
-      const reaction =
-        this.result === "timeout" || reduced ? t : Math.max(0, t - 280);
-      this.rabbit?.setFrame(
-        String(
-          petFrame(
-            this.result === "correct" ? "happy" : "encourage",
-            reaction,
-            reduced,
-          ),
-        ),
-      );
-      if (this.result === "correct") {
-        this.slime?.setFrame(
-          String(
-            reaction < 80 ? 4 : reaction < 150 ? 5 : reaction < 230 ? 6 : 7,
-          ),
-        );
-        this.hearts.setPosition(
+      if (!reduced)
+        paintSpeed(
+          this.effects,
           this.rabbit?.x ?? this.startX,
-          this.baseline - 70 * this.s,
+          this.baseline,
+          this.s,
+          progress,
         );
-        paintHearts(this.hearts, reaction, 110 * this.s, reduced);
+      if (t >= CHARGE_MS) this.land(reduced);
+    }
+    if (this.impacted) {
+      const reaction =
+        this.result === "timeout" || reduced ? t : Math.max(0, t - CHARGE_MS);
+      if (this.result === "correct") {
+        const push = reduced ? 0 : knockbackProgress(reaction);
+        this.rabbit?.setFrame(
+          reduced
+            ? "0"
+            : reaction < HIT_STOP_MS
+              ? "6"
+              : String(petFrame("hop", reaction - HIT_STOP_MS, false)),
+        );
+        this.slime
+          ?.setX(this.enemyX + (14 + 62 * push) * this.s)
+          .setFrame(
+            String(
+              reaction < HIT_STOP_MS
+                ? 4
+                : reaction < 140
+                  ? 5
+                  : reaction < 210
+                    ? 6
+                    : 7,
+            ),
+          )
+          .setAlpha(
+            reduced ? 0 : Math.max(0, 1 - Math.max(0, reaction - 180) / 100),
+          );
+        if (!reduced) {
+          this.effects
+            .clear()
+            .setPosition(
+              this.enemyX - 12 * this.s,
+              this.baseline - 36 * this.s,
+            );
+          paintContact(this.effects, reaction, this.s);
+        }
+      } else {
+        this.rabbit?.setFrame(String(petFrame("encourage", reaction, reduced)));
       }
     }
     this.rabbit?.setDisplaySize(142 * this.s, 142 * this.s);

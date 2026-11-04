@@ -4,9 +4,9 @@ The training board now places a meadow encounter between the question and choice
 The rabbit faces right (the preserved poses are mirrored at render time).
 
 - Selecting an answer records it immediately through the existing session/planner/FSRS path.
-- A 280 ms horizontal charge replaces the choice-card projectile. Correct answers squash/dissolve the slime and show stars/hearts; incorrect answers make the slime dodge before the existing correction card appears.
+- A 160 ms accelerating charge (20 ms anticipation, cubic acceleration) replaces the choice-card projectile. Contact holds both poses for 48 ms, then knocks the slime away with a sharp gold/white impact flash, radial strokes and dust. No combat hearts. The existing 320 ms feedback window puts the next correct-answer question at approximately 480 ms after selection. Incorrect answers make the slime dodge before correction.
 - Timeouts open correction immediately without a charge. Reduced-motion mode skips travel and animated impact.
-- Reading has a stationary background and sprite-only idle animation. The rabbit has no procedural scale, rotation or vertical movement; only the explicitly approved charge changes its horizontal position.
+- Reading has a stationary background and sprite-only running/fleeing loops. The rabbit has no procedural scale, rotation or vertical movement; only the explicitly approved charge changes its horizontal position. There is no return trip delay; the next encounter resets the position.
 - Pausing freezes presentation. Existing resize/correction recovery remains authoritative and never records a second answer.
 
 ## Art
@@ -18,4 +18,4 @@ Sprite WebP files use lossless encoding; the background uses quality 85. Generat
 
 ## Validation
 
-58 existing tests, TypeScript, ESLint and production build passed. Local Edge checks covered mobile/desktop, correct/incorrect answers, reduced motion, pause/resume during a charge, correction pause/resize and timeout correction. No production learning records were used.
+60 tests (including acceleration, bounded cadence and hit-stop/knockback regression coverage), TypeScript, ESLint and production build passed. Local Edge checks covered mobile/desktop, correct/incorrect answers, reduced motion, pause/resume during a charge, correction pause/resize and timeout correction. No production learning records were used.
