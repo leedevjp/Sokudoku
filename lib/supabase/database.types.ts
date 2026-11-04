@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       answer_log: {
         Row: {
+          mode: string | null
           answered_at: string
           id: string
           learning_processed_at: string | null
@@ -33,6 +34,7 @@ export type Database = {
           word_id: string | null
         }
         Insert: {
+          mode?: string | null
           answered_at: string
           id: string
           learning_processed_at?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           word_id?: string | null
         }
         Update: {
+          mode?: string | null
           answered_at?: string
           id?: string
           learning_processed_at?: string | null

@@ -462,7 +462,14 @@ export class TrainingScene extends Phaser.Scene {
         this.finish();
         return;
       }
-      const question = this.options.planner.next();
+      let question: Question | null;
+      try {
+        question = this.options.planner.next();
+      } catch (error) {
+        this.phase = "end";
+        this.options.onError?.(error);
+        return;
+      }
       if (!question) {
         this.finish(true);
         return;
@@ -541,6 +548,7 @@ export class TrainingScene extends Phaser.Scene {
       this.view,
       {
         reviewComplete: this.reviewComplete,
+        progress: this.options.planner.progress(),
         answers: this.logs,
         preview: this.options.preview,
         syncing: this.syncing,

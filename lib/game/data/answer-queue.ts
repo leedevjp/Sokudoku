@@ -10,6 +10,10 @@ export async function pendingCount(owner: string) {
     (a) => a.owner === owner,
   ).length;
 }
+export async function pendingAnswers(owner: string): Promise<Answer[]> {
+  return ((await storageDeadline((await database()).getAll("answer"))) as Queued[])
+    .filter((answer) => answer.owner === owner);
+}
 let flight: Promise<void> | null = null;
 export async function flushAnswers(owner: string): Promise<void> {
   if (flight) {

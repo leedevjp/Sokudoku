@@ -31,6 +31,7 @@ export class TrainingSession {
       id: uuidv7(),
       word_id: question.word.id,
       question_type: question.kind,
+      mode: question.mode,
       selected_word_id: selected?.id ?? null,
       result,
       response_ms: timeout ? maxTime : Math.min(maxTime - 1, elapsed),

@@ -16,6 +16,7 @@ export type Stat = Tables<"word_recent_stat">;
 export type Kind = "meaning" | "reading";
 export type Result = "correct" | "incorrect" | "timeout";
 export type Answer = {
+  mode?: "exploration" | "review";
   source?: "word" | "personal";
   selected_source?: "word" | "personal";
   id: string;

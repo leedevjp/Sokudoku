@@ -8,10 +8,12 @@ import { useSettings } from "@/components/settings/settings-provider";
 import type { Word } from "@/lib/game/types";
 import { parseModes } from "@/lib/game/learning/types";
 import { LearningEngine } from "@/lib/game/learning/engine";
+import { recoverLearning } from "@/lib/game/learning/recovery";
 import { TrainingPlanner } from "@/lib/game/learning/planner";
 import { parseKinds, wordsForKinds } from "@/lib/game/selection";
 import { AnswerJournal } from "@/lib/game/data/answer-journal";
 import { GameDataLoader, type Bootstrap } from "@/lib/game/data/bootstrap";
+import { database, storageDeadline } from "@/lib/game/data/database";
 export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   const { prefs, change } = useSettings();
   const router = useRouter();
@@ -70,21 +72,33 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       data = filterWords(data);
       owner = data.user_id;
       journal = new AnswerJournal(owner, data.words, !!previewWords);
-      journal.recover();
+      const pending = await journal.recover();
+      if (pending.length && !previewWords) {
+        try {
+          const fresh = filterWords(await loader.fetchData());
+          if (fresh.user_id !== owner) throw Error("LOGIN");
+          data = fresh;
+          journal.setWords(data.words);
+        } catch (e) {
+          if ((e as Error).message === "LOGIN") throw e;
+          // Local replay below protects exploration even while offline.
+        }
+      }
       if (cancelled || !parent.current) return;
-      if (data.words.length < 4) throw Error("WORDS");
+      if (!data.words.length) throw Error("WORDS");
+      const engine = await recoverLearning(data.learning, pending, data.words);
+      if (pending.length) {
+        try {
+          await storageDeadline((await database()).put("cache", engine.snapshot(), `learning-v1:${owner}`));
+        } catch { /* Durable answer queue remains the fallback if caching is unavailable. */ }
+      }
       let planner = new TrainingPlanner(
-        await LearningEngine.create(data.learning),
+        engine,
         data.words,
         kinds,
         modes,
       );
-      if (!planner.hasQuestions())
-        throw Error(
-          modes.length === 1 && modes[0] === "review"
-            ? "REVIEW_EMPTY"
-            : "WORDS",
-        );
+      planner.hasQuestions(); // Empty is a normal completion; construction failure throws.
       await document.fonts.ready;
       const { createTraining } =
         await import("@/lib/game/phaser/create-training");
@@ -103,7 +117,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         onError: (error) => {
           clearTimeout(readyTimer);
           console.error("Training initialization failed", error);
-          if (!cancelled) setError("START");
+          if (!cancelled) setError((error as Error)?.message === "QUESTION_BUILD_FAILED" ? "QUESTION_BUILD_FAILED" : "START");
         },
         kinds,
         planner,
@@ -122,7 +136,8 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
           ended = false;
           if (previewWords)
             return { words: wordsForKinds(previewWords, kinds), stats: [] };
-          await journal!.sync();
+          if (!(await journal!.sync()))
+            return { words: data.words, stats: [], planner };
           try {
             const fresh = filterWords(await loader.fetchData());
             if (fresh.user_id !== owner) {
@@ -169,6 +184,11 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
                     "ゲームを開始できませんでした。ホームからもう一度お試しください。",
                     "게임을 시작하지 못했어요. 메인으로 돌아가 다시 시작해주세요.",
                   )
+                : error === "QUESTION_BUILD_FAILED"
+                  ? t(
+                      "候補はありますが、重複しない4択を作れませんでした。範囲を広げるか単語の意味を確認してください。",
+                      "남은 단어는 있지만 겹치지 않는 4지선다를 만들지 못했어요. 범위를 넓히거나 단어 뜻을 확인해주세요.",
+                    )
                 : error === "REVIEW_EMPTY"
                   ? t(
                       "いま復習する単語はありません。探索で学習するか、時間をおいてお試しください。",

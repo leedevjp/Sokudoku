@@ -48,6 +48,7 @@ answer_logのpersonal_word_idとselected_personal_word_idで個人単語の回�
 | user_id | auth.usersへの外部キー、既定値auth.uid() |
 | word_id | 出題したwordのID |
 | question_type | meaning / reading |
+| mode | exploration / review。旧クライアント・過去の記録はNULLで保持 |
 | selected_word_id | 選んだwordのID、時間切れはNULL |
 | result | correct / incorrect / timeout |
 | response_ms | 有効応答時間（ミリ秒） |

@@ -12,6 +12,7 @@ const answer = z
     selected_source: z.enum(["word", "personal"]).optional(),
     word_id: z.uuid(),
     question_type: z.enum(["meaning", "reading"]),
+    mode: z.enum(["exploration", "review"]).optional(),
     selected_word_id: z.uuid().nullable(),
     result: z.enum(["correct", "incorrect", "timeout"]),
     response_ms: z.number().int().min(0).max(10000),

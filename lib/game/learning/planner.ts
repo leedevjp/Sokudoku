@@ -69,6 +69,21 @@ export class TrainingPlanner {
       difficulty: word.difficulty,
     });
   }
+  progress(now = Date.now()) {
+    const known = new Set(this.seen);
+    for (const state of this.engine.words.values())
+      known.add(wordKey(state.source, state.word_ref));
+    const unseen = this.words.filter((word) => !known.has(wordKey(word.source, word.id))).length;
+    const review = new Set(reviewCandidates(this.engine, this.byKey, this.kinds, now)
+      .map(({ word }) => wordKey(word.source, word.id))).size;
+    const future = [...this.engine.words.values()].filter((state) => {
+      const word = this.byKey.get(wordKey(state.source, state.word_ref));
+      return word && this.kinds.includes(state.question_type) &&
+        (state.question_type !== "reading" || word.has_kanji) &&
+        state.last_result === "correct" && Date.parse(state.due_at) > now;
+    }).map((state) => Date.parse(state.due_at));
+    return { total: this.byKey.size, unseen, review, nextDue: future.length ? Math.min(...future) : null };
+  }
   private select(
     candidates: Candidate[],
     used: Set<string>,
@@ -125,17 +140,20 @@ export class TrainingPlanner {
     const known = new Set(this.seen);
     for (const state of this.engine.words.values())
       known.add(wordKey(state.source, state.word_ref));
+    const unseen = this.words.filter((word) => !known.has(wordKey(word.source, word.id)));
     const exploration = this.modes.includes("exploration")
       ? this.select(
           explorationWeights(
-            this.words.filter(
-              (word) => !known.has(wordKey(word.source, word.id)),
-            ),
+            unseen,
           ),
           used,
           "exploration",
         )
       : [];
+    if (!review.length && !exploration.length && (
+      (this.modes.includes("review") && candidates.length > 0) ||
+      (this.modes.includes("exploration") && unseen.length > 0)
+    )) throw new Error("QUESTION_BUILD_FAILED");
     for (let i = 0; i < Math.max(exploration.length, review.length); i++) {
       if (exploration[i]) this.queue.push(exploration[i]);
       if (review[i]) this.queue.push(review[i]);

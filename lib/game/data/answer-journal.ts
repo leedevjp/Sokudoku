@@ -1,5 +1,5 @@
 import type { Answer, Word } from "../types";
-import { flushAnswers, queueAnswer } from "./answer-queue";
+import { flushAnswers, queueAnswer, pendingAnswers } from "./answer-queue";
 
 /** Keeps an in-memory fallback while each answer is durably queued in IndexedDB. */
 export class AnswerJournal {
@@ -16,9 +16,11 @@ export class AnswerJournal {
   setWords(words: Word[]) {
     this.sources = new Map(words.map((word) => [word.id, word.source]));
   }
-  recover() {
-    // Recovery must never delay the next game after a killed tab.
-    if (!this.preview) void flushAnswers(this.owner).catch(() => {});
+  async recover(): Promise<Answer[]> {
+    if (this.preview) return [];
+    const pending = await pendingAnswers(this.owner).catch(() => []);
+    if (pending.length) await flushAnswers(this.owner).catch(() => {});
+    return pending;
   }
   record(answer: Answer) {
     const entry: Answer = {
