@@ -140,9 +140,15 @@ export default function HomeScreen() {
       </header>
       <HomeHero authenticated={!!user} />
       <div className="home-actions">
-        <ModeSelector modes={modes} onToggle={toggleMode} />
-        <KindSelector kinds={kinds} onToggle={toggleKind} />
-        <LevelSelector levels={levels} onToggle={toggleLevel} />
+        <div className="home-setting-group">
+          <ModeSelector modes={modes} onToggle={toggleMode} />
+        </div>
+        <div className="home-setting-group">
+          <KindSelector kinds={kinds} onToggle={toggleKind} />
+        </div>
+        <div className="home-setting-group">
+          <LevelSelector levels={levels} onToggle={toggleLevel} />
+        </div>
         {kanaOnly && !kinds.includes("meaning") && (
           <p className="level-hint" role="status">
             {t(
@@ -151,59 +157,62 @@ export default function HomeScreen() {
             )}
           </p>
         )}
-        {loading ? (
-          <button className="primary" disabled>
-            {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
-          </button>
-        ) : user ? (
-          <Link
-            className="primary"
-            aria-disabled={!canStart}
-            href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}`}
-            onClick={(event) => {
-              if (!canStart) event.preventDefault();
-            }}
-          >
-            {t("トレーニングを始める", "훈련 시작하기")}
-            <span>→</span>
-          </Link>
-        ) : (
-          <button
-            className="primary"
-            disabled={!canStart}
-            onClick={() => setModal("auth")}
-          >
-            {t("ログインして始める", "로그인하고 시작하기")}
-            <span>→</span>
-          </button>
-        )}
-        <div className="home-secondary-actions">
-          <Link
-            className="notebook-link"
-            href="/dashboard"
-            onClick={(event) => {
-              if (!user) {
-                event.preventDefault();
-                setModal("auth");
-              }
-            }}
-          >
-            <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
-            <span aria-hidden="true">↗</span>
-          </Link>
-          <Link
-            className="notebook-link"
-            href="/notebook"
-            onClick={(event) => {
-              if (!user) {
-                event.preventDefault();
-                setModal("auth");
-              }
-            }}
-          >
-            <span aria-hidden="true">▤</span> {t("まちがいノート", "오답노트")}
-            <span aria-hidden="true">↗</span>
-          </Link>
+        <div className="home-launch-group">
+          {loading ? (
+            <button className="primary" disabled>
+              {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
+            </button>
+          ) : user ? (
+            <Link
+              className="primary"
+              aria-disabled={!canStart}
+              href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}`}
+              onClick={(event) => {
+                if (!canStart) event.preventDefault();
+              }}
+            >
+              {t("トレーニングを始める", "훈련 시작하기")}
+              <span>→</span>
+            </Link>
+          ) : (
+            <button
+              className="primary"
+              disabled={!canStart}
+              onClick={() => setModal("auth")}
+            >
+              {t("ログインして始める", "로그인하고 시작하기")}
+              <span>→</span>
+            </button>
+          )}
+          <div className="home-secondary-actions">
+            <Link
+              className="notebook-link"
+              href="/dashboard"
+              onClick={(event) => {
+                if (!user) {
+                  event.preventDefault();
+                  setModal("auth");
+                }
+              }}
+            >
+              <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
+              <span aria-hidden="true">↗</span>
+            </Link>
+            <Link
+              className="notebook-link"
+              href="/notebook"
+              onClick={(event) => {
+                if (!user) {
+                  event.preventDefault();
+                  setModal("auth");
+                }
+              }}
+            >
+              <span aria-hidden="true">▤</span>{" "}
+              {t("まちがいノート", "오답노트")}
+              <span aria-hidden="true">↗</span>
+            </Link>
+          </div>
         </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">
