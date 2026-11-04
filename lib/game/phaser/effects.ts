@@ -11,20 +11,25 @@ export function answerImpact(
   index: number | null,
   result: Result,
   onImpact: () => void,
+  projectile = true,
 ) {
   const hit = () => {
     const at = view.wordView!;
     if (result === "correct") {
-      dissolveCard(scene, at, 300 * view.boardLayout.scale, view.c.blue);
+      dissolveCard(scene, at, 250 * view.boardLayout.scale, view.c.blue);
       burst(scene, at.x, at.y, view.c.blue);
     } else {
       burst(scene, at.x, at.y, view.c.red);
       if (index !== null) view.choices[index]?.setVisible(false);
-      if (!reducedEffects()) scene.cameras.main.shake(90, 0.002);
     }
     onImpact();
   };
-  if (result === "timeout" || index === null || reducedEffects()) {
+  if (
+    !projectile ||
+    result === "timeout" ||
+    index === null ||
+    reducedEffects()
+  ) {
     if (result === "timeout") view.drawTime(0);
     hit();
     return;

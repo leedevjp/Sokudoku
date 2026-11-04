@@ -4,8 +4,8 @@ import type { Question } from "../types";
 export function drawQuestionCard(view: TrainingView, question: Question) {
   const { scale: s, width: cw, left, top, extra } = view.boardLayout;
   const x = view.w / 2;
-  const cardTop = top + 202 * s + extra,
-    size = 300 * s,
+  const cardTop = top + 166 * s + extra,
+    size = 250 * s,
     qy = cardTop + size / 2;
   view.wordView = view.add.container(x, qy);
   const halo = view.add.graphics();
@@ -138,7 +138,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     0,
     14 * s,
     question.word.term,
-    Math.min(176, 245 / Math.min(Math.max(length, 1), 5)) * s,
+    Math.min(150, 210 / Math.min(Math.max(length, 1), 5)) * s,
     view.c.ink,
   );
   word.setWordWrapWidth(size - 38 * s, true);
@@ -153,7 +153,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   view.promptCaption = view
     .designText(
       x,
-      cardTop + 359 * s,
+      cardTop + 280 * s,
       question.kind === "reading"
         ? view.t("読み方を選んでください", "읽기를 고르세요")
         : question.word.difficulty === -1

@@ -1,3 +1,4 @@
+import { MeadowBattle, preloadBattle } from "./meadow-battle";
 import { RabbitCompanion, preloadRabbit } from "./rabbit-companion";
 import { PetMotionState } from "../pet-motion";
 import { RunPersistence } from "./run-persistence";
@@ -24,6 +25,7 @@ import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
 export class TrainingScene extends Phaser.Scene {
   private pet?: RabbitCompanion;
+  private battle?: MeadowBattle;
   private petMotion = new PetMotionState();
   private reducedMotion?: MediaQueryList;
   private options: TrainingOptions;
@@ -108,6 +110,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   preload() {
     preloadRabbit(this);
+    preloadBattle(this);
   }
   create() {
     try {
@@ -139,6 +142,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private clear() {
     this.pet = undefined;
+    this.battle = undefined;
     this.viewGeneration++;
     this.children.removeAll(true);
     this.view.clear();
@@ -199,14 +203,7 @@ export class TrainingScene extends Phaser.Scene {
   private drawBoard() {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
-    const { scale: s, top, extra } = this.view.boardLayout;
-    this.pet = new RabbitCompanion(
-      this,
-      this.w / 2 + 245 * s,
-      top + 370 * s + extra,
-      132 * s,
-    );
-    this.paintPet();
+    this.battle = new MeadowBattle(this, this.view);
   }
   private paintPet() {
     this.pet?.show(
@@ -221,6 +218,11 @@ export class TrainingScene extends Phaser.Scene {
       this.phase === "paused" || this.phase === "settling",
     );
     this.paintPet();
+    this.battle?.update(
+      delta,
+      this.phase === "paused" || this.phase === "settling",
+      this.reducedMotion?.matches ?? false,
+    );
     if (this.phase === "settling") {
       if (performance.now() < this.settleUntil) return;
       this.phase = this.afterSettle;
@@ -294,7 +296,11 @@ export class TrainingScene extends Phaser.Scene {
       }
       this.advanceAfterFeedback();
     };
-    answerImpact(this, this.view, index, result, hit);
+    const impact = () =>
+      answerImpact(this, this.view, index, result, hit, false);
+    if (this.battle)
+      this.battle.attack(result, this.reducedMotion?.matches ?? false, impact);
+    else impact();
   }
 
   private renderCorrection(animate = false) {
