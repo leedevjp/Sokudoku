@@ -99,5 +99,7 @@ export function drawPause(view: TrainingView, actions: PauseActions) {
     overlay,
   );
   drawSettings(view, actions, overlay);
+  const rabbit = view.createRestingRabbit(view.w / 2, view.h / 2 - 220, 100);
+  overlay.add(rabbit.root);
   return overlay;
 }

@@ -1,3 +1,4 @@
+import { RabbitCompanion } from "./rabbit-companion";
 import Phaser from "phaser";
 import { choiceLabel, INITIAL_HEARTS } from "../rules";
 import type { Question } from "../types";
@@ -44,6 +45,11 @@ export class TrainingView extends TrainingSurface {
     private actions: BoardActions,
   ) {
     super(scene, getDensity, getPreferences);
+  }
+  createRestingRabbit(x: number, y: number, size: number) {
+    const pet = new RabbitCompanion(this.scene, x, y, size);
+    pet.show("rest", 0, true);
+    return pet;
   }
   clear() {
     this.choices = [];

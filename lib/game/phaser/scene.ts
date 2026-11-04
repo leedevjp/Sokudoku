@@ -1,3 +1,5 @@
+import { RabbitCompanion, preloadRabbit } from "./rabbit-companion";
+import { PetMotionState } from "../pet-motion";
 import { RunPersistence } from "./run-persistence";
 import { paintAnswerFeedback } from "./answer-feedback";
 import { TrainingInput } from "./training-input";
@@ -21,6 +23,9 @@ import { Correction } from "../correction";
 import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
 export class TrainingScene extends Phaser.Scene {
+  private pet?: RabbitCompanion;
+  private petMotion = new PetMotionState();
+  private reducedMotion?: MediaQueryList;
   private options: TrainingOptions;
   private prefs: Preferences;
   private view: TrainingView;
@@ -101,6 +106,9 @@ export class TrainingScene extends Phaser.Scene {
       .setZoom(this.density)
       .centerOn(this.w / 2, this.h / 2);
   }
+  preload() {
+    preloadRabbit(this);
+  }
   create() {
     try {
       this.bootTraining();
@@ -115,6 +123,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private bootTraining() {
     this.syncCamera();
+    this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.game.canvas.setAttribute(
       "aria-label",
       this.t(
@@ -129,6 +138,7 @@ export class TrainingScene extends Phaser.Scene {
     this.startRun();
   }
   private clear() {
+    this.pet = undefined;
     this.viewGeneration++;
     this.children.removeAll(true);
     this.view.clear();
@@ -149,6 +159,7 @@ export class TrainingScene extends Phaser.Scene {
     this.reviewComplete = false;
     this.correction = undefined;
     this.session.reset();
+    this.petMotion.play("hop");
     this.options.planner.resetSet();
     this.persistence.reset();
     this.next(true);
@@ -188,8 +199,28 @@ export class TrainingScene extends Phaser.Scene {
   private drawBoard() {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
+    const { scale: s, top, extra } = this.view.boardLayout;
+    this.pet = new RabbitCompanion(
+      this,
+      this.w / 2 + 245 * s,
+      top + 370 * s + extra,
+      132 * s,
+    );
+    this.paintPet();
+  }
+  private paintPet() {
+    this.pet?.show(
+      this.petMotion.motion,
+      this.petMotion.elapsed,
+      this.reducedMotion?.matches ?? false,
+    );
   }
   update(_time: number, delta: number) {
+    this.petMotion.tick(
+      delta,
+      this.phase === "paused" || this.phase === "settling",
+    );
+    this.paintPet();
     if (this.phase === "settling") {
       if (performance.now() < this.settleUntil) return;
       this.phase = this.afterSettle;
@@ -254,6 +285,8 @@ export class TrainingScene extends Phaser.Scene {
     const hit = () => {
       this.phase = "feedback";
       paintAnswerFeedback(this.view, a, this.hearts, this.correct);
+      this.petMotion.play(result === "correct" ? "happy" : "encourage");
+      this.paintPet();
       if (this.correction) {
         this.phase = "correction";
         this.renderCorrection(true);
@@ -267,6 +300,8 @@ export class TrainingScene extends Phaser.Scene {
   private renderCorrection(animate = false) {
     const correction = this.correction;
     if (!correction) return;
+    this.petMotion.play("encourage");
+    this.paintPet();
     this.correctionView = showCorrection(
       this,
       this.view,
@@ -291,6 +326,7 @@ export class TrainingScene extends Phaser.Scene {
       return;
     this.phase = "feedback";
     this.correction = undefined;
+    this.petMotion.play("happy");
     const card = this.correctionView?.root;
     if (card) {
       burst(this, card.x, card.y, this.c.blue);
@@ -458,6 +494,7 @@ export class TrainingScene extends Phaser.Scene {
     this.correction = undefined;
     this.reviewComplete ||= reviewComplete;
     this.phase = "end";
+    this.petMotion.play(this.reviewComplete ? "celebrate" : "happy");
     this.gate.close();
     this.time.removeAllEvents();
     this.tweens.killAll();
@@ -506,5 +543,14 @@ export class TrainingScene extends Phaser.Scene {
         exit: () => this.options.onExit(),
       },
     );
+    const s = Math.min(1, (this.h - 32) / 680);
+    const width = Math.min(this.w - 32, 500);
+    this.pet = new RabbitCompanion(
+      this,
+      this.w / 2 + width / 2 - 65 * s,
+      this.h / 2 - 225 * s,
+      100 * s,
+    );
+    this.paintPet();
   }
 }

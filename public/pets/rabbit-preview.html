@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Sokudoku · 토끼의 하루</title
+  ><style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f7f5fa;
+      color: #44364e;
+      font-family: system-ui, sans-serif;
+    }
+    main {
+      max-width: 980px;
+      margin: auto;
+      padding: 44px 24px;
+    }
+    small {
+      letter-spacing: 0.18em;
+      color: #877294;
+    }
+    h1 {
+      font-size: clamp(30px, 6vw, 48px);
+      margin: 14px 0;
+    }
+    p {
+      line-height: 1.7;
+      color: #766680;
+    }
+    nav {
+      display: flex;
+      gap: 12px;
+      margin: 24px 0;
+      flex-wrap: wrap;
+    }
+    button {
+      font: inherit;
+      font-size: 16px;
+      padding: 12px 20px;
+      border-radius: 24px;
+      border: 1px solid #d9cfe1;
+      background: #fff;
+      color: #574463;
+      cursor: pointer;
+    }
+    section {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    article {
+      text-align: center;
+      background: #fff;
+      border: 1px solid #e5ddea;
+      border-radius: 28px;
+      padding: 20px 12px;
+    }
+    canvas {
+      display: block;
+      width: min(100%, 220px);
+      aspect-ratio: 1;
+      margin: auto;
+    }
+    h2 {
+      font-size: 20px;
+      margin: 12px 0 0;
+    }
+    article p {
+      font-size: 15px;
+      margin: 8px 0;
+    }
+    .dark {
+      background: #191621;
+      color: #f3eafb;
+    }
+    .dark article {
+      background: #292232;
+      border-color: #483952;
+    }
+    .dark p {
+      color: #bdaccb;
+    }
+    .dark button {
+      background: #30273b;
+      color: #eee1f5;
+      border-color: #584665;
+    }
+    @media (max-width: 620px) {
+      main {
+        padding: 28px 16px;
+      }
+      section {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      article {
+        padding: 12px 8px;
+      }
+      article p {
+        font-size: 14px;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+    }
+  </style>
+  <main>
+    <small>SOKUDOKU / COMPANION 01</small>
+    <h1>함께 배우는 작은 토끼</h1>
+    <p>
+      귀를 쫑긋, 네 발로 폴짝.<br />문제를 푸는 동안 곁에 머무는 친구입니다.
+    </p>
+    <nav>
+      <button id="pause">움직임 멈추기</button
+      ><button id="theme">어두운 배경</button>
+    </nav>
+    <section>
+      <article>
+        <canvas
+          width="440"
+          height="440"
+          data-motion="idle"
+          aria-label="대기 동작"
+        ></canvas>
+        <h2>대기</h2>
+        <p>문제를 읽을 때 조용히 기다려요</p>
+      </article>
+      <article>
+        <canvas
+          width="440"
+          height="440"
+          data-motion="hop"
+          aria-label="이동 동작"
+        ></canvas>
+        <h2>이동</h2>
+        <p>학습을 시작하면 폴짝 다가와요</p>
+      </article>
+      <article>
+        <canvas
+          width="440"
+          height="440"
+          data-motion="happy"
+          aria-label="기쁨 동작"
+        ></canvas>
+        <h2>기쁨</h2>
+        <p>정답을 맞히면 함께 기뻐해요</p>
+      </article>
+      <article>
+        <canvas
+          width="440"
+          height="440"
+          data-motion="encourage"
+          aria-label="격려 동작"
+        ></canvas>
+        <h2>격려</h2>
+        <p>틀려도 곁에서 응원해요</p>
+      </article>
+      <article>
+        <canvas
+          width="440"
+          height="440"
+          data-motion="rest"
+          aria-label="휴식 동작"
+        ></canvas>
+        <h2>휴식</h2>
+        <p>잠시 쉬는 동안 몸을 웅크려요</p>
+      </article>
+      <article>
+        <canvas
+          width="440"
+          height="440"
+          data-motion="celebrate"
+          aria-label="축하 동작"
+        ></canvas>
+        <h2>축하</h2>
+        <p>지금 할 학습을 마치면 축하해요</p>
+      </article>
+    </section>
+    <p id="status" role="status"></p>
+  </main>
+  <script>
+    const clips = {
+      idle: { frames: [0, 0, 0, 0, 1, 0, 0, 2, 3, 0], step: 350 },
+      hop: { frames: [4, 5, 6, 7], step: 140 },
+      happy: { frames: [8, 9, 10, 11], step: 150 },
+      encourage: { frames: [12, 13, 13, 12], step: 450 },
+      rest: { frames: [14, 15], step: 1500 },
+      celebrate: { frames: [8, 9, 10, 11, 11, 11, 11, 11], step: 180 },
+    };
+    const image = new Image();
+    let paused = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let elapsed = 0,
+      last = 0;
+    const button = document.querySelector("#pause");
+    const label = () => {
+      button.textContent = paused ? "움직임 재생" : "움직임 멈추기";
+      button.setAttribute("aria-pressed", String(paused));
+    };
+    label();
+    button.onclick = () => {
+      paused = !paused;
+      label();
+    };
+    document.querySelector("#theme").onclick = (e) => {
+      const dark = document.body.classList.toggle("dark");
+      e.target.textContent = dark ? "밝은 배경" : "어두운 배경";
+    };
+    function render(now) {
+      if (last && !paused) elapsed += Math.min(100, now - last);
+      last = now;
+      for (const c of document.querySelectorAll("canvas")) {
+        const ctx = c.getContext("2d"),
+          clip = clips[c.dataset.motion],
+          f =
+            clip.frames[
+              paused ? 0 : Math.floor(elapsed / clip.step) % clip.frames.length
+            ],
+          col = f % 4,
+          row = Math.floor(f / 4);
+        ctx.clearRect(0, 0, 440, 440);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(220, 220, 210, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = "#fffcf8";
+        ctx.fillRect(0, 0, 440, 440);
+        const x = Math.round((col * image.width) / 4),
+          y = Math.round((row * image.height) / 4);
+        ctx.drawImage(
+          image,
+          x,
+          y,
+          Math.round(((col + 1) * image.width) / 4) - x,
+          Math.round(((row + 1) * image.height) / 4) - y,
+          10,
+          10,
+          420,
+          420,
+        );
+        ctx.restore();
+      }
+      requestAnimationFrame(render);
+    }
+    image.onload = () => requestAnimationFrame(render);
+    image.onerror = () =>
+      (document.querySelector("#status").textContent =
+        "토끼 이미지를 불러오지 못했어요. 새로고침해주세요.");
+    image.src = "./rabbit-v1.png";
+  </script>
+</html>
