@@ -1,9 +1,4 @@
-import {
-  type Answer,
-  type Kind,
-  type Question,
-  type Word,
-} from "../types";
+import { type Answer, type Kind, type Question, type Word } from "../types";
 import { questionFor } from "../question";
 import { trainingKinds } from "../selection";
 import { LearningEngine } from "./engine";
@@ -73,16 +68,32 @@ export class TrainingPlanner {
     const known = new Set(this.seen);
     for (const state of this.engine.words.values())
       known.add(wordKey(state.source, state.word_ref));
-    const unseen = this.words.filter((word) => !known.has(wordKey(word.source, word.id))).length;
-    const review = new Set(reviewCandidates(this.engine, this.byKey, this.kinds, now)
-      .map(({ word }) => wordKey(word.source, word.id))).size;
-    const future = [...this.engine.words.values()].filter((state) => {
-      const word = this.byKey.get(wordKey(state.source, state.word_ref));
-      return word && this.kinds.includes(state.question_type) &&
-        (state.question_type !== "reading" || word.has_kanji) &&
-        state.last_result === "correct" && Date.parse(state.due_at) > now;
-    }).map((state) => Date.parse(state.due_at));
-    return { total: this.byKey.size, unseen, review, nextDue: future.length ? Math.min(...future) : null };
+    const unseen = this.words.filter(
+      (word) => !known.has(wordKey(word.source, word.id)),
+    ).length;
+    const review = new Set(
+      reviewCandidates(this.engine, this.byKey, this.kinds, now).map(
+        ({ word }) => wordKey(word.source, word.id),
+      ),
+    ).size;
+    const future = [...this.engine.words.values()]
+      .filter((state) => {
+        const word = this.byKey.get(wordKey(state.source, state.word_ref));
+        return (
+          word &&
+          this.kinds.includes(state.question_type) &&
+          (state.question_type !== "reading" || word.has_kanji) &&
+          state.last_result === "correct" &&
+          Date.parse(state.due_at) > now
+        );
+      })
+      .map((state) => Date.parse(state.due_at));
+    return {
+      total: this.byKey.size,
+      unseen,
+      review,
+      nextDue: future.length ? Math.min(...future) : null,
+    };
   }
   private select(
     candidates: Candidate[],
@@ -96,7 +107,8 @@ export class TrainingPlanner {
         ...c,
         weight:
           c.weight *
-          (mode === "review" && wordKey(c.word.source, c.word.id) === this.lastWord
+          (mode === "review" &&
+          wordKey(c.word.source, c.word.id) === this.lastWord
             ? 0.05
             : 1),
       }));
@@ -131,29 +143,46 @@ export class TrainingPlanner {
     return questions;
   }
   private makeSet() {
+    if (this.modes.includes("exam")) {
+      // No learned/due/ability filtering: each word has exactly one ticket.
+      // Each frozen five-question set is unique; later sets can repeat words.
+      const exam = this.select(
+        explorationWeights(this.words),
+        new Set(),
+        "exam",
+      );
+      if (!exam.length && this.words.length)
+        throw new Error("QUESTION_BUILD_FAILED");
+      this.queue.push(...exam);
+      return;
+    }
     const now = Date.now(),
       used = new Set<string>();
-    const candidates = reviewCandidates(this.engine, this.byKey, this.kinds, now);
+    const candidates = reviewCandidates(
+      this.engine,
+      this.byKey,
+      this.kinds,
+      now,
+    );
     const review = this.modes.includes("review")
       ? this.select(candidates, used, "review")
       : [];
     const known = new Set(this.seen);
     for (const state of this.engine.words.values())
       known.add(wordKey(state.source, state.word_ref));
-    const unseen = this.words.filter((word) => !known.has(wordKey(word.source, word.id)));
+    const unseen = this.words.filter(
+      (word) => !known.has(wordKey(word.source, word.id)),
+    );
     const exploration = this.modes.includes("exploration")
-      ? this.select(
-          explorationWeights(
-            unseen,
-          ),
-          used,
-          "exploration",
-        )
+      ? this.select(explorationWeights(unseen), used, "exploration")
       : [];
-    if (!review.length && !exploration.length && (
-      (this.modes.includes("review") && candidates.length > 0) ||
-      (this.modes.includes("exploration") && unseen.length > 0)
-    )) throw new Error("QUESTION_BUILD_FAILED");
+    if (
+      !review.length &&
+      !exploration.length &&
+      ((this.modes.includes("review") && candidates.length > 0) ||
+        (this.modes.includes("exploration") && unseen.length > 0))
+    )
+      throw new Error("QUESTION_BUILD_FAILED");
     for (let i = 0; i < Math.max(exploration.length, review.length); i++) {
       if (exploration[i]) this.queue.push(exploration[i]);
       if (review[i]) this.queue.push(review[i]);

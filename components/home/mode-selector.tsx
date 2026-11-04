@@ -14,12 +14,15 @@ export function ModeSelector({
     <>
       <p className="selection-label">
         {t("学習モード", "학습 모드")}
-        <span>{t("複数選択可", "복수 선택 가능")}</span>
+        <span>{t("探索＋復習 / テストは単独", "탐색+복습 / 시험은 단독")}</span>
       </p>
       <div
-        className="training-levels training-kinds"
+        className="training-levels training-kinds training-modes"
         role="group"
-        aria-label={t("学習モード（複数選択可）", "학습 모드 (복수 선택 가능)")}
+        aria-label={t(
+          "学習モード（探索と復習は併用可、テストは単独）",
+          "학습 모드 (탐색과 복습은 함께 선택 가능, 시험은 단독)",
+        )}
       >
         {trainingModes.map((mode) => (
           <button
@@ -30,22 +33,39 @@ export function ModeSelector({
             title={
               mode === "exploration"
                 ? t(
-                    "実力に合わせて新しい単語にも挑戦",
-                    "실력에 맞는 난이도에서 다양한 단어를 탐색해요",
+                    "まだ出会っていない単語を均等ランダムに出題",
+                    "아직 만나지 않은 단어를 균등 랜덤으로 출제해요",
                   )
-                : t(
-                    "記憶と復習時期に合わせて出題。記録がなくても選択できます。",
-                    "기억 상태와 복습 시점에 따라 출제해요. 기록이 없어도 선택할 수 있어요.",
-                  )
+                : mode === "exam"
+                  ? t(
+                      "選択範囲の全単語を均等ランダムに出題。学習記録と復習にも反映します。",
+                      "학습 여부와 관계없이 선택 범위 전체에서 균등 랜덤으로 출제해요. 학습 기록과 복습에도 반영해요.",
+                    )
+                  : t(
+                      "記憶と復習時期に合わせて出題。記録がなくても選択できます。",
+                      "기억 상태와 복습 시점에 따라 출제해요. 기록이 없어도 선택할 수 있어요.",
+                    )
             }
           >
             <span className="kind-check" aria-hidden="true">
               {modes.includes(mode) ? "✓" : "+"}
             </span>
-            {mode === "exploration" ? t("探索", "탐색") : t("復習", "복습")}
+            {mode === "exploration"
+              ? t("探索", "탐색")
+              : mode === "exam"
+                ? t("テスト", "시험")
+                : t("復習", "복습")}
           </button>
         ))}
       </div>
+      {modes.includes("exam") && (
+        <p className="level-hint" role="status">
+          {t(
+            "学習済みも含む全範囲からランダム出題。結果は学習・復習に反映します。",
+            "이미 학습한 단어도 포함해 전체 범위에서 랜덤 출제합니다. 결과는 학습·복습에 반영됩니다.",
+          )}
+        </p>
+      )}
       {!modes.length && (
         <p className="level-hint" role="status">
           {t("学習モードを選んでください。", "학습 모드를 선택해주세요.")}

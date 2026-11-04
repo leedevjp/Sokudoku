@@ -1,3 +1,4 @@
+import { paintHearts } from "./reward-effects";
 import Phaser from "phaser";
 import { petFrame, type PetMotion } from "../pet-motion";
 const TEXTURE = "sokudoku-rabbit-v1";
@@ -8,10 +9,13 @@ export function preloadRabbit(scene: Phaser.Scene) {
 /** The generated poses live in sixteen equal cells; runtime slicing preserves the source. */
 export class RabbitCompanion {
   readonly root: Phaser.GameObjects.Container;
+  private hearts?: Phaser.GameObjects.Graphics;
+  private size = 0;
   private sprite?: Phaser.GameObjects.Image;
   private maskShape?: Phaser.GameObjects.Graphics;
   private mask?: Phaser.Display.Masks.GeometryMask;
   constructor(scene: Phaser.Scene, x: number, y: number, size: number) {
+    this.size = size;
     this.root = scene.add.container(x, y);
     if (!scene.textures.exists(TEXTURE)) return; // Art failure must not block learning.
     const texture = scene.textures.get(TEXTURE);
@@ -56,6 +60,8 @@ export class RabbitCompanion {
     this.root.add(
       scene.add.circle(0, 0, size / 2).setStrokeStyle(1, 0xb6a3c4, 0.35),
     );
+    this.hearts = scene.add.graphics();
+    this.root.add(this.hearts);
     this.root.once("destroy", () => {
       if (this.mask) this.sprite?.clearMask();
       this.mask?.destroy();
@@ -64,5 +70,15 @@ export class RabbitCompanion {
   }
   show(motion: PetMotion, elapsed: number, reduced: boolean) {
     this.sprite?.setFrame(String(petFrame(motion, elapsed, reduced)));
+    if (this.hearts) {
+      this.hearts.clear();
+      if (motion === "happy" || motion === "celebrate")
+        paintHearts(
+          this.hearts,
+          motion === "celebrate" ? elapsed % 1440 : elapsed,
+          this.size,
+          reduced,
+        );
+    }
   }
 }

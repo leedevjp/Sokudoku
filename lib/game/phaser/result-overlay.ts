@@ -61,12 +61,18 @@ export function drawEnd(
       .map((a) => `${a.source ?? "word"}:${a.word_id}`),
   ).size;
   const reviews = data.answers.filter((a) => a.mode === "review").length;
+  const exams = data.answers.filter((a) => a.mode === "exam").length;
   label(
     -72,
-    view.t(
-      `新しく学んだ単語 ${newWords}語 · 復習 ${reviews}問`,
-      `새로 만난 단어 ${newWords}개 · 복습 ${reviews}문제`,
-    ),
+    exams
+      ? view.t(
+          `テスト ${exams}問 · 学習記録に反映`,
+          `시험 ${exams}문제 · 학습 기록에 반영`,
+        )
+      : view.t(
+          `新しく学んだ単語 ${newWords}語 · 復習 ${reviews}問`,
+          `새로 만난 단어 ${newWords}개 · 복습 ${reviews}문제`,
+        ),
     17,
     view.c.blue,
   );

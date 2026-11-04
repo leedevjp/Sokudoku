@@ -19,7 +19,8 @@ import type { Kind } from "@/lib/game/types";
 import { ModeSelector } from "./mode-selector";
 import {
   parseModes,
-  trainingModes,
+  defaultTrainingModes,
+  toggleTrainingMode,
   type TrainingMode,
 } from "@/lib/game/learning/types";
 import { KindSelector } from "./kind-selector";
@@ -37,7 +38,7 @@ export default function HomeScreen() {
   const { user, loading, notice } = account;
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
-  const [modes, setModes] = useState<TrainingMode[]>(trainingModes);
+  const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -88,9 +89,7 @@ export default function HomeScreen() {
     }
   }
   function toggleMode(mode: TrainingMode) {
-    const next = trainingModes.filter((item) =>
-      item === mode ? !modes.includes(item) : modes.includes(item),
-    );
+    const next = toggleTrainingMode(modes, mode);
     setModes(next);
     try {
       localStorage.setItem("sokudoku-modes-v1", next.join(","));

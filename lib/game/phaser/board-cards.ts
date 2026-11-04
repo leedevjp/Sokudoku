@@ -96,11 +96,16 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     ),
   );
   const review = question.mode === "review";
-  const modeColor = review
+  const exam = question.mode === "exam";
+  const modeColor = exam
     ? view.prefs.theme === "dark"
-      ? 0xc4b5fd
-      : 0x6d28d9
-    : view.c.blue;
+      ? 0xfcd778
+      : 0x946010
+    : review
+      ? view.prefs.theme === "dark"
+        ? 0xc4b5fd
+        : 0x6d28d9
+      : view.c.blue;
   const modeX = left + cw - badgeWidth / 2;
   badges.add(
     view.add
@@ -118,7 +123,11 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     view.designText(
       modeX,
       badgeY,
-      review ? view.t("復習", "복습") : view.t("探索", "탐색"),
+      exam
+        ? view.t("テスト", "시험")
+        : review
+          ? view.t("復習", "복습")
+          : view.t("探索", "탐색"),
       badgeFont,
       modeColor,
       true,

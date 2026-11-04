@@ -331,7 +331,6 @@ export class TrainingScene extends Phaser.Scene {
     if (card) {
       burst(this, card.x, card.y, this.c.blue);
       card.disableInteractive().setVisible(false);
-      this.cameras.main.flash(90, 100, 190, 255, false);
     }
     this.advanceAfterFeedback();
   }
