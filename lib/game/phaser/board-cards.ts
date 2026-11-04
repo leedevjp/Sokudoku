@@ -112,6 +112,32 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       true,
     ),
   );
+  const review = question.mode === "review";
+  const modeColor = review
+    ? view.prefs.theme === "dark"
+      ? 0xc4b5fd
+      : 0x6d28d9
+    : view.c.blue;
+  const modeX = size / 2 - 22 * s - badgeWidth / 2;
+  view.wordView.add(
+    view.add.graphics().fillStyle(modeColor, 0.1).fillRoundedRect(
+      modeX - badgeWidth / 2,
+      badgeY - 15 * s,
+      badgeWidth,
+      30 * s,
+      15 * s,
+    ),
+  );
+  view.wordView.add(
+    view.designText(
+      modeX,
+      badgeY,
+      review ? view.t("復習", "복습") : view.t("探索", "탐색"),
+      14 * s,
+      modeColor,
+      true,
+    ),
+  );
   const length = Array.from(question.word.term).length;
   const word = view.designText(
     0,
@@ -133,14 +159,11 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     .designText(
       x,
       cardTop + 359 * s,
-      (question.mode === "review"
-        ? view.t("復習 · ", "복습 · ")
-        : view.t("探索 · ", "탐색 · ")) +
-        (question.kind === "reading"
-          ? view.t("読み方を選んでください", "읽기를 고르세요")
-          : question.word.difficulty === -1
-            ? view.t("発音を選んでください", "발음 표기를 고르세요")
-            : view.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요")),
+      question.kind === "reading"
+        ? view.t("読み方を選んでください", "읽기를 고르세요")
+        : question.word.difficulty === -1
+          ? view.t("発音を選んでください", "발음 표기를 고르세요")
+          : view.t("韓国語の意味を選んでください", "한국어 뜻을 고르세요"),
       20 * s,
       view.c.muted,
     )
