@@ -5,6 +5,9 @@ import assert from "node:assert/strict";
 import { AnswerGate, keyIndex, limitFor } from "../lib/game/rules";
 import { TrainingPlanner } from "../lib/game/learning/planner";
 import { LearningEngine } from "../lib/game/learning/engine";
+import { explorationWeights } from "../lib/game/learning/exploration";
+import { cryptoRandom } from "../lib/game/learning/random";
+import { selectedDifficulty } from "../lib/game/selection";
 const word = (
   id: number,
   term: string,
@@ -32,6 +35,80 @@ const words = [
   word(5, "コミュニケーション", "コミュニケーション", "의사소통", false),
   word(6, "あす", "あす", "내일", false),
 ];
+
+test("exploration is uniform across uneven difficulty buckets and entry types", () => {
+  const pool = words.map((w, i) => ({ ...w, difficulty: i ? 0 : 1 }));
+  pool.push({ ...words[0], id: "kana", entry_type: "hiragana", difficulty: -1 });
+  assert.deepEqual(explorationWeights(pool).map((c) => c.weight), pool.map(() => 1));
+});
+
+test("crypto draws request fresh entropy and stay inside the shuffle range", (t) => {
+  let calls = 0;
+  t.mock.method(crypto, "getRandomValues", (values: Uint32Array) => {
+    values[0] = calls++ === 0 ? 0 : 0xffffffff;
+    return values;
+  });
+  assert.equal(cryptoRandom(), 0);
+  assert.equal(cryptoRandom(), 1 - 1 / 0x1_0000_0000);
+  assert.equal(calls, 2);
+});
+
+test("common stages stay within their difficulty pairs and exclude personal-only 10", () => {
+  assert.deepEqual([...selectedDifficulty(["5"])], [8, 9]);
+  assert.deepEqual([...selectedDifficulty(["1", "2", "3", "4", "5"])], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+
+test("exploration excludes learned words across kinds and never repeats across sets", async () => {
+  const pool = Array.from({ length: 16 }, (_, i) => word(i, `term${i}`, `kana${i}`, `meaning${i}`));
+  const engine = await LearningEngine.create();
+  engine.apply({ id: "learned", source: "word", word_id: "0", question_type: "reading", result: "correct", difficulty: 0, answered_at: new Date().toISOString() });
+  const planner = new TrainingPlanner(engine, pool, ["meaning"], ["exploration"], () => 0.42);
+  const seen = new Set<string>();
+  while (planner.hasQuestions()) {
+    const q = planner.next()!;
+    assert.notEqual(q.word.id, "0");
+    assert.equal(seen.has(q.word.id), false);
+    seen.add(q.word.id);
+  }
+  assert.equal(seen.size, 15);
+  assert.equal(planner.next(), null);
+});
+
+test("mixed mode moves answered failures to review instead of repeating exploration", async () => {
+  const pool = Array.from({ length: 12 }, (_, i) => word(i, `term${i}`, `kana${i}`, `meaning${i}`));
+  const planner = new TrainingPlanner(await LearningEngine.create(), pool, ["meaning"], ["exploration", "review"], () => 0.77);
+  const explored = new Set<string>();
+  let reviews = 0;
+  for (let i = 0; i < 40; i++) {
+    const q = planner.next()!;
+    assert.ok(q);
+    if (q.mode === "exploration") {
+      assert.equal(explored.has(q.word.id), false);
+      explored.add(q.word.id);
+    } else {
+      assert.ok(explored.has(q.word.id));
+      reviews++;
+    }
+    planner.record({ id: `answer${i}`, word_id: q.word.id, question_type: q.kind, result: "incorrect", selected_word_id: null, response_ms: 500, time_limit_ms: 10000, answered_at: new Date().toISOString() }, q.word);
+  }
+  assert.equal(explored.size, 12);
+  assert.ok(reviews > 0);
+});
+
+test("one mixed set cannot repeat a word across review kinds or exploration", async () => {
+  const pool = Array.from({ length: 20 }, (_, i) => word(i, `term${i}`, `kana${i}`, `meaning${i}`));
+  const engine = await LearningEngine.create();
+  for (const w of pool.slice(0, 10)) {
+    for (const kind of ["meaning", "reading"] as const) {
+      engine.apply({ id: `${w.id}-${kind}`, source: "word", word_id: w.id, question_type: kind, result: "incorrect", difficulty: w.difficulty, answered_at: new Date().toISOString() });
+    }
+  }
+  const planner = new TrainingPlanner(engine, pool, ["meaning", "reading"], ["exploration", "review"], () => 0.4);
+  const batch = Array.from({ length: 10 }, () => planner.next()!);
+  assert.equal(new Set(batch.map((q) => q.word.id)).size, 10);
+  assert.equal(batch.filter((q) => q.mode === "review").length, 5);
+  assert.equal(batch.filter((q) => q.mode === "exploration").length, 5);
+});
 
 test("lean catalog entries preserve gameplay without audit fields or recent-20 statistics", async () => {
   const lean: Word[] = words.map((w) => ({

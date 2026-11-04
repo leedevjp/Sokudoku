@@ -13,7 +13,7 @@ export const levelDifficulty: Record<
   "2": [2, 3],
   "3": [4, 5],
   "4": [6, 7],
-  "5": [8, 9, 10],
+  "5": [8, 9],
 };
 export function parseLevels(value: string | null): TrainingLevel[] {
   if (value === null) return [...defaultLevels];
