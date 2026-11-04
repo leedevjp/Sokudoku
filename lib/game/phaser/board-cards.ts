@@ -80,9 +80,9 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       38 * s,
     );
   view.wordView.add(tint);
-  const badgeWidth = Math.max(72, 112 * s),
-    badgeHeight = Math.max(30, 48 * s),
-    badgeFont = Math.max(14, 24 * s),
+  const badgeWidth = Math.max(94, 144 * s),
+    badgeHeight = Math.max(39, 62 * s),
+    badgeFont = Math.max(18, 31 * s),
     badgeX = left + badgeWidth / 2,
     badgeY = top + 166 * s;
   const badges = view.add.container(0, 0);
@@ -99,7 +99,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       ),
   );
   badges.add(
-    view.add.circle(badgeX - badgeWidth * 0.3, badgeY, Math.max(3, 4 * s), view.c.blue),
+    view.add.circle(badgeX - badgeWidth * 0.3, badgeY, Math.max(4, 5 * s), view.c.blue),
   );
   badges.add(
     view.designText(
