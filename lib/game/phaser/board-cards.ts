@@ -27,7 +27,7 @@ export function paintChoice(
 }
 
 export function drawQuestionCard(view: TrainingView, question: Question) {
-  const { scale: s, width: cw, top, extra } = view.boardLayout;
+  const { scale: s, width: cw, left, top, extra } = view.boardLayout;
   const x = view.w / 2;
   const cardTop = top + 202 * s + extra,
     size = 300 * s,
@@ -80,34 +80,37 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       38 * s,
     );
   view.wordView.add(tint);
-  const badgeWidth = 72 * s,
-    badgeX = -size / 2 + 22 * s + badgeWidth / 2,
-    badgeY = -size / 2 + 36 * s;
-  view.wordView.add(
+  const badgeWidth = Math.max(72, 112 * s),
+    badgeHeight = Math.max(30, 48 * s),
+    badgeFont = Math.max(14, 24 * s),
+    badgeX = left + badgeWidth / 2,
+    badgeY = top + 166 * s;
+  const badges = view.add.container(0, 0);
+  badges.add(
     view.add
       .graphics()
       .fillStyle(view.c.press)
       .fillRoundedRect(
         badgeX - badgeWidth / 2,
-        badgeY - 15 * s,
+        badgeY - badgeHeight / 2,
         badgeWidth,
-        30 * s,
-        15 * s,
+        badgeHeight,
+        badgeHeight / 2,
       ),
   );
-  view.wordView.add(
-    view.add.circle(badgeX - 20 * s, badgeY, 4 * s, view.c.blue),
+  badges.add(
+    view.add.circle(badgeX - badgeWidth * 0.3, badgeY, Math.max(3, 4 * s), view.c.blue),
   );
-  view.wordView.add(
+  badges.add(
     view.designText(
-      badgeX + 7 * s,
+      badgeX + badgeWidth * 0.1,
       badgeY,
       question.kind === "reading"
         ? view.t("読み", "읽기")
         : question.word.difficulty === -1
           ? view.t("かな", "가나")
           : view.t("意味", "의미"),
-      14 * s,
+      badgeFont,
       view.c.blue,
       true,
     ),
@@ -118,22 +121,22 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       ? 0xc4b5fd
       : 0x6d28d9
     : view.c.blue;
-  const modeX = size / 2 - 22 * s - badgeWidth / 2;
-  view.wordView.add(
+  const modeX = left + cw - badgeWidth / 2;
+  badges.add(
     view.add.graphics().fillStyle(modeColor, 0.1).fillRoundedRect(
       modeX - badgeWidth / 2,
-      badgeY - 15 * s,
+      badgeY - badgeHeight / 2,
       badgeWidth,
-      30 * s,
-      15 * s,
+      badgeHeight,
+      badgeHeight / 2,
     ),
   );
-  view.wordView.add(
+  badges.add(
     view.designText(
       modeX,
       badgeY,
       review ? view.t("復習", "복습") : view.t("探索", "탐색"),
-      14 * s,
+      badgeFont,
       modeColor,
       true,
     ),
