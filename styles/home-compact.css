@@ -229,3 +229,45 @@
 .home-launch-group .home-secondary-actions {
   margin-top: 0;
 }
+/* Keep the three section gaps equal instead of stretching them independently. */
+@media (min-height: 921px) {
+  .home-shell .home-actions {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    gap: clamp(24px, 3svh, 40px);
+    margin-top: auto;
+  }
+  .home-actions .home-setting-group > :last-child,
+  .home-actions .kind-selector > :last-child {
+    margin-bottom: 0;
+  }
+  .home-shell .home-content {
+    flex: 1 1 auto;
+    padding: 24px 0;
+  }
+}
+/* Wide windows preview the same two-by-two answer layout as the game. */
+@media (min-width: 600px) and (min-height: 700px) {
+  .home-shell .home-visual {
+    --visual-size: clamp(128px, 16svh, 220px);
+    height: calc(var(--visual-size) + 168px);
+    min-height: calc(var(--visual-size) + 168px);
+    max-height: none;
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+  .home-visual .preview-target {
+    left: 50%;
+  }
+  .home-answer-list {
+    left: 0;
+    right: 0;
+    top: calc(var(--visual-size) + 42px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .home-answer-list .preview-answer {
+    min-height: clamp(42px, 4.4svh, 56px);
+    padding: 8px 10px;
+  }
+}
