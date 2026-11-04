@@ -267,7 +267,7 @@
   }
   .home-visual .preview-target {
     left: 50%;
-    top: 0;
+    top: 9.943977%;
     width: 47.468354%;
     height: auto;
     aspect-ratio: 1;
@@ -350,5 +350,21 @@
   }
   .home-launch-group {
     gap: 16px;
+  }
+}
+
+/* Center the square in the space above the answer grid and scale its captions. */
+.home-visual .preview-kind { font-size: 12px; }
+.home-visual .preview-reading { font-size: 14px; }
+@media (min-width: 600px) and (min-height: 800px) {
+  .home-visual .preview-kind {
+    font-size: clamp(11px, 3.006329cqw, 18px);
+    top: clamp(6px, 2cqw, 12px);
+    left: clamp(6px, 2cqw, 12px);
+    padding: 4px 8px;
+  }
+  .home-visual .preview-reading {
+    font-size: clamp(12px, 3.006329cqw, 18px);
+    bottom: clamp(8px, 3cqw, 18px);
   }
 }
