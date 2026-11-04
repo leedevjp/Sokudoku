@@ -36,16 +36,28 @@ export class RabbitCompanion {
     this.sprite = scene.add
       .image(0, 0, TEXTURE, "0")
       .setDisplaySize(size, size);
-    this.maskShape = scene.make.graphics({ x: 0, y: 0 });
-    this.maskShape.fillStyle(0xffffff).fillCircle(x, y, size / 2);
-    this.mask = this.maskShape.createGeometryMask();
-    this.sprite.setMask(this.mask);
+    if (scene.game.renderer.type === Phaser.WEBGL) {
+      const key = "sokudoku-rabbit-circle";
+      if (!scene.textures.exists(key)) {
+        const shape = scene.make.graphics({ x: 0, y: 0 });
+        shape.fillStyle(0xffffff).fillCircle(128, 128, 128);
+        shape.generateTexture(key, 256, 256);
+        shape.destroy();
+      }
+      this.sprite.enableFilters();
+      this.sprite.filters!.internal.addMask(key);
+    } else {
+      this.maskShape = scene.make.graphics({ x: 0, y: 0 });
+      this.maskShape.fillStyle(0xffffff).fillCircle(x, y, size / 2);
+      this.mask = this.maskShape.createGeometryMask();
+      this.sprite.setMask(this.mask);
+    }
     this.root.add(this.sprite);
     this.root.add(
       scene.add.circle(0, 0, size / 2).setStrokeStyle(1, 0xb6a3c4, 0.35),
     );
     this.root.once("destroy", () => {
-      this.sprite?.clearMask();
+      if (this.mask) this.sprite?.clearMask();
       this.mask?.destroy();
       this.maskShape?.destroy();
     });
