@@ -170,6 +170,19 @@
   .home-shell .home-visual {
     --visual-size: min(clamp(176px, 20svh, 260px), 40vw);
   }
+  .home-shell .home-content {
+    flex: 0 0 auto;
+    padding: clamp(32px, 6svh, 80px) 0 clamp(24px, 4svh, 56px);
+  }
+  .home-shell .home-visual {
+    margin-top: 0;
+  }
+  .home-shell footer {
+    margin-top: auto;
+  }
+  .home-actions .training-levels {
+    margin-bottom: clamp(16px, 1.8svh, 24px);
+  }
   .home-actions .training-levels button {
     min-height: clamp(44px, 4.8svh, 64px);
     font-size: clamp(14px, 1.5svh, 18px);
