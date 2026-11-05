@@ -12,16 +12,16 @@ import {
 import { paintContact, paintSpeed } from "./battle-impact";
 import type { TrainingView } from "./board";
 
-const MEADOW = "battle-meadow-reference-v3";
-const RABBIT = "battle-rabbit-reference-v3";
+const MEADOW = "battle-meadow-original-v4";
+const RABBIT = "battle-hero-original-v4";
 const ACTIONS = RABBIT;
-const SLIME_ACTIONS = "battle-slime-reference-v3";
-const SLIME = "battle-slime-reference-v3";
+const SLIME_ACTIONS = "battle-sprout-original-v4";
+const SLIME = "battle-sprout-original-v4";
 export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
-    [MEADOW, "meadow-reference-v3.png"],
-    [RABBIT, "rabbit-reference-v3.png"],
-    [SLIME, "slime-reference-v3.png"],
+    [MEADOW, "meadow-original-v4.png"],
+    [RABBIT, "hero-original-v4.png"],
+    [SLIME, "sprout-original-v4.png"],
   ]) {
     if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
   }
@@ -79,20 +79,20 @@ export class MeadowBattle {
         .setStrokeStyle(Math.max(1, s), 0xacc8af, 0.6);
     }
     if (scene.textures.exists(RABBIT)) {
-      frames(scene, RABBIT, 4, 6);
+      frames(scene, RABBIT, 6, 6);
       this.rabbit = scene.add
         .image(this.startX, this.baseline, RABBIT, "0")
         .setOrigin(0.5, 0.88)
         .setDisplaySize(142 * s, 142 * s)
-        .setFlipX(true);
+        .setFlipX(false);
     }
     if (scene.textures.exists(SLIME)) {
       frames(scene, SLIME, 4, 4);
       this.slime = scene.add
         .image(this.enemyX, this.baseline, SLIME, "0")
         .setOrigin(0.5, 0.88)
-        .setDisplaySize(105 * s, 105 * s)
-        .setFlipX(true);
+        .setDisplaySize(128 * s, 128 * s)
+        .setFlipX(false);
     }
     for (const key of [MEADOW, RABBIT, SLIME]) {
       if (scene.textures.exists(key))
@@ -121,8 +121,8 @@ export class MeadowBattle {
     const texture = rabbit ? ACTIONS : SLIME_ACTIONS;
     if (sprite?.scene.textures.exists(texture))
       sprite
-        .setTexture(texture, String(frame + (rabbit ? 16 : 8)))
-        .setFlipX(rabbit);
+        .setTexture(texture, String(rabbit ? frame : frame + 8))
+        .setFlipX(false);
     else sprite?.setFrame(rabbit ? "0" : "0");
   }
   update(delta: number, paused: boolean, reduced: boolean) {
@@ -139,20 +139,20 @@ export class MeadowBattle {
             reduced ? 0 : [0, 1, 2, 3][Math.floor(this.idleElapsed / 110) % 4],
           ),
         )
-        .setDisplaySize(105 * this.s, 105 * this.s);
+        .setDisplaySize(128 * this.s, 128 * this.s);
       return;
     }
     this.elapsed += Math.max(0, delta);
     const t = this.elapsed;
-    const contactX = this.enemyX - 40 * this.s;
+    const contactX = this.enemyX - 66 * this.s;
     if (reduced || this.result === "timeout") {
-      this.pose(true, this.result === "correct" ? 2 : 7);
+      this.pose(true, this.result === "correct" ? 16 : 29);
       this.slime?.setVisible(this.result !== "correct");
     } else {
       if (t < CHARGE_MS) {
         const progress = chargeProgress(t);
         this.rabbit?.setX(this.startX + (contactX - this.startX) * progress);
-        this.pose(true, t < 35 ? 0 : 1);
+        this.pose(true, t < 25 ? 12 : t < 65 ? 13 : t < 120 ? 14 : 15);
         paintSpeed(
           this.effects,
           this.rabbit?.x ?? this.startX,
@@ -170,7 +170,30 @@ export class MeadowBattle {
         );
         if (t >= CHARGE_MS) {
           const stumble = stumblePose(t);
-          this.pose(true, stumble.frame);
+          this.pose(
+            true,
+            t < 210
+              ? 18
+              : t < 250
+                ? 19
+                : t < 300
+                  ? 20
+                  : t < 450
+                    ? 21
+                    : t < 650
+                      ? 22
+                      : t < 800
+                        ? 23
+                        : t < 950
+                          ? 24
+                          : t < 1100
+                            ? 25
+                            : t < 1250
+                              ? 26
+                              : t < 1400
+                                ? 27
+                                : 29,
+          );
           this.rabbit?.setX(contactX + stumble.x * this.s);
           if (t >= 280 && t < 500) {
             const fade = 1 - (t - 280) / 220;
@@ -190,7 +213,7 @@ export class MeadowBattle {
       } else if (t >= CHARGE_MS) {
         const age = t - CHARGE_MS;
         const push = knockbackProgress(age);
-        this.pose(true, age < HIT_STOP_MS ? 2 : 1);
+        this.pose(true, age < HIT_STOP_MS ? 16 : 17);
         this.rabbit?.setX(contactX + 18 * push * this.s);
         this.pose(
           false,
@@ -204,12 +227,12 @@ export class MeadowBattle {
           .setAlpha(Math.max(0, 1 - Math.max(0, age - 210) / 110));
         this.effects
           .clear()
-          .setPosition(this.enemyX - 24 * this.s, this.baseline - 36 * this.s);
+          .setPosition(this.enemyX - 24 * this.s, this.baseline - 57 * this.s);
         paintContact(this.effects, age, this.s * 1.45);
         this.land();
       }
     }
     this.rabbit?.setDisplaySize(142 * this.s, 142 * this.s);
-    this.slime?.setDisplaySize(105 * this.s, 105 * this.s);
+    this.slime?.setDisplaySize(128 * this.s, 128 * this.s);
   }
 }

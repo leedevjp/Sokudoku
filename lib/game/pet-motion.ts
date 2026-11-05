@@ -11,16 +11,16 @@ export const PET_CLIPS: Record<
   { frames: readonly number[]; step: number; duration: number }
 > = {
   idle: {
-    frames: [0, 0, 0, 0, 1, 0, 0, 2, 3, 0],
+    frames: [0, 1, 2, 3, 4, 5],
     step: 350,
     duration: Infinity,
   },
-  hop: { frames: [4, 5, 6, 7], step: 140, duration: 560 },
-  happy: { frames: [8, 9, 10, 11], step: 150, duration: 600 },
-  encourage: { frames: [12, 13, 13, 12], step: 450, duration: Infinity },
-  rest: { frames: [14, 15], step: 1500, duration: Infinity },
+  hop: { frames: [6, 7, 8, 9, 10, 11], step: 93, duration: 558 },
+  happy: { frames: [30, 31, 32, 33, 34, 35], step: 100, duration: 600 },
+  encourage: { frames: [29, 30, 35, 30], step: 450, duration: Infinity },
+  rest: { frames: [28, 29], step: 1500, duration: Infinity },
   celebrate: {
-    frames: [8, 9, 10, 11, 11, 11, 11, 11],
+    frames: [30, 31, 32, 33, 34, 35, 35, 35],
     step: 180,
     duration: Infinity,
   },
