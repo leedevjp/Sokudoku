@@ -3,216 +3,142 @@
   <meta charset="utf-8" /><meta
     name="viewport"
     content="width=device-width,initial-scale=1"
-  /><title>Sokudoku · 토끼귀 모험가</title
-  ><style>
+  />
+  <title>Sokudoku · 마법사의 작은 모험</title>
+  <style>
     * {
       box-sizing: border-box;
     }
     body {
       margin: 0;
-      background: #f7f5fa;
-      color: #44364e;
-      font-family: system-ui, sans-serif;
+      background: #edf0f7;
+      color: #24314d;
+      font:
+        16px system-ui,
+        sans-serif;
     }
     main {
-      max-width: 980px;
+      max-width: 1100px;
       margin: auto;
-      padding: 44px 24px;
-    }
-    small {
-      letter-spacing: 0.18em;
-      color: #877294;
+      padding: 32px 20px;
     }
     h1 {
-      font-size: clamp(30px, 6vw, 48px);
-      margin: 14px 0;
+      font-size: 30px;
     }
     p {
       line-height: 1.7;
-      color: #766680;
     }
     nav {
       display: flex;
       gap: 12px;
       margin: 24px 0;
-      flex-wrap: wrap;
     }
     button {
       font: inherit;
-      font-size: 16px;
       padding: 12px 20px;
-      border-radius: 24px;
-      border: 1px solid #d9cfe1;
-      background: #fff;
-      color: #574463;
+      border: 1px solid #b8c6dc;
+      border-radius: 12px;
+      background: white;
+      color: inherit;
       cursor: pointer;
     }
     section {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
     }
     article {
-      text-align: center;
+      padding: 16px;
       background: #fff;
-      border: 1px solid #e5ddea;
-      border-radius: 28px;
-      padding: 20px 12px;
+      border-radius: 18px;
+      text-align: center;
     }
     canvas {
       display: block;
-      image-rendering: pixelated;
-      width: min(100%, 220px);
+      width: 100%;
+      max-width: 240px;
       aspect-ratio: 1;
       margin: auto;
+      image-rendering: pixelated;
     }
-    h2 {
-      font-size: 20px;
-      margin: 12px 0 0;
-    }
-    article p {
-      font-size: 15px;
-      margin: 8px 0;
+    h3 {
+      font-size: 18px;
+      margin: 10px 0;
     }
     .dark {
-      background: #191621;
-      color: #f3eafb;
+      background: #151c2e;
+      color: #e4ebfc;
     }
-    .dark article {
-      background: #292232;
-      border-color: #483952;
-    }
-    .dark p {
-      color: #bdaccb;
+    .dark article,
+    .dark button {
+      background: #25314a;
     }
     .dark button {
-      background: #30273b;
-      color: #eee1f5;
-      border-color: #584665;
+      border-color: #586b91;
     }
-    @media (max-width: 620px) {
-      main {
-        padding: 28px 16px;
-      }
+    @media (max-width: 550px) {
       section {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      main {
+        padding: 20px 12px;
       }
       article {
-        padding: 12px 8px;
-      }
-      article p {
-        font-size: 14px;
-      }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html {
-        scroll-behavior: auto;
+        padding: 8px;
       }
     }
   </style>
   <main>
-    <small>SOKUDOKU / COMPANION 01</small>
-    <h1>함께 달리는 토끼귀 모험가</h1>
-    <p>
-      파란 머리와 하얀 토끼귀.<br />문제를 푸는 동안 곁에 머무는 친구입니다.
-    </p>
+    <h1>마법사의 작은 모험</h1>
+    <p>백발 마법사와 네 식물 친구들. 불·물·번개·바람으로 모험해요.</p>
     <nav>
       <button id="pause">움직임 멈추기</button
       ><button id="theme">어두운 배경</button>
     </nav>
-    <section>
-      <article>
-        <canvas
-          width="440"
-          height="440"
-          data-motion="idle"
-          aria-label="대기 동작"
-        ></canvas>
-        <h2>대기</h2>
-        <p>문제를 읽을 때 조용히 기다려요</p>
-      </article>
-      <article>
-        <canvas
-          width="440"
-          height="440"
-          data-motion="hop"
-          aria-label="이동 동작"
-        ></canvas>
-        <h2>이동</h2>
-        <p>학습하는 동안 함께 달려요</p>
-      </article>
-      <article>
-        <canvas
-          width="440"
-          height="440"
-          data-motion="happy"
-          aria-label="기쁨 동작"
-        ></canvas>
-        <h2>기쁨</h2>
-        <p>정답을 맞히면 함께 기뻐해요</p>
-      </article>
-      <article>
-        <canvas
-          width="440"
-          height="440"
-          data-motion="encourage"
-          aria-label="격려 동작"
-        ></canvas>
-        <h2>격려</h2>
-        <p>틀려도 곁에서 응원해요</p>
-      </article>
-      <article>
-        <canvas
-          width="440"
-          height="440"
-          data-motion="rest"
-          aria-label="휴식 동작"
-        ></canvas>
-        <h2>휴식</h2>
-        <p>잠시 쉬는 동안 몸을 웅크려요</p>
-      </article>
-      <article>
-        <canvas
-          width="440"
-          height="440"
-          data-motion="celebrate"
-          aria-label="축하 동작"
-        ></canvas>
-        <h2>축하</h2>
-        <p>지금 할 학습을 마치면 축하해요</p>
-      </article>
-    </section>
+    <h2>마법사</h2>
+    <section id="mage"></section>
+    <h2>식물 몬스터</h2>
+    <section id="plants"></section>
+    <h2>네 가지 마법</h2>
+    <section id="magic"></section>
     <p id="status" role="status"></p>
   </main>
   <script>
-    const clips = {
-      charge: { frames: [12, 13, 14, 15, 16, 17], step: 160 },
-      stumble: { frames: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27], step: 160 },
-      idle: { frames: [0, 1, 2, 3, 4, 5], step: 350 },
-      hop: { frames: [6, 7, 8, 9, 10, 11], step: 140 },
-      happy: { frames: [30, 31, 32, 33, 34, 35], step: 150 },
-      encourage: { frames: [29, 30, 35, 30], step: 450 },
-      rest: { frames: [28, 29], step: 1500 },
-      celebrate: { frames: [30, 31, 32, 33, 34, 35, 35, 35], step: 180 },
+    const assets = {
+      mage: { src: "../battle/mage-v5.png", cols: 4, cell: 128 },
+      plants: { src: "../battle/mandrakes-v5.png", cols: 6, cell: 96 },
+      magic: { src: "../battle/magic-v5.png", cols: 6, cell: 96 },
     };
-    for (const [motion, title] of [
-      ["charge", "돌진 · 충돌"],
-      ["stumble", "헛발질 · 넘어짐"],
-    ]) {
-      const article = document.createElement("article");
-      article.innerHTML = `<canvas width="440" height="440" data-motion="${motion}" aria-label="${title}"></canvas><h2>${title}</h2>`;
-      document.querySelector("section").append(article);
-    }
-    const image = new Image();
-    let paused = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let elapsed = 0,
+    const clips = [
+      ["mage", "대기", [0, 0, 0, 1, 2, 3], 350],
+      ["mage", "마법 시전", [4, 5, 6, 7, 0, 0], 150],
+      ["mage", "실패 · 넘어짐", [4, 5, 8, 9, 10, 11, 11], 150],
+      ["mage", "일어나기", [12, 13, 14, 15], 220],
+      ["mage", "기쁨", [16, 17, 18, 16], 200],
+      ["mage", "격려", [15, 15, 0, 15], 450],
+      ["mage", "휴식", [19, 2], 1500],
+      ["mage", "승리", [16, 17, 18, 17, 16, 16], 180],
+      ...["새싹 무", "단풍 뿌리", "꽃봉오리", "고사리"].map((name, i) => [
+        "plants",
+        name,
+        [0, 1, 0, 2, 3, 4, 5, 5].map((f) => i * 6 + f),
+        230,
+      ]),
+      ...["불", "물", "번개", "바람"].map((name, i) => [
+        "magic",
+        name,
+        [0, 1, 2, 3, 4, 5].map((f) => i * 6 + f),
+        110,
+      ]),
+    ];
+    let paused = matchMedia("(prefers-reduced-motion: reduce)").matches,
+      elapsed = 0,
       last = 0;
     const button = document.querySelector("#pause");
-    const label = () => {
+    function label() {
       button.textContent = paused ? "움직임 재생" : "움직임 멈추기";
       button.setAttribute("aria-pressed", String(paused));
-    };
+    }
     label();
     button.onclick = () => {
       paused = !paused;
@@ -222,47 +148,57 @@
       const dark = document.body.classList.toggle("dark");
       e.target.textContent = dark ? "밝은 배경" : "어두운 배경";
     };
+    for (const clip of clips) {
+      const a = document.createElement("article"),
+        c = document.createElement("canvas"),
+        h = document.createElement("h3");
+      c.width = 384;
+      c.height = 384;
+      c.setAttribute("aria-label", clip[1]);
+      h.textContent = clip[1];
+      a.append(c, h);
+      document.getElementById(clip[0]).append(a);
+      clip.push(c);
+    }
+    Promise.all(
+      Object.values(assets).map(
+        (a) =>
+          new Promise((resolve, reject) => {
+            a.image = new Image();
+            a.image.onload = resolve;
+            a.image.onerror = reject;
+            a.image.src = a.src;
+          }),
+      ),
+    )
+      .then(() => requestAnimationFrame(render))
+      .catch(
+        () =>
+          (document.getElementById("status").textContent =
+            "이미지를 불러오지 못했어요. 새로고침해주세요."),
+      );
     function render(now) {
       if (last && !paused) elapsed += Math.min(100, now - last);
       last = now;
-      for (const c of document.querySelectorAll("canvas")) {
-        const ctx = c.getContext("2d"),
-          clip = clips[c.dataset.motion],
-          f =
-            clip.frames[
-              paused ? 0 : Math.floor(elapsed / clip.step) % clip.frames.length
-            ],
-          col = f % 6,
-          row = Math.floor(f / 6);
+      for (const [key, , frames, step, c] of clips) {
+        const a = assets[key],
+          f = frames[paused ? 0 : Math.floor(elapsed / step) % frames.length],
+          ctx = c.getContext("2d");
         ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, 440, 440);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(220, 220, 210, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.fillStyle = "#fffcf8";
-        ctx.fillRect(0, 0, 440, 440);
-        const x = Math.round((col * image.width) / 6),
-          y = Math.round((row * image.height) / 6);
+        ctx.clearRect(0, 0, 384, 384);
         ctx.drawImage(
-          image,
-          x,
-          y,
-          Math.round(((col + 1) * image.width) / 6) - x,
-          Math.round(((row + 1) * image.height) / 6) - y,
-          10,
-          10,
-          420,
-          420,
+          a.image,
+          (f % a.cols) * a.cell,
+          Math.floor(f / a.cols) * a.cell,
+          a.cell,
+          a.cell,
+          0,
+          0,
+          384,
+          384,
         );
-        ctx.restore();
       }
       requestAnimationFrame(render);
     }
-    image.onload = () => requestAnimationFrame(render);
-    image.onerror = () =>
-      (document.querySelector("#status").textContent =
-        "캐릭터 이미지를 불러오지 못했어요. 새로고침해주세요.");
-    image.src = "../battle/hero-original-v4.png";
   </script>
 </html>

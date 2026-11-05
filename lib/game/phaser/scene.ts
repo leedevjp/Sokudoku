@@ -203,7 +203,7 @@ export class TrainingScene extends Phaser.Scene {
   private drawBoard() {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
-    this.battle = new MeadowBattle(this, this.view);
+    this.battle = new MeadowBattle(this, this.view, this.question.word.id);
   }
   private paintPet() {
     this.pet?.show(

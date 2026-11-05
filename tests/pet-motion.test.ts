@@ -17,7 +17,7 @@ test("pause freezes reaction time, and reduced motion uses a static expression",
   for (const name of Object.keys(PET_CLIPS) as (keyof typeof PET_CLIPS)[]) {
     assert.equal(petFrame(name, 3000, true), petFrame(name, 0, true));
     for (let t = 0; t < 8000; t += 50)
-      assert.ok(petFrame(name, t) >= 0 && petFrame(name, t) < 36);
+      assert.ok(petFrame(name, t) >= 0 && petFrame(name, t) < 20);
   }
 });
 test("encouragement and completion loop until the scene changes state", () => {

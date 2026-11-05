@@ -2,26 +2,25 @@ import Phaser from "phaser";
 import type { Result } from "../types";
 import { petFrame } from "../pet-motion";
 import {
-  CHARGE_MS,
-  HIT_STOP_MS,
-  chargeProgress,
-  knockbackProgress,
-  dodgePose,
-  stumblePose,
-} from "../battle-timing";
-import { paintContact, paintSpeed } from "./battle-impact";
+  magicEncounter,
+  magicCastFrame,
+  magicFallFrame,
+  magicImpactFrame,
+  SPELL_HIT_MS,
+  SPELL_HIT_STOP_MS,
+} from "../magic-presentation";
 import type { TrainingView } from "./board";
 
 const MEADOW = "battle-meadow-original-v4";
-const RABBIT = "battle-hero-original-v4";
-const ACTIONS = RABBIT;
-const SLIME_ACTIONS = "battle-sprout-original-v4";
-const SLIME = "battle-sprout-original-v4";
+const MAGE = "battle-mage-v5";
+const MONSTERS = "battle-mandrakes-v5";
+const MAGIC = "battle-magic-v5";
 export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
     [MEADOW, "meadow-original-v4.png"],
-    [RABBIT, "hero-original-v4.png"],
-    [SLIME, "sprout-original-v4.png"],
+    [MAGE, "mage-v5.png"],
+    [MONSTERS, "mandrakes-v5.png"],
+    [MAGIC, "magic-v5.png"],
   ]) {
     if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
   }
@@ -34,42 +33,49 @@ function frames(
 ) {
   const texture = scene.textures.get(key);
   const source = texture.getSourceImage() as HTMLImageElement;
+  const width = source.width / columns,
+    height = source.height / rows;
   for (let i = 0; i < columns * rows; i++) {
-    if (texture.has(String(i))) continue;
-    const x = Math.round(((i % columns) * source.width) / columns);
-    const y = Math.round((Math.floor(i / columns) * source.height) / rows);
-    texture.add(
-      String(i),
-      0,
-      x,
-      y,
-      Math.round((((i % columns) + 1) * source.width) / columns) - x,
-      Math.round(((Math.floor(i / columns) + 1) * source.height) / rows) - y,
-    );
+    if (!texture.has(String(i)))
+      texture.add(
+        String(i),
+        0,
+        (i % columns) * width,
+        Math.floor(i / columns) * height,
+        width,
+        height,
+      );
   }
+  texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
-/** Presentation only: answer recording and FSRS remain owned by TrainingScene. */
+/** Presentation only. The caster stays planted; spells carry the movement. */
 export class MeadowBattle {
-  private rabbit?: Phaser.GameObjects.Image;
-  private slime?: Phaser.GameObjects.Image;
-  private effects: Phaser.GameObjects.Graphics;
+  private mage?: Phaser.GameObjects.Image;
+  private monster?: Phaser.GameObjects.Image;
+  private spell?: Phaser.GameObjects.Image;
   private elapsed = 0;
+  private idleElapsed = 0;
   private result?: Result;
   private impact?: () => void;
   private impacted = false;
-  private idleElapsed = 0;
   private s: number;
   private startX: number;
   private enemyX: number;
   private baseline: number;
-  constructor(scene: Phaser.Scene, view: TrainingView) {
+  private monsterRow: number;
+  private element: number;
+  constructor(scene: Phaser.Scene, view: TrainingView, encounterKey: string) {
     const { scale: s, left, width, top, extra } = view.boardLayout;
     this.s = s;
     const y = top + 466 * s + extra;
     this.startX = left + 100 * s;
     this.enemyX = left + width * 0.62;
     this.baseline = y + 140 * s;
+    const encounter = magicEncounter(encounterKey);
+    this.monsterRow = encounter.monster * 6;
+    this.element = encounter.element * 6;
     if (scene.textures.exists(MEADOW)) {
+      scene.textures.get(MEADOW).setFilter(Phaser.Textures.FilterMode.NEAREST);
       scene.add
         .image(left, y, MEADOW)
         .setOrigin(0)
@@ -78,37 +84,36 @@ export class MeadowBattle {
         .rectangle(left + width / 2, y + 83 * s, width, 166 * s)
         .setStrokeStyle(Math.max(1, s), 0xacc8af, 0.6);
     }
-    if (scene.textures.exists(RABBIT)) {
-      frames(scene, RABBIT, 6, 6);
-      this.rabbit = scene.add
-        .image(this.startX, this.baseline, RABBIT, "0")
+    if (scene.textures.exists(MAGE)) {
+      frames(scene, MAGE, 4, 5);
+      this.mage = scene.add
+        .image(this.startX, this.baseline, MAGE, "0")
         .setOrigin(0.5, 0.88)
-        .setDisplaySize(142 * s, 142 * s)
-        .setFlipX(false);
+        .setDisplaySize(154 * s, 154 * s)
+        .setFlipX(true);
     }
-    if (scene.textures.exists(SLIME)) {
-      frames(scene, SLIME, 4, 4);
-      this.slime = scene.add
-        .image(this.enemyX, this.baseline, SLIME, "0")
+    if (scene.textures.exists(MONSTERS)) {
+      frames(scene, MONSTERS, 6, 4);
+      this.monster = scene.add
+        .image(this.enemyX, this.baseline, MONSTERS, String(this.monsterRow))
         .setOrigin(0.5, 0.88)
-        .setDisplaySize(128 * s, 128 * s)
-        .setFlipX(false);
+        .setDisplaySize(112 * s, 112 * s);
     }
-    for (const key of [MEADOW, RABBIT, SLIME]) {
-      if (scene.textures.exists(key))
-        scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    if (scene.textures.exists(MAGIC)) {
+      frames(scene, MAGIC, 6, 4);
+      this.spell = scene.add
+        .image(this.startX, this.baseline, MAGIC, String(this.element))
+        .setDisplaySize(160 * s, 160 * s)
+        .setVisible(false);
     }
-    this.effects = scene.add.graphics();
   }
   attack(result: Result, reduced: boolean, impact: () => void) {
     this.result = result;
     this.elapsed = 0;
     this.impact = impact;
-    if (reduced || result === "timeout" || !this.rabbit || !this.slime) {
+    if (reduced || result === "timeout" || !this.mage || !this.monster)
       this.land();
-    }
   }
-
   private land() {
     if (this.impacted) return;
     this.impacted = true;
@@ -116,123 +121,82 @@ export class MeadowBattle {
     this.impact = undefined;
     callback?.();
   }
-  private pose(rabbit: boolean, frame: number) {
-    const sprite = rabbit ? this.rabbit : this.slime;
-    const texture = rabbit ? ACTIONS : SLIME_ACTIONS;
-    if (sprite?.scene.textures.exists(texture))
-      sprite
-        .setTexture(texture, String(rabbit ? frame : frame + 8))
-        .setFlipX(false);
-    else sprite?.setFrame(rabbit ? "0" : "0");
+  private effect(frame: number, x: number, y: number, size = 160) {
+    this.spell
+      ?.setFrame(String(this.element + frame))
+      .setPosition(x, y)
+      .setDisplaySize(size * this.s, size * this.s)
+      .setVisible(true);
   }
   update(delta: number, paused: boolean, reduced: boolean) {
     if (paused) return;
-    this.effects.clear().setPosition(0, 0);
     this.idleElapsed += Math.max(0, delta);
+    this.spell?.setVisible(false);
     if (!this.result) {
-      this.rabbit
-        ?.setFrame(String(petFrame("hop", this.idleElapsed * 1.4, reduced)))
-        .setDisplaySize(142 * this.s, 142 * this.s);
-      this.slime
-        ?.setFrame(
-          String(
-            reduced ? 0 : [0, 1, 2, 3][Math.floor(this.idleElapsed / 110) % 4],
-          ),
-        )
-        .setDisplaySize(128 * this.s, 128 * this.s);
+      this.mage?.setFrame(String(petFrame("idle", this.idleElapsed, reduced)));
+      this.monster?.setFrame(
+        String(
+          this.monsterRow +
+            (reduced ? 0 : Math.floor(this.idleElapsed / 460) % 2),
+        ),
+      );
       return;
     }
     this.elapsed += Math.max(0, delta);
     const t = this.elapsed;
-    const contactX = this.enemyX - 66 * this.s;
     if (reduced || this.result === "timeout") {
-      this.pose(true, this.result === "correct" ? 16 : 29);
-      this.slime?.setVisible(this.result !== "correct");
-    } else {
-      if (t < CHARGE_MS) {
-        const progress = chargeProgress(t);
-        this.rabbit?.setX(this.startX + (contactX - this.startX) * progress);
-        this.pose(true, t < 25 ? 12 : t < 65 ? 13 : t < 120 ? 14 : 15);
-        paintSpeed(
-          this.effects,
-          this.rabbit?.x ?? this.startX,
-          this.baseline,
-          this.s,
-          progress,
-        );
-      }
-      if (this.result === "incorrect") {
-        const dodge = dodgePose(t);
-        this.pose(false, dodge.frame);
-        this.slime?.setPosition(
-          this.enemyX + dodge.x * this.s,
-          this.baseline + dodge.y * this.s,
-        );
-        if (t >= CHARGE_MS) {
-          const stumble = stumblePose(t);
-          this.pose(
-            true,
-            t < 210
-              ? 18
-              : t < 250
-                ? 19
-                : t < 300
-                  ? 20
-                  : t < 450
-                    ? 21
-                    : t < 650
-                      ? 22
-                      : t < 800
-                        ? 23
-                        : t < 950
-                          ? 24
-                          : t < 1100
-                            ? 25
-                            : t < 1250
-                              ? 26
-                              : t < 1400
-                                ? 27
-                                : 29,
-          );
-          this.rabbit?.setX(contactX + stumble.x * this.s);
-          if (t >= 280 && t < 500) {
-            const fade = 1 - (t - 280) / 220;
-            for (let i = 0; i < 5; i++)
-              this.effects
-                .fillStyle(0xe5cc99, fade * 0.8)
-                .fillRect(
-                  (this.rabbit?.x ?? contactX) + (i - 3) * 14 * this.s,
-                  this.baseline - 6 * this.s,
-                  (14 + i * 2) * this.s,
-                  7 * this.s,
-                );
-          }
-        }
-        // Start correction once the fall is visibly underway, without delaying reading until recovery.
-        if (t >= 300) this.land();
-      } else if (t >= CHARGE_MS) {
-        const age = t - CHARGE_MS;
-        const push = knockbackProgress(age);
-        this.pose(true, age < HIT_STOP_MS ? 16 : 17);
-        this.rabbit?.setX(contactX + 18 * push * this.s);
-        this.pose(
-          false,
-          age < HIT_STOP_MS ? 4 : age < 130 ? 5 : age < 230 ? 6 : 7,
-        );
-        this.slime
-          ?.setPosition(
-            this.enemyX + 142 * push * this.s,
-            this.baseline - 48 * Math.sin(push * Math.PI * 0.8) * this.s,
-          )
-          .setAlpha(Math.max(0, 1 - Math.max(0, age - 210) / 110));
-        this.effects
-          .clear()
-          .setPosition(this.enemyX - 24 * this.s, this.baseline - 57 * this.s);
-        paintContact(this.effects, age, this.s * 1.45);
-        this.land();
-      }
+      this.mage?.setFrame(this.result === "correct" ? "16" : "15");
+      this.monster?.setVisible(this.result !== "correct");
+      this.land();
+      return;
     }
-    this.rabbit?.setDisplaySize(142 * this.s, 142 * this.s);
-    this.slime?.setDisplaySize(128 * this.s, 128 * this.s);
+    const handX = this.startX + 36 * this.s;
+    const spellY = this.baseline - 46 * this.s;
+    this.mage?.setFrame(String(magicCastFrame(t)));
+    if (t < SPELL_HIT_MS) {
+      const progress = Math.max(0, (t - 60) / (SPELL_HIT_MS - 60));
+      this.effect(
+        t < 60 ? 0 : 1,
+        handX + (this.enemyX - handX) * progress * progress,
+        spellY,
+        t < 60 ? 90 : 140,
+      );
+      return;
+    }
+    if (this.result === "incorrect") {
+      this.mage?.setFrame(String(magicFallFrame(t)));
+      this.monster?.setFrame(
+        String(
+          this.monsterRow +
+            (t < 450 ? 2 : Math.floor(this.idleElapsed / 460) % 2),
+        ),
+      );
+      // The failed spell dissipates before contact; no hit flash or enemy damage.
+      if (t < 290)
+        this.effect(t < 220 ? 4 : 5, this.enemyX - 60 * this.s, spellY, 90);
+      if (t >= 300) this.land();
+      return;
+    }
+    const age = t - SPELL_HIT_MS;
+    const push =
+      1 -
+      Math.pow(
+        1 - Math.max(0, Math.min(1, (age - SPELL_HIT_STOP_MS) / 160)),
+        3,
+      );
+    this.monster
+      ?.setFrame(
+        String(
+          this.monsterRow + (age < SPELL_HIT_STOP_MS ? 3 : age < 140 ? 4 : 5),
+        ),
+      )
+      .setPosition(
+        this.enemyX + 65 * push * this.s,
+        this.baseline - 18 * Math.sin(push * Math.PI) * this.s,
+      )
+      .setAlpha(Math.max(0, 1 - Math.max(0, age - 200) / 110));
+    const frame = magicImpactFrame(age);
+    if (frame !== null) this.effect(frame, this.enemyX, spellY);
+    this.land();
   }
 }
