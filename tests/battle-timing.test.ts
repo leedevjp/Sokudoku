@@ -30,3 +30,19 @@ test("contact freezes before the slime is knocked away, then settles monotonical
   }
   assert.equal(previous, 1);
 });
+import { dodgePose, stumblePose } from "../lib/game/battle-timing";
+test("dodge clears the charge lane before contact and lands inside reserved space", () => {
+  assert.ok(dodgePose(CHARGE_MS).y < -50);
+  assert.ok(dodgePose(CHARGE_MS).x > 50);
+  assert.ok(Math.abs(dodgePose(400).y) < 1e-9);
+  assert.equal(dodgePose(400).x, 125);
+  assert.ok(632 * 0.62 + 125 + 105 / 2 < 632);
+});
+test("miss visibly progresses through stumble, tip, belly landing and recovery", () => {
+  assert.deepEqual(
+    [180, 240, 310, 450, 800].map((t) => stumblePose(t).frame),
+    [3, 4, 5, 6, 7],
+  );
+  assert.equal(stumblePose(160).x, 0);
+  assert.equal(stumblePose(500).x, 72);
+});

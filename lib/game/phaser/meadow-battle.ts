@@ -6,16 +6,22 @@ import {
   HIT_STOP_MS,
   chargeProgress,
   knockbackProgress,
+  dodgePose,
+  stumblePose,
 } from "../battle-timing";
 import { paintContact, paintSpeed } from "./battle-impact";
 import type { TrainingView } from "./board";
 
 const MEADOW = "battle-meadow-v1";
 const RABBIT = "battle-rabbit-v1";
+const ACTIONS = "battle-rabbit-actions-v1";
+const SLIME_ACTIONS = "battle-slime-actions-v1";
 const SLIME = "battle-slime-v1";
 export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
     [MEADOW, "meadow-v1.webp"],
+    [ACTIONS, "rabbit-actions-v1.webp"],
+    [SLIME_ACTIONS, "slime-actions-v1.webp"],
     [RABBIT, "rabbit-cutout-v1.webp"],
     [SLIME, "slime-v1.webp"],
   ]) {
@@ -63,7 +69,7 @@ export class MeadowBattle {
     this.s = s;
     const y = top + 466 * s + extra;
     this.startX = left + 100 * s;
-    this.enemyX = left + width - 115 * s;
+    this.enemyX = left + width * 0.62;
     this.baseline = y + 140 * s;
     if (scene.textures.exists(MEADOW)) {
       scene.add
@@ -90,6 +96,9 @@ export class MeadowBattle {
         .setDisplaySize(105 * s, 105 * s)
         .setFlipX(true);
     }
+    for (const key of [ACTIONS, SLIME_ACTIONS]) {
+      if (scene.textures.exists(key)) frames(scene, key, 4, 2);
+    }
     this.effects = scene.add.graphics();
   }
   attack(result: Result, reduced: boolean, impact: () => void) {
@@ -97,20 +106,24 @@ export class MeadowBattle {
     this.elapsed = 0;
     this.impact = impact;
     if (reduced || result === "timeout" || !this.rabbit || !this.slime) {
-      this.land(reduced);
+      this.land();
     }
   }
-  private land(reduced: boolean) {
+
+  private land() {
     if (this.impacted) return;
     this.impacted = true;
-    if (this.result === "correct") {
-      this.slime?.setVisible(!reduced).setFrame("4");
-    } else this.slime?.setFrame("2");
     const callback = this.impact;
     this.impact = undefined;
     callback?.();
   }
-
+  private pose(rabbit: boolean, frame: number) {
+    const sprite = rabbit ? this.rabbit : this.slime;
+    const texture = rabbit ? ACTIONS : SLIME_ACTIONS;
+    if (sprite?.scene.textures.exists(texture))
+      sprite.setTexture(texture, String(frame)).setFlipX(rabbit);
+    else sprite?.setFrame(rabbit ? "0" : "0");
+  }
   update(delta: number, paused: boolean, reduced: boolean) {
     if (paused) return;
     this.effects.clear().setPosition(0, 0);
@@ -130,19 +143,15 @@ export class MeadowBattle {
     }
     this.elapsed += Math.max(0, delta);
     const t = this.elapsed;
-    if (!this.impacted) {
-      const progress = chargeProgress(t);
-      // The nose overlaps the slime silhouette at contact, rather than stopping short.
-      const target = this.enemyX + 14 * this.s - 44 * this.s;
-      this.rabbit?.setX(this.startX + (target - this.startX) * progress);
-      this.rabbit?.setFrame(t < 20 ? "4" : "6");
-      this.slime?.setX(this.enemyX + 14 * this.s * progress);
-      if (this.result === "incorrect" && t >= 75) {
-        this.slime
-          ?.setFrame("3")
-          .setX(this.enemyX + 62 * this.s * Math.min(1, (t - 75) / 85));
-      }
-      if (!reduced)
+    const contactX = this.enemyX - 40 * this.s;
+    if (reduced || this.result === "timeout") {
+      this.pose(true, this.result === "correct" ? 2 : 7);
+      this.slime?.setVisible(this.result !== "correct");
+    } else {
+      if (t < CHARGE_MS) {
+        const progress = chargeProgress(t);
+        this.rabbit?.setX(this.startX + (contactX - this.startX) * progress);
+        this.pose(true, t < 35 ? 0 : 1);
         paintSpeed(
           this.effects,
           this.rabbit?.x ?? this.startX,
@@ -150,47 +159,53 @@ export class MeadowBattle {
           this.s,
           progress,
         );
-      if (t >= CHARGE_MS) this.land(reduced);
-    }
-    if (this.impacted) {
-      const reaction =
-        this.result === "timeout" || reduced ? t : Math.max(0, t - CHARGE_MS);
-      if (this.result === "correct") {
-        const push = reduced ? 0 : knockbackProgress(reaction);
-        this.rabbit?.setFrame(
-          reduced
-            ? "0"
-            : reaction < HIT_STOP_MS
-              ? "6"
-              : String(petFrame("hop", reaction - HIT_STOP_MS, false)),
+      }
+      if (this.result === "incorrect") {
+        const dodge = dodgePose(t);
+        this.pose(false, dodge.frame);
+        this.slime?.setPosition(
+          this.enemyX + dodge.x * this.s,
+          this.baseline + dodge.y * this.s,
+        );
+        if (t >= CHARGE_MS) {
+          const stumble = stumblePose(t);
+          this.pose(true, stumble.frame);
+          this.rabbit?.setX(contactX + stumble.x * this.s);
+          if (t >= 280 && t < 500) {
+            const fade = 1 - (t - 280) / 220;
+            for (let i = 0; i < 5; i++)
+              this.effects
+                .fillStyle(0xe5cc99, fade * 0.8)
+                .fillEllipse(
+                  (this.rabbit?.x ?? contactX) + (i - 3) * 14 * this.s,
+                  this.baseline - 6 * this.s,
+                  (14 + i * 2) * this.s,
+                  7 * this.s,
+                );
+          }
+        }
+        // Start correction once the fall is visibly underway, without delaying reading until recovery.
+        if (t >= 300) this.land();
+      } else if (t >= CHARGE_MS) {
+        const age = t - CHARGE_MS;
+        const push = knockbackProgress(age);
+        this.pose(true, age < HIT_STOP_MS ? 2 : 1);
+        this.rabbit?.setX(contactX + 18 * push * this.s);
+        this.pose(
+          false,
+          age < HIT_STOP_MS ? 4 : age < 130 ? 5 : age < 230 ? 6 : 7,
         );
         this.slime
-          ?.setX(this.enemyX + (14 + 62 * push) * this.s)
-          .setFrame(
-            String(
-              reaction < HIT_STOP_MS
-                ? 4
-                : reaction < 140
-                  ? 5
-                  : reaction < 210
-                    ? 6
-                    : 7,
-            ),
+          ?.setPosition(
+            this.enemyX + 142 * push * this.s,
+            this.baseline - 48 * Math.sin(push * Math.PI * 0.8) * this.s,
           )
-          .setAlpha(
-            reduced ? 0 : Math.max(0, 1 - Math.max(0, reaction - 180) / 100),
-          );
-        if (!reduced) {
-          this.effects
-            .clear()
-            .setPosition(
-              this.enemyX - 12 * this.s,
-              this.baseline - 36 * this.s,
-            );
-          paintContact(this.effects, reaction, this.s);
-        }
-      } else {
-        this.rabbit?.setFrame(String(petFrame("encourage", reaction, reduced)));
+          .setAlpha(Math.max(0, 1 - Math.max(0, age - 210) / 110));
+        this.effects
+          .clear()
+          .setPosition(this.enemyX - 24 * this.s, this.baseline - 36 * this.s);
+        paintContact(this.effects, age, this.s * 1.45);
+        this.land();
       }
     }
     this.rabbit?.setDisplaySize(142 * this.s, 142 * this.s);

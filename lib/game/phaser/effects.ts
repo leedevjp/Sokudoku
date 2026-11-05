@@ -15,6 +15,11 @@ export function answerImpact(
 ) {
   const hit = () => {
     const at = view.wordView!;
+    if (!projectile) {
+      if (result === "correct") at.setAlpha(0.65);
+      onImpact();
+      return;
+    }
     if (result === "correct") {
       dissolveCard(scene, at, 250 * view.boardLayout.scale, view.c.blue);
       burst(scene, at.x, at.y, view.c.blue);

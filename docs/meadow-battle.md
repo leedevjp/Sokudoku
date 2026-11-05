@@ -18,4 +18,10 @@ Sprite WebP files use lossless encoding; the background uses quality 85. Generat
 
 ## Validation
 
-60 tests (including acceleration, bounded cadence and hit-stop/knockback regression coverage), TypeScript, ESLint and production build passed. Local Edge checks covered mobile/desktop, correct/incorrect answers, reduced motion, pause/resume during a charge, correction pause/resize and timeout correction. No production learning records were used.
+62 tests (including acceleration, bounded cadence and hit-stop/knockback regression coverage), TypeScript, ESLint and production build passed. Local Edge checks covered mobile/desktop, correct/incorrect answers, reduced motion, pause/resume during a charge, correction pause/resize and timeout correction. No production learning records were used.
+
+## Readable hit and miss actions
+
+The slime now starts at 62% of the scene width, reserving the right side for dodge and knockback. New additive 4x2 action sheets preserve the original rabbit artwork. Rabbit poses include anticipation, charge, contact, misstep, tipping, belly landing, sliding and recovery. Slime poses include dodge anticipation/jump/landing and impact/flight/fragmentation.
+
+Correct answers retain the 480 ms cadence with a larger local contact flash and upward/right knockback into visible jelly chunks. Incorrect answers arc the slime out of the charge lane, then show the rabbit stumbling and belly-sliding; correction opens at 300 ms while recovery continues. Card-level explosions are suppressed during combat so the hit stays the visual focus. Background and camera remain stationary. Audio was not added.
