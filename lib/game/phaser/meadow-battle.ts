@@ -12,16 +12,16 @@ import {
 import { paintContact, paintSpeed } from "./battle-impact";
 import type { TrainingView } from "./board";
 
-const MEADOW = "battle-meadow-pixel-v2";
-const RABBIT = "battle-rabbit-pixel-v2";
+const MEADOW = "battle-meadow-reference-v3";
+const RABBIT = "battle-rabbit-reference-v3";
 const ACTIONS = RABBIT;
-const SLIME_ACTIONS = "battle-slime-pixel-v2";
-const SLIME = "battle-slime-pixel-v2";
+const SLIME_ACTIONS = "battle-slime-reference-v3";
+const SLIME = "battle-slime-reference-v3";
 export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
-    [MEADOW, "meadow-pixel-v2.png"],
-    [RABBIT, "rabbit-pixel-v2.png"],
-    [SLIME, "slime-pixel-v2.png"],
+    [MEADOW, "meadow-reference-v3.png"],
+    [RABBIT, "rabbit-reference-v3.png"],
+    [SLIME, "slime-reference-v3.png"],
   ]) {
     if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
   }

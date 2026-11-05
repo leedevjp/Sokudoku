@@ -1,10 +1,10 @@
 import { paintHearts } from "./reward-effects";
 import Phaser from "phaser";
 import { petFrame, type PetMotion } from "../pet-motion";
-const TEXTURE = "battle-rabbit-pixel-v2";
+const TEXTURE = "battle-rabbit-reference-v3";
 export function preloadRabbit(scene: Phaser.Scene) {
   if (!scene.textures.exists(TEXTURE))
-    scene.load.image(TEXTURE, "/battle/rabbit-pixel-v2.png");
+    scene.load.image(TEXTURE, "/battle/rabbit-reference-v3.png");
 }
 /** The same low-resolution atlas supplies combat, results and pause poses. */
 export class RabbitCompanion {
