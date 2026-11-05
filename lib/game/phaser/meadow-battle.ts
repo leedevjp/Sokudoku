@@ -12,18 +12,16 @@ import {
 import { paintContact, paintSpeed } from "./battle-impact";
 import type { TrainingView } from "./board";
 
-const MEADOW = "battle-meadow-v1";
-const RABBIT = "battle-rabbit-v1";
-const ACTIONS = "battle-rabbit-actions-v1";
-const SLIME_ACTIONS = "battle-slime-actions-v1";
-const SLIME = "battle-slime-v1";
+const MEADOW = "battle-meadow-pixel-v2";
+const RABBIT = "battle-rabbit-pixel-v2";
+const ACTIONS = RABBIT;
+const SLIME_ACTIONS = "battle-slime-pixel-v2";
+const SLIME = "battle-slime-pixel-v2";
 export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
-    [MEADOW, "meadow-v1.webp"],
-    [ACTIONS, "rabbit-actions-v1.webp"],
-    [SLIME_ACTIONS, "slime-actions-v1.webp"],
-    [RABBIT, "rabbit-cutout-v1.webp"],
-    [SLIME, "slime-v1.webp"],
+    [MEADOW, "meadow-pixel-v2.png"],
+    [RABBIT, "rabbit-pixel-v2.png"],
+    [SLIME, "slime-pixel-v2.png"],
   ]) {
     if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
   }
@@ -81,7 +79,7 @@ export class MeadowBattle {
         .setStrokeStyle(Math.max(1, s), 0xacc8af, 0.6);
     }
     if (scene.textures.exists(RABBIT)) {
-      frames(scene, RABBIT, 4, 4);
+      frames(scene, RABBIT, 4, 6);
       this.rabbit = scene.add
         .image(this.startX, this.baseline, RABBIT, "0")
         .setOrigin(0.5, 0.88)
@@ -89,15 +87,16 @@ export class MeadowBattle {
         .setFlipX(true);
     }
     if (scene.textures.exists(SLIME)) {
-      frames(scene, SLIME, 4, 2);
+      frames(scene, SLIME, 4, 4);
       this.slime = scene.add
         .image(this.enemyX, this.baseline, SLIME, "0")
         .setOrigin(0.5, 0.88)
         .setDisplaySize(105 * s, 105 * s)
         .setFlipX(true);
     }
-    for (const key of [ACTIONS, SLIME_ACTIONS]) {
-      if (scene.textures.exists(key)) frames(scene, key, 4, 2);
+    for (const key of [MEADOW, RABBIT, SLIME]) {
+      if (scene.textures.exists(key))
+        scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     this.effects = scene.add.graphics();
   }
@@ -121,7 +120,9 @@ export class MeadowBattle {
     const sprite = rabbit ? this.rabbit : this.slime;
     const texture = rabbit ? ACTIONS : SLIME_ACTIONS;
     if (sprite?.scene.textures.exists(texture))
-      sprite.setTexture(texture, String(frame)).setFlipX(rabbit);
+      sprite
+        .setTexture(texture, String(frame + (rabbit ? 16 : 8)))
+        .setFlipX(rabbit);
     else sprite?.setFrame(rabbit ? "0" : "0");
   }
   update(delta: number, paused: boolean, reduced: boolean) {
@@ -176,7 +177,7 @@ export class MeadowBattle {
             for (let i = 0; i < 5; i++)
               this.effects
                 .fillStyle(0xe5cc99, fade * 0.8)
-                .fillEllipse(
+                .fillRect(
                   (this.rabbit?.x ?? contactX) + (i - 3) * 14 * this.s,
                   this.baseline - 6 * this.s,
                   (14 + i * 2) * this.s,

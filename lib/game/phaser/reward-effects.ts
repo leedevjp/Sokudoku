@@ -84,24 +84,25 @@ export function paintHearts(
       radius = size * (0.065 + i * 0.01);
     const x = (i - 1) * size * 0.22 + Math.sin(t * Math.PI) * (i % 2 ? -5 : 5);
     const y = -size * (0.26 + t * 0.6);
-    const points = Array.from({ length: 40 }, (_, k) => {
-      const a = (k * Math.PI * 2) / 40;
-      return new Phaser.Math.Vector2(
-        x + radius * Math.pow(Math.sin(a), 3),
-        y -
-          (radius *
-            (13 * Math.cos(a) -
-              5 * Math.cos(2 * a) -
-              2 * Math.cos(3 * a) -
-              Math.cos(4 * a))) /
-            16,
-      );
-    });
-    g.fillStyle(i === 1 ? 0xffa5c9 : 0xf271a4, alpha).fillPoints(points, true);
-    g.fillStyle(0xffffff, alpha * 0.85).fillCircle(
-      x - radius * 0.4,
-      y - radius * 0.35,
-      radius * 0.14,
+    const grid = [
+      "0110110",
+      "1111111",
+      "1111111",
+      "0111110",
+      "0011100",
+      "0001000",
+    ];
+    const pixel = Math.max(1, Math.round(radius / 3));
+    grid.forEach((row, yy) =>
+      [...row].forEach((cell, xx) => {
+        if (cell === "1")
+          g.fillStyle(yy < 2 ? 0xffa5c9 : 0xf271a4, alpha).fillRect(
+            Math.round(x + (xx - 3) * pixel),
+            Math.round(y + (yy - 3) * pixel),
+            pixel,
+            pixel,
+          );
+      }),
     );
   }
 }
