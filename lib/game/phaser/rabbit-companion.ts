@@ -1,15 +1,16 @@
-import { paintHearts } from "./reward-effects";
+import { EmotionEffect, preloadEmotions } from "./emotion-effects";
 import Phaser from "phaser";
 import { petFrame, type PetMotion } from "../pet-motion";
 const TEXTURE = "battle-mage-v5";
 export function preloadRabbit(scene: Phaser.Scene) {
+  preloadEmotions(scene);
   if (!scene.textures.exists(TEXTURE))
     scene.load.image(TEXTURE, "/battle/mage-v5.png");
 }
 /** The same low-resolution atlas supplies combat, results and pause poses. */
 export class RabbitCompanion {
   readonly root: Phaser.GameObjects.Container;
-  private hearts?: Phaser.GameObjects.Graphics;
+  private emotion?: EmotionEffect;
   private sprite?: Phaser.GameObjects.Image;
   constructor(
     scene: Phaser.Scene,
@@ -35,22 +36,19 @@ export class RabbitCompanion {
       .image(0, 0, TEXTURE, "0")
       .setDisplaySize(size, size);
     this.root.add(this.sprite);
-    this.hearts = scene.add.graphics();
-    this.root.add(this.hearts);
+    this.emotion = new EmotionEffect(scene);
+    if (this.emotion.sprite) this.root.add(this.emotion.sprite);
   }
   show(motion: PetMotion, elapsed: number, reduced: boolean) {
     this.sprite
       ?.setFrame(String(petFrame(motion, elapsed, reduced)))
       .setDisplaySize(this.size, this.size);
-    if (this.hearts) {
-      this.hearts.clear();
-      if (motion === "happy" || motion === "celebrate")
-        paintHearts(
-          this.hearts,
-          motion === "celebrate" ? elapsed % 1440 : elapsed,
-          this.size,
-          reduced,
-        );
+    this.emotion?.hide();
+    if (motion === "happy" || motion === "celebrate" || motion === "encourage") {
+      this.emotion?.show(
+        motion === "encourage" ? "confusion" : "hearts",
+        elapsed, reduced, this.size * 0.29, -this.size * 0.31, this.size * 0.36,
+      );
     }
   }
 }

@@ -1,3 +1,4 @@
+import { EmotionEffect, preloadEmotions } from "./emotion-effects";
 import Phaser from "phaser";
 import type { Result } from "../types";
 import { petFrame } from "../pet-motion";
@@ -16,6 +17,7 @@ const MAGE = "battle-mage-v5";
 const MONSTERS = "battle-mandrakes-v5";
 const MAGIC = "battle-magic-v5";
 export function preloadBattle(scene: Phaser.Scene) {
+  preloadEmotions(scene);
   for (const [key, file] of [
     [MEADOW, "meadow-original-v4.png"],
     [MAGE, "mage-v5.png"],
@@ -50,6 +52,8 @@ function frames(
 }
 /** Presentation only. The caster stays planted; spells carry the movement. */
 export class MeadowBattle {
+  private mageEmotion?: EmotionEffect;
+  private monsterEmotion?: EmotionEffect;
   private mage?: Phaser.GameObjects.Image;
   private monster?: Phaser.GameObjects.Image;
   private spell?: Phaser.GameObjects.Image;
@@ -106,6 +110,8 @@ export class MeadowBattle {
         .setDisplaySize(160 * s, 160 * s)
         .setVisible(false);
     }
+    this.mageEmotion = new EmotionEffect(scene);
+    this.monsterEmotion = new EmotionEffect(scene);
   }
   attack(result: Result, reduced: boolean, impact: () => void) {
     this.result = result;
@@ -132,6 +138,8 @@ export class MeadowBattle {
     if (paused) return;
     this.idleElapsed += Math.max(0, delta);
     this.spell?.setVisible(false);
+    this.mageEmotion?.hide();
+    this.monsterEmotion?.hide();
     if (!this.result) {
       this.mage?.setFrame(String(petFrame("idle", this.idleElapsed, reduced)));
       this.monster?.setFrame(
@@ -144,6 +152,17 @@ export class MeadowBattle {
     }
     this.elapsed += Math.max(0, delta);
     const t = this.elapsed;
+    // Head-side accents stay inside the meadow and clear of faces and spell impact.
+    if (this.result === "timeout" || (this.result === "incorrect" && t >= SPELL_HIT_MS)) {
+      const age = this.result === "timeout" ? t : t - SPELL_HIT_MS;
+      this.mageEmotion?.show("confusion", age, reduced,
+        this.startX - 40 * this.s, this.baseline - 99 * this.s, 48 * this.s);
+      if (this.result === "incorrect") this.monsterEmotion?.show("anger", age, reduced,
+        this.enemyX + 40 * this.s, this.baseline - 85 * this.s, 40 * this.s);
+    } else if (this.result === "correct" && (reduced || t >= SPELL_HIT_MS)) {
+      this.mageEmotion?.show("hearts", Math.max(0, t - SPELL_HIT_MS), reduced,
+        this.startX - 40 * this.s, this.baseline - 99 * this.s, 52 * this.s);
+    }
     if (reduced || this.result === "timeout") {
       this.mage?.setFrame(this.result === "correct" ? "16" : "15");
       this.monster?.setVisible(this.result !== "correct");
