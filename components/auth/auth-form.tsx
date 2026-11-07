@@ -14,6 +14,9 @@ export function AuthForm({ account }: { account: Account }) {
     busy,
     setNotice,
     submit,
+    notice,
+    resendSeconds,
+    resendConfirmation,
   } = account;
   return (
     <>
@@ -82,6 +85,13 @@ export function AuthForm({ account }: { account: Account }) {
           <span>→</span>
         </button>
       </form>
+      {(notice === "sent" || notice === "unconfirmed" || notice === "rate") && <button
+        type="button"
+        disabled={busy || resendSeconds > 0 || !email.trim()}
+        onClick={resendConfirmation}
+      >{resendSeconds > 0
+        ? t(`${resendSeconds}秒後に再送できます`, `${resendSeconds}초 후 다시 받을 수 있어요`)
+        : t("確認メールを再送する", "인증 메일 다시 받기")}</button>}
       <p className="footnote">
         {t(
           "新規登録後はメール認証が必要です。",

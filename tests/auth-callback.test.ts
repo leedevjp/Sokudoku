@@ -18,17 +18,24 @@ function authStub(options: { error?: string; signedIn?: boolean; throws?: boolea
   return { auth, calls };
 }
 
-test("successful code exchange returns home and forwards the matching PKCE flow", async () => {
+test("successful legacy code exchange opens confirmation and forwards the matching PKCE flow", async () => {
   const { auth, calls } = authStub();
-  assert.deepEqual(await completeAuthCallback(new URLSearchParams("code=test-code&sb_flow_id=test-flow"), auth), { destination: "/" });
+  assert.deepEqual(await completeAuthCallback(new URLSearchParams("code=test-code&sb_flow_id=test-flow"), auth), { destination: "/auth/confirmed?legacy=1" });
   assert.deepEqual(calls, [["test-code", { flowId: "test-flow" }]]);
 });
 
 test("missing verifier offers login recovery without claiming email confirmation", async () => {
   const { auth } = authStub({ error: "pkce_code_verifier_not_found" });
   assert.deepEqual(await completeAuthCallback(new URLSearchParams("code=test-code"), auth), {
-    destination: "/auth/error?reason=session", diagnostic: "missing_verifier",
+    destination: "/auth/confirmed?legacy=1", diagnostic: "missing_verifier",
   });
+});
+
+test("signup fragments go to the confirmation page without a PKCE exchange or untrusted redirect", async () => {
+  const { auth, calls } = authStub();
+  const result = await completeAuthCallback(new URLSearchParams("signup=1&state=test-state&next=https://example.com"), auth);
+  assert.deepEqual(result, { destination: "/auth/confirmed?state=test-state" });
+  assert.equal(calls.length, 0);
 });
 
 test("a failed or reused code preserves an already verified login", async () => {

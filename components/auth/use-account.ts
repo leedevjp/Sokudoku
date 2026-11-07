@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { createSignupClient } from "@/lib/supabase/signup";
+import { signupRedirect } from "@/lib/auth/signup-confirmation";
 
 export function useAccount(onAuthenticated: () => void) {
   const [user, setUser] = useState<User | null>(null),
@@ -9,10 +11,21 @@ export function useAccount(onAuthenticated: () => void) {
     [mode, setMode] = useState<"login" | "signup">("login"),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
+    [resendSeconds, setResendSeconds] = useState(0),
     [notice, setNotice] = useState<
       "sent" | "error" | "unconfirmed" | "rate" | "logout" | null
     >(null);
   const lock = useRef(false);
+  useEffect(() => {
+    if (!resendSeconds) return;
+    const timer = setTimeout(() => setResendSeconds((n) => Math.max(0, n - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [resendSeconds]);
+  function confirmationRedirect() {
+    let storage: Storage | null = null;
+    try { storage = localStorage; } catch { /* Only optional same-browser login is affected. */ }
+    return signupRedirect(location.origin, email, storage, crypto.randomUUID());
+  }
   useEffect(() => {
     let active = true;
     const client = createClient();
@@ -54,14 +67,11 @@ export function useAccount(onAuthenticated: () => void) {
       const client = createClient();
       const { data, error } =
         mode === "signup"
-          ? await client.auth.signUp({
+          ? await createSignupClient().auth.signUp({
               email: email.trim(),
               password,
               options: {
-                emailRedirectTo: new URL(
-                  "/auth/callback",
-                  location.origin,
-                ).toString(),
+                emailRedirectTo: confirmationRedirect(),
               },
             })
           : await client.auth.signInWithPassword({
@@ -80,7 +90,10 @@ export function useAccount(onAuthenticated: () => void) {
         if (data.session) {
           setUser(data.user);
           onAuthenticated();
-        } else setNotice("sent");
+        } else {
+          setNotice("sent");
+          setResendSeconds(60);
+        }
         setPassword("");
       }
     } catch {
@@ -89,6 +102,20 @@ export function useAccount(onAuthenticated: () => void) {
       lock.current = false;
       setBusy(false);
     }
+  }
+  async function resendConfirmation() {
+    if (lock.current || resendSeconds || !email.trim()) return;
+    lock.current = true;
+    setBusy(true);
+    try {
+      const { error } = await createSignupClient().auth.resend({
+        type: "signup", email: email.trim(),
+        options: { emailRedirectTo: confirmationRedirect() },
+      });
+      setNotice(error ? error.code?.includes("rate_limit") ? "rate" : "error" : "sent");
+      setResendSeconds(60);
+    } catch { setNotice("error"); }
+    finally { lock.current = false; setBusy(false); }
   }
   async function logout() {
     if (lock.current) return;
@@ -124,6 +151,8 @@ export function useAccount(onAuthenticated: () => void) {
     setNotice,
     submit,
     logout,
+    resendSeconds,
+    resendConfirmation,
   };
 }
 export type Account = ReturnType<typeof useAccount>;
