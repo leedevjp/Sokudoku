@@ -13,6 +13,8 @@ import { drawQuestionCard } from "./board-cards";
 
 type BoardActions = {
   pause: () => void;
+  toggleSound: () => void;
+  soundEnabled: () => boolean;
   press: (source: string, index: number) => void;
 };
 
@@ -126,7 +128,7 @@ export class TrainingView extends TrainingSurface {
     maxTime: number,
   ) {
     this.hearts = hearts;
-    this.timeBar = drawHud(this, correct, maxTime, () => this.actions.pause());
+    this.timeBar = drawHud(this, correct, maxTime, () => this.actions.pause(), this.actions.toggleSound, this.actions.soundEnabled);
     this.drawHearts();
     drawQuestionCard(this, question);
     const choices = drawChoices(this, question, (source, index) =>

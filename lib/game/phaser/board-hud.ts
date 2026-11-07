@@ -5,6 +5,8 @@ export function drawHud(
   correct: number,
   maxTime: number,
   pauseAction: () => void,
+  toggleSound: () => void,
+  soundEnabled: () => boolean,
 ) {
   const { scale: s, left, width: cw, top } = view.boardLayout;
   const x = view.w / 2,
@@ -32,6 +34,15 @@ export function drawHud(
     .setSize(Math.max(44, 44 * s), Math.max(44, 44 * s))
     .setInteractive({ useHandCursor: true })
     .on("pointerup", () => pauseAction());
+  const sound = view.add.container(right - 22 * s - Math.max(50, 58 * s), headerY);
+  sound.add(view.box(0, 0, 44 * s, 44 * s, view.c.panel, 14 * s));
+  const soundLabel = view.designText(0, 0, soundEnabled() ? "♪" : "♪̸", 25 * s, view.c.ink, true);
+  sound.add(soundLabel);
+  sound.setSize(Math.max(44, 44 * s), Math.max(44, 44 * s))
+    .setInteractive({ useHandCursor: true }).on("pointerup", () => {
+      toggleSound();
+      soundLabel.setText(soundEnabled() ? "♪" : "♪̸");
+    });
   const metaY = top + 89 * s;
   view
     .designText(

@@ -8,7 +8,10 @@ export function preloadBattleAudio(scene: Phaser.Scene) {
 }
 
 export class BattleAudio {
-  enabled = true;
+  enabled = false;
+  musicVolume = .05;
+  effectsVolume = .7;
+  preview = false;
   private music?: HTMLAudioElement;
   private unlocked = false;
   private playing = false;
@@ -16,7 +19,13 @@ export class BattleAudio {
   private duckUntil = 0;
   private generation = 0;
   constructor(private scene: Phaser.Scene) {
-    try { this.enabled = localStorage.getItem("sokudoku-battle-sound") !== "off"; } catch {}
+    try {
+      this.enabled = localStorage.getItem("sokudoku-battle-sound") === "on";
+      const saved = JSON.parse(localStorage.getItem("sokudoku-audio-volumes") ?? "null");
+      if (typeof saved?.music === "number" && Number.isFinite(saved.music)) this.musicVolume = Math.max(0, Math.min(1, saved.music));
+      if (typeof saved?.effects === "number" && Number.isFinite(saved.effects)) this.effectsVolume = Math.max(0, Math.min(1, saved.effects));
+    } catch {}
+    scene.sound.volume = this.effectsVolume;
     window.addEventListener("keydown", this.unlock);
     window.addEventListener("pointerdown", this.unlock);
     const cleanup = () => {
@@ -49,6 +58,7 @@ export class BattleAudio {
     });
   }
   update(active: boolean, delta: number) {
+    active ||= this.preview;
     this.active = active;
     // One continuous study track for the whole run, including question/map changes.
     if (!this.music) {
@@ -63,7 +73,7 @@ export class BattleAudio {
     }
     this.startMusic();
     if (this.music) {
-      const target = performance.now() < this.duckUntil ? .045 : .075;
+      const target = this.musicVolume * (performance.now() < this.duckUntil ? .6 : 1);
       this.music.volume += (target - this.music.volume) * Math.min(1, delta / (target < this.music.volume ? 35 : 450));
     }
   }
@@ -75,7 +85,15 @@ export class BattleAudio {
   toggle() {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stop();
+    else this.unlock();
     try { localStorage.setItem("sokudoku-battle-sound", this.enabled ? "on" : "off"); } catch {}
+  }
+  setVolumes(music: number, effects: number) {
+    this.musicVolume = Math.max(0, Math.min(1, music));
+    this.effectsVolume = Math.max(0, Math.min(1, effects));
+    this.scene.sound.volume = this.effectsVolume;
+    if (this.music) this.music.volume = this.musicVolume;
+    try { localStorage.setItem("sokudoku-audio-volumes", JSON.stringify({ music: this.musicVolume, effects: this.effectsVolume })); } catch {}
   }
   stop() { this.scene.sound.stopAll(); this.music?.pause(); this.playing = false; this.active = false; }
   play(cue: Cue, volume = cue === "dash" ? .12 : .20) {

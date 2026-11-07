@@ -7,8 +7,7 @@ type PauseActions = {
   finish: () => void;
   preferences: Preferences;
   changePreferences: (preferences: Preferences) => void;
-  soundEnabled: boolean;
-  toggleSound: () => void;
+  openSoundSettings: () => void;
 };
 function drawSettings(
   view: TrainingView,
@@ -45,9 +44,9 @@ function drawSettings(
     parent,
   );
   view.button(
-    actions.soundEnabled ? view.t("音 ON", "소리 켬") : view.t("音 OFF", "소리 끔"),
+    view.t("音設定", "소리 설정"),
     view.w / 2 + 96, view.h / 2 + 150, 88,
-    actions.toggleSound, false, parent,
+    actions.openSoundSettings, false, parent,
   );
 }
 
