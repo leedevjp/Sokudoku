@@ -1,3 +1,4 @@
+import { kanaChoices } from "./kana-choices";
 import {
   entryType,
   type Word,
@@ -33,6 +34,13 @@ export function questionFor(
   rng = Math.random,
 ): Question | null {
   if (entryType(word) !== "word" && kind !== "meaning") return null;
+  if (entryType(word) !== "word") {
+    const choices = kanaChoices(word, pool, rng);
+    if (choices === null) return null;
+    if (choices) return { word, kind, options: shuffle(choices, rng) };
+    // Non-syllabic kana (ん/っ), legacy labels or incomplete catalogs retain
+    // the existing distinct-answer fallback; never fabricate missing entries.
+  }
   const options: Word[] = [];
   for (const other of shuffle(pool, rng)) {
     if (
