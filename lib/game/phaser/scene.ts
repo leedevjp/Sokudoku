@@ -67,6 +67,10 @@ export class TrainingScene extends Phaser.Scene {
   private reviewComplete = false;
   private failed = false;
   private viewGeneration = 0;
+  private nextGeneration = 0;
+  private preparingQuestion = false;
+  private pauseRequested = false;
+  private readyNotified = false;
   private correction?: Correction;
   private correctionView?: CorrectionCard;
   constructor(
@@ -115,9 +119,6 @@ export class TrainingScene extends Phaser.Scene {
   create() {
     try {
       this.bootTraining();
-      this.game.events.once("postrender", () => {
-        if (!this.failed) this.options.onReady?.();
-      });
     } catch (error) {
       this.failed = true;
       this.phase = "end";
@@ -137,7 +138,7 @@ export class TrainingScene extends Phaser.Scene {
     this.game.canvas.setAttribute("tabindex", "0");
     this.trainingInput.attach();
     this.scale.on("resize", this.resize, this);
-    this.events.once("shutdown", () => this.trainingInput.detach());
+    this.events.once("shutdown", () => { this.nextGeneration++; this.trainingInput.detach(); });
     this.startRun();
   }
   private clear() {
@@ -160,6 +161,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private startRun() {
     if (this.persistence.saving) return;
+    this.pauseRequested = false;
     this.reviewComplete = false;
     this.correction = undefined;
     this.session.reset();
@@ -168,9 +170,16 @@ export class TrainingScene extends Phaser.Scene {
     this.persistence.reset();
     this.next(true);
   }
-  private next(delayInput = false) {
+  private async next(delayInput = false) {
+    const request = ++this.nextGeneration;
+    this.phase = "arming";
+    this.gate.close();
+    this.preparingQuestion = true;
     this.correction = undefined;
     try {
+      await this.options.planner.prepareSet();
+      if (request !== this.nextGeneration) return;
+      this.preparingQuestion = false;
       const question = this.options.planner.next();
       if (!question) {
         this.finish(true);
@@ -178,6 +187,8 @@ export class TrainingScene extends Phaser.Scene {
       }
       this.question = question;
     } catch (error) {
+      if (request !== this.nextGeneration) return;
+      this.preparingQuestion = false;
       this.phase = "end";
       this.options.onError?.(error);
       return;
@@ -191,6 +202,11 @@ export class TrainingScene extends Phaser.Scene {
     // The timer starts only after the new question has actually been rendered.
     this.game.events.once("postrender", () => {
       if (this.phase === "arming" && generation === this.viewGeneration) {
+        if (this.pauseRequested || document.hidden) {
+          this.pauseRequested = false;
+          this.pause();
+          return;
+        }
         if (delayInput) this.settle("play", 0);
         else {
           this.started = performance.now();
@@ -204,6 +220,12 @@ export class TrainingScene extends Phaser.Scene {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
     this.battle = new MeadowBattle(this, this.view, this.question.word.id);
+    this.notifyReady();
+  }
+  private notifyReady() {
+    if (this.readyNotified) return;
+    this.readyNotified = true;
+    this.game.events.once("postrender", () => { if (!this.failed) this.options.onReady?.(); });
   }
   private paintPet() {
     this.pet?.show(
@@ -351,6 +373,7 @@ export class TrainingScene extends Phaser.Scene {
     this.pause();
   };
   private pause() {
+    if (this.preparingQuestion) { this.pauseRequested = true; return; }
     if (this.phase === "paused" || this.phase === "end") return;
     this.beforePause = this.phase;
     this.pauseAt = performance.now();
@@ -421,8 +444,9 @@ export class TrainingScene extends Phaser.Scene {
     this.time.paused = true;
     this.tweens.pauseAll();
   }
-  private resize() {
+  private async resize() {
     this.syncCamera();
+    if (this.preparingQuestion) return;
     if (this.phase === "end") {
       this.drawEnd();
       return;
@@ -465,9 +489,17 @@ export class TrainingScene extends Phaser.Scene {
         return;
       }
       let question: Question | null;
+      const request = ++this.nextGeneration;
+      this.preparingQuestion = true;
+      this.phase = "arming";
       try {
+        await this.options.planner.prepareSet();
+        if (request !== this.nextGeneration) return;
+        this.preparingQuestion = false;
         question = this.options.planner.next();
       } catch (error) {
+        if (request !== this.nextGeneration) return;
+        this.preparingQuestion = false;
         this.phase = "end";
         this.options.onError?.(error);
         return;
@@ -484,6 +516,8 @@ export class TrainingScene extends Phaser.Scene {
     if (progress.paused) {
       // Manual/visibility pauses remain paused; resizing alone never opens this overlay.
       this.beforePause = "arming";
+      this.phase = "paused";
+      this.pauseRequested = false;
       this.drawPause();
       return;
     }
@@ -491,11 +525,19 @@ export class TrainingScene extends Phaser.Scene {
     const generation = this.viewGeneration;
     this.game.events.once("postrender", () => {
       if (this.phase === "arming" && generation === this.viewGeneration) {
+        if (this.pauseRequested || document.hidden) {
+          this.pauseRequested = false;
+          this.pause();
+          return;
+        }
         this.settle("play", progress.elapsed);
       }
     });
   }
   private finish(reviewComplete = false) {
+    this.nextGeneration++;
+    this.preparingQuestion = false;
+    this.pauseRequested = false;
     this.correction = undefined;
     this.reviewComplete ||= reviewComplete;
     this.phase = "end";
@@ -523,6 +565,7 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   private drawEnd() {
+    this.notifyReady();
     this.clear();
     this.game.canvas.setAttribute(
       "aria-label",

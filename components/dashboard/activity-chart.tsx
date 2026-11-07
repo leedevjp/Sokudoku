@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { dashboardSummary } from "@/lib/dashboard/summary";
 import type { Translate } from "@/lib/dashboard/types";
 import styles from "./dashboard-styles";
@@ -19,11 +19,15 @@ export function ActivityChart({
   const max = Math.max(1, ...days.map((d) => d.attempts));
   const active = days[selected];
   const locale = lang === "jp" ? "ja-JP" : "ko-KR";
-  const date = (day: string, options: Intl.DateTimeFormatOptions) =>
-    new Date(day + "T12:00:00Z").toLocaleDateString(locale, {
-      ...options,
-      timeZone: "UTC",
+  const dates = useMemo(() => {
+    const detail = new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", weekday: "short", timeZone: "UTC" });
+    const label = new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", timeZone: "UTC" });
+    const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+    return days.map(({ day }) => {
+      const value = new Date(day + "T12:00:00Z");
+      return { detail: detail.format(value), label: label.format(value), weekday: weekday.format(value) };
     });
+  }, [days, locale]);
   const accuracy = week.attempts
     ? Math.round((week.correct / week.attempts) * 100)
     : null;
@@ -43,11 +47,7 @@ export function ActivityChart({
       </p>
       <div className={styles.dayDetail} aria-live="polite">
         <b>
-          {date(active.day, {
-            month: "long",
-            day: "numeric",
-            weekday: "short",
-          })}
+          {dates[selected].detail}
           {selected === 6 ? " · " + t("今日", "오늘") : ""}
         </b>
         <strong>
@@ -65,7 +65,7 @@ export function ActivityChart({
             className={styles.dayColumn}
             aria-pressed={i === selected}
             aria-label={
-              date(d.day, { month: "long", day: "numeric" }) +
+              dates[i].label +
               ": " +
               d.attempts +
               t("回", "회")
@@ -81,7 +81,7 @@ export function ActivityChart({
                 }}
               />
             </span>
-            <span>{date(d.day, { weekday: "short" })}</span>
+            <span>{dates[i].weekday}</span>
             <small>{i === 6 ? t("今日", "오늘") : " "}</small>
           </button>
         ))}

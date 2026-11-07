@@ -60,7 +60,7 @@ export function questionFor(
     // the existing distinct-answer fallback; never fabricate missing entries.
   }
   const options: Word[] = [];
-  for (const other of shuffle(kind === "reading" ? nearbyReadings(word, pool) : pool, rng)) {
+  for (const other of shuffle(kind === "reading" ? word.reading_choices ?? nearbyReadings(word, pool) : pool, rng)) {
     if (
       entryType(other) !== entryType(word) ||
       other.id === word.id ||

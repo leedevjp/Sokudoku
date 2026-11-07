@@ -28,34 +28,71 @@ export class TrainingPlanner {
   private readonly byKey: Map<string, Word>;
   private lastWord: string | undefined;
   private seen = new Set<string>();
+  private prepared = false;
+  private preparing?: Promise<void>;
+  private generation = 0;
   constructor(
     readonly engine: LearningEngine,
     private words: Word[],
     private kinds: Kind[] = trainingKinds,
     private modes: TrainingMode[] = ["exploration", "review"],
     private rng: () => number = cryptoRandom,
+    private prepareQuestion?: (word: Word, kind: Kind) => Promise<void>,
   ) {
     this.byKey = new Map(
       words.map((word) => [wordKey(word.source, word.id), word]),
     );
   }
   resetSet() {
+    this.generation++;
+    this.prepared = false;
     this.queue = [];
     this.lastWord = undefined;
     this.seen.clear();
   }
   next(): PlannedQuestion | null {
-    if (!this.queue.length) this.makeSet();
+    this.ensureSet();
     const question = this.queue.shift() ?? null;
     if (question) {
       this.lastWord = wordKey(question.word.source, question.word.id);
       this.seen.add(this.lastWord);
+      if (!this.queue.length) this.prepared = false;
     }
     return question;
   }
   hasQuestions() {
-    if (!this.queue.length) this.makeSet();
+    this.ensureSet();
     return this.queue.length > 0;
+  }
+  private ensureSet() {
+    if (this.queue.length || this.prepared) return;
+    if (this.prepareQuestion) throw Error("SET_NOT_PREPARED");
+    for (const request of this.makeSet()) void request;
+    this.prepared = true;
+  }
+  /** Select first, then prepare only those questions. Never precompute the catalog. */
+  async prepareSet(): Promise<void> {
+    if (!this.prepareQuestion) { this.ensureSet(); return; }
+    if (this.preparing) {
+      await this.preparing;
+      if (!this.queue.length && !this.prepared) await this.prepareSet();
+      return;
+    }
+    if (this.queue.length || this.prepared) return;
+    const generation = this.generation;
+    const work = (async () => {
+      const iterator = this.makeSet();
+      let step = iterator.next();
+      while (!step.done) {
+        await this.prepareQuestion!(step.value.word, step.value.kind);
+        if (generation !== this.generation) { iterator.return(); return; }
+        step = iterator.next();
+      }
+      this.prepared = true;
+    })();
+    this.preparing = work;
+    try { await work; } finally { if (this.preparing === work) this.preparing = undefined; }
+    if (generation !== this.generation) await this.prepareSet();
   }
   record(answer: Answer, word: Word) {
     this.engine.apply({
@@ -95,11 +132,11 @@ export class TrainingPlanner {
       nextDue: future.length ? Math.min(...future) : null,
     };
   }
-  private select(
+  private *select(
     candidates: Candidate[],
     used: Set<string>,
     mode: TrainingMode,
-  ) {
+  ): Generator<{ word: Word; kind: Kind }, PlannedQuestion[], void> {
     const questions: PlannedQuestion[] = [];
     let remaining = candidates
       .filter((c) => !used.has(wordKey(c.word.source, c.word.id)))
@@ -132,6 +169,7 @@ export class TrainingPlanner {
         ? [selected.kind]
         : [first, ...available.filter((kind) => kind !== first)];
       for (const kind of kinds) {
+        yield { word: selected.word, kind };
         const question = questionFor(selected.word, kind, this.words, this.rng);
         if (question) {
           questions.push({ ...question, mode });
@@ -142,11 +180,11 @@ export class TrainingPlanner {
     }
     return questions;
   }
-  private makeSet() {
+  private *makeSet(): Generator<{ word: Word; kind: Kind }, void, void> {
     if (this.modes.includes("exam")) {
       // No learned/due/ability filtering: each word has exactly one ticket.
       // Each frozen five-question set is unique; later sets can repeat words.
-      const exam = this.select(
+      const exam = yield* this.select(
         explorationWeights(this.words),
         new Set(),
         "exam",
@@ -165,7 +203,7 @@ export class TrainingPlanner {
       now,
     );
     const review = this.modes.includes("review")
-      ? this.select(candidates, used, "review")
+      ? yield* this.select(candidates, used, "review")
       : [];
     const known = new Set(this.seen);
     for (const state of this.engine.words.values())
@@ -174,7 +212,7 @@ export class TrainingPlanner {
       (word) => !known.has(wordKey(word.source, word.id)),
     );
     const exploration = this.modes.includes("exploration")
-      ? this.select(explorationWeights(unseen), used, "exploration")
+      ? yield* this.select(explorationWeights(unseen), used, "exploration")
       : [];
     if (
       !review.length &&

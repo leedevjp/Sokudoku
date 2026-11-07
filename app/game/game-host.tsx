@@ -88,6 +88,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       clearTimeout(readyTimer);
       window.removeEventListener("online", online);
       game?.destroy(true);
+      runtime.dispose();
     };
   }, [previewWords, router]);
   return (

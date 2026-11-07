@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { EntryType, Kind } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
@@ -21,7 +21,8 @@ export default function DashboardScreen() {
   const [kind, setKind] = useState<Kind>("meaning");
   const { data, error, retry } = useDashboardData();
   const actualKind = entry === "word" ? kind : "meaning";
-  const summary = data ? dashboardSummary(data, entry, actualKind) : null;
+  const summary = useMemo(() => data ? dashboardSummary(data, entry, actualKind) : null,
+    [data, entry, actualKind]);
   const scope =
     entry === "word"
       ? t("単語", "단어") +

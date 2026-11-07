@@ -17,6 +17,7 @@ export type Bootstrap = {
   stats: Stat[];
   user_id: string;
   learning?: LearningSnapshot;
+  readingWords?: Word[];
 };
 
 /** One loader per game route. Owns selected sources, incremental cache and offline fallback. */
@@ -28,6 +29,7 @@ export class GameDataLoader {
     levels: string | null,
     private onLoginRequired: () => void,
     private needsMeaning = true,
+    private needsReading = false,
   ) {
     const selected = parseLevels(levels);
     this.levels = selected;
@@ -45,7 +47,7 @@ export class GameDataLoader {
   async fetchData(): Promise<Bootstrap> {
     const [sets, state] = await Promise.all([
       Promise.all([
-        this.difficulties.size ? this.fetchCommon() : Promise.resolve(null),
+        this.difficulties.size || this.needsReading ? this.fetchCommon() : Promise.resolve(null),
         this.includePersonal ? this.fetchPersonal() : Promise.resolve(null),
       ]),
       this.fetchLearning(),
@@ -70,6 +72,7 @@ export class GameDataLoader {
       user_id: present[0].user_id,
       learning: state.learning,
       words: present.flatMap((set) => set.words),
+      readingWords: this.needsReading ? present.flatMap((set) => set.readingWords ?? set.words) : undefined,
       stats: [
         ...new Map(
           present
@@ -144,7 +147,7 @@ export class GameDataLoader {
       data.synced_at,
     );
     const selected = this.filterCommon(words);
-    return { ...data, words: this.needsMeaning && this.bankLevels()
+    return { ...data, readingWords: this.needsReading ? words : undefined, words: this.needsMeaning && this.bankLevels()
       ? withMeaningBank(selected, await loadMeaningBank(this.bankLevels(), this.onLoginRequired))
       : selected };
   }
@@ -155,7 +158,7 @@ export class GameDataLoader {
     } = await createClient().auth.getSession();
     if (!session) throw Error("LOAD");
     const [common, personal] = await Promise.all([
-      this.difficulties.size
+      this.difficulties.size || this.needsReading
         ? readWords().catch(() => undefined)
         : Promise.resolve([]),
       this.includePersonal
@@ -171,6 +174,7 @@ export class GameDataLoader {
     if (this.needsMeaning && this.bankLevels() && !bank) throw Error("MEANING_BANK");
     return {
       words: [...(bank ? withMeaningBank(selected, bank) : selected), ...personal],
+      readingWords: this.needsReading ? [...common, ...personal] : undefined,
       stats: [],
       user_id: session.user.id,
       learning:

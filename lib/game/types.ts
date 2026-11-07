@@ -10,6 +10,7 @@ export type Word = Omit<
     source?: "personal";
     entry_type?: EntryType;
     meaning_choices?: Choice[];
+    reading_choices?: Word[];
   };
 /** Extra labels can be selected, but are never words in the learning catalog. */
 export type Choice = Pick<Word, "id" | "kana" | "hanja_reading" | "meaning_ko"> & {

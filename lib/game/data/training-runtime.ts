@@ -7,6 +7,7 @@ import { wordsForKinds } from "../selection";
 import { AnswerJournal } from "./answer-journal";
 import { GameDataLoader, type Bootstrap } from "./bootstrap";
 import { database, storageDeadline } from "./database";
+import { ReadingSearch } from "./reading-search";
 
 export type TrainingData = {
   words: Word[];
@@ -28,9 +29,11 @@ export class TrainingRuntime {
   private planner!: TrainingPlanner;
   private journal!: AnswerJournal;
   private ended = false;
+  private reading?: ReadingSearch;
+  private disposed = false;
 
   constructor(private options: RuntimeOptions) {
-    this.loader = new GameDataLoader(options.levels, options.onLoginRequired, options.kinds.includes("meaning"));
+    this.loader = new GameDataLoader(options.levels, options.onLoginRequired, options.kinds.includes("meaning"), options.kinds.includes("reading"));
   }
   private filter(data: Bootstrap): Bootstrap {
     return { ...data, words: wordsForKinds(data.words, this.options.kinds) };
@@ -42,14 +45,29 @@ export class TrainingRuntime {
       planner: this.planner,
     };
   }
-  private plan(engine: LearningEngine) {
+  private plan(engine: LearningEngine, data = this.data, reading = this.reading) {
     return new TrainingPlanner(
       engine,
-      this.data.words,
+      data.words,
       this.options.kinds,
       this.options.modes,
+      undefined,
+      reading ? async (word, kind) => { if (kind === "reading") await reading.prepare(word); } : undefined,
     );
   }
+  private async createReading(data: Bootstrap): Promise<ReadingSearch | undefined> {
+    if (this.options.previewWords || !this.options.kinds.includes("reading")) return;
+    if (this.disposed) throw Error("READING_CLOSED");
+    const reading = new ReadingSearch();
+    try {
+      await reading.initialize(data.readingWords ?? data.words, data.user_id);
+      if (this.disposed) throw Error("READING_CLOSED");
+    } catch (error) { reading.close(); throw error; }
+    // A new catalog snapshot invalidates every previous per-word candidate result.
+    for (const word of data.words) delete word.reading_choices;
+    return reading;
+  }
+  dispose() { this.disposed = true; this.reading?.close(); }
   async load(): Promise<TrainingData> {
     const { previewWords, kinds, modes } = this.options;
     if (!kinds.length) throw Error("KINDS");
@@ -99,7 +117,9 @@ export class TrainingRuntime {
         /* The durable answer queue remains the fallback. */
       }
     }
+    this.reading = await this.createReading(this.data);
     this.planner = this.plan(engine);
+    await this.planner.prepareSet();
     this.planner.hasQuestions();
     return this.current();
   }
@@ -123,9 +143,17 @@ export class TrainingRuntime {
         this.options.onLoginRequired();
         throw Error("LOGIN");
       }
+      const reading = await this.createReading(fresh);
+      let planner: TrainingPlanner;
+      try {
+        planner = this.plan(await LearningEngine.create(fresh.learning), fresh, reading);
+        await planner.prepareSet();
+      } catch (error) { reading?.close(); throw error; }
+      this.reading?.close();
+      this.reading = reading;
       this.data = fresh;
       this.journal.setWords(fresh.words);
-      this.planner = this.plan(await LearningEngine.create(fresh.learning));
+      this.planner = planner;
       return this.current();
     } catch {
       return { ...this.current(), stats: [] };
