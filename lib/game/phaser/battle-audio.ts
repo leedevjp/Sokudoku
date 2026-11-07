@@ -10,7 +10,6 @@ export function preloadBattleAudio(scene: Phaser.Scene) {
 export class BattleAudio {
   enabled = true;
   private music?: HTMLAudioElement;
-  private region = -1;
   private unlocked = false;
   private playing = false;
   private active = false;
@@ -49,15 +48,14 @@ export class BattleAudio {
       if (generation === this.generation) { this.playing = false; this.unlocked = false; }
     });
   }
-  update(region: number, active: boolean, delta: number) {
+  update(active: boolean, delta: number) {
     this.active = active;
-    if (this.region !== region) {
-      this.music?.pause();
+    // One continuous study track for the whole run, including question/map changes.
+    if (!this.music) {
       this.generation++;
-      this.music = new Audio(["/audio/meadow-bgm.mp3", "/audio/forest-bgm.mp3", "/audio/ruins-bgm.mp3"][region]);
+      this.music = new Audio("/audio/study-lobby-night-v1.mp3");
       this.music.loop = true;
       this.music.volume = 0;
-      this.region = region;
       this.playing = false;
     }
     if (!active || !this.enabled || document.hidden) {
@@ -65,7 +63,7 @@ export class BattleAudio {
     }
     this.startMusic();
     if (this.music) {
-      const target = performance.now() < this.duckUntil ? .035 : .10;
+      const target = performance.now() < this.duckUntil ? .045 : .075;
       this.music.volume += (target - this.music.volume) * Math.min(1, delta / (target < this.music.volume ? 35 : 450));
     }
   }

@@ -21,7 +21,7 @@ import { TrainingView } from "./board";
 import { answerImpact, burst } from "./effects";
 import { resizeProgress } from "./resize-progress";
 import { Correction } from "../correction";
-import { BattleProgress, battleRegion, comboTier } from "../battle-progress";
+import { BattleProgress, comboTier } from "../battle-progress";
 import { BattleAudio, preloadBattleAudio } from "./battle-audio";
 import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
@@ -242,7 +242,7 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   update(_time: number, delta: number) {
-    this.battleAudio?.update(battleRegion(this.correct), !["paused", "end", "settling", "arming"].includes(this.phase), delta);
+    this.battleAudio?.update(!["paused", "end"].includes(this.phase), delta);
     this.petMotion.tick(
       delta,
       this.phase === "paused" || this.phase === "settling",
