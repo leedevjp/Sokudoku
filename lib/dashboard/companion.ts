@@ -1,21 +1,17 @@
 import type { DashboardSummary } from "./summary";
+import { companionLines, type CompanionLine } from "./companion-lines";
 
 export type CompanionSection = "overview" | "memory" | "activity" | "stages";
 export type CompanionFocus = { section: CompanionSection; day?: string; level?: string; band?: number };
 
+export function companionFocusKey(focus: CompanionFocus) {
+  return [focus.section, focus.day ?? "", focus.level ?? "", focus.band ?? ""].join(":");
+}
+
 /** Encouragement is grounded in the selected scope; never a claim of mastery. */
-export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0) {
+function recordMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string) {
   const jp = lang === "jp", n = (value: number) => value.toLocaleString(jp ? "ja-JP" : "ko-KR");
   const say = (ja: string, ko: string) => jp ? ja : ko;
-  if (variant % 2) {
-    const extra: Record<CompanionSection, [string, string]> = {
-      overview: ["おかえり。今日はひとつからでも大丈夫。", "다시 와줘서 반가워. 오늘은 하나부터 해도 좋아."],
-      memory: ["忘れても、また会えばいい。一緒に続けよう。", "잊어버려도 다시 만나면 돼. 같이 이어가자."],
-      activity: ["たくさんの日も、少しの日も。ここまでの一歩を大切に。", "많이 한 날도, 조금 한 날도. 여기까지 온 한 걸음을 아껴주자."],
-      stages: ["気になる段階からでいいよ。私はここで応援してる。", "마음 가는 단계부터 해도 좋아. 여기서 응원할게."],
-    };
-    return say(...extra[focus.section]);
-  }
   if (focus.section === "overview") {
     if (!summary.learned) return say("最初のひとつから、一緒に始めよう。", "첫 번째 하나부터, 같이 시작해볼까?");
     const today = summary.days[6].attempts;
@@ -50,6 +46,22 @@ export function companionMessage(summary: DashboardSummary, focus: CompanionFocu
       : say(`${name}はこれから。一度に全部じゃなくて大丈夫。`, `${name}는 이제 시작이야. 한꺼번에 다 하지 않아도 괜찮아.`);
   }
   return say("ひらいてみて。次に会いたい単語を一緒に探そう。", "단계를 펼쳐봐. 다음에 만날 단어를 같이 찾아보자.");
+}
+
+/** A full cycle is exhausted before repeating; extra lines match the current context. */
+export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0) {
+  let specific: readonly CompanionLine[] = [];
+  if (focus.section === "overview" && summary.learned === 0) specific = companionLines.first;
+  if (focus.section === "memory" && focus.band !== undefined && summary.memory[focus.band] > 0) {
+    specific = [companionLines.band0, companionLines.band1, companionLines.band2][focus.band] ?? [];
+  }
+  if (focus.section === "activity") {
+    const day = summary.days.find(d => d.day === focus.day);
+    if (day ? day.attempts === 0 : summary.week.attempts === 0) specific = companionLines.rest;
+  }
+  if (focus.section === "stages" && focus.level === "P") specific = companionLines.personal;
+  const lines = [recordMessage(summary, focus, lang), ...[...specific, ...companionLines[focus.section]].map(line => line[lang === "jp" ? 0 : 1])];
+  return lines[((variant % lines.length) + lines.length) % lines.length];
 }
 
 export function visibleCompanionSection(rects: { section: CompanionSection; top: number; bottom: number }[], height: number): CompanionSection | null {

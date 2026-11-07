@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { dashboardSummary } from "../lib/dashboard/summary";
-import { companionMessage, visibleCompanionSection } from "../lib/dashboard/companion";
+import { companionFocusKey, companionMessage, visibleCompanionSection, type CompanionFocus } from "../lib/dashboard/companion";
+import { companionLines } from "../lib/dashboard/companion-lines";
 import type { DashboardData } from "../lib/dashboard/types";
 
 const data: DashboardData = {
@@ -29,6 +30,43 @@ test("empty history gets encouragement without invented achievements", () => {
   assert.match(companionMessage(empty, { section: "overview" }, "kr"), /첫 번째/);
   assert.match(companionMessage(empty, { section: "memory", band: 2 }, "kr"), /비어 있어/);
   assert.match(companionMessage(empty, { section: "activity" }, "kr"), /반가워/);
+});
+
+test("every context offers a full non-repeating bilingual cycle", () => {
+  const empty = dashboardSummary({ ...data, groups: [], activity: [] }, "word", "meaning");
+  const cases: [typeof summary, CompanionFocus, number][] = [
+    [summary, { section: "overview" }, 11],
+    [empty, { section: "overview" }, 17],
+    [summary, { section: "memory" }, 11],
+    ...[0, 1, 2].map(band => [summary, { section: "memory", band }, 16] as [typeof summary, CompanionFocus, number]),
+    [empty, { section: "memory", band: 0 }, 11],
+    [summary, { section: "activity" }, 11],
+    [summary, { section: "activity", day: "2026-11-07" }, 17],
+    [empty, { section: "activity" }, 17],
+    [summary, { section: "stages" }, 11],
+    [summary, { section: "stages", level: "P" }, 17],
+  ];
+  for (const [scope, focus, length] of cases) for (const lang of ["kr", "jp"]) {
+    const lines = Array.from({ length }, (_, i) => companionMessage(scope, focus, lang, i));
+    assert.equal(new Set(lines).size, length, JSON.stringify({ focus, lang }));
+    assert.equal(companionMessage(scope, focus, lang, length), lines[0]);
+    assert.notEqual(lines.at(-1), lines[0]);
+  }
+  const all = Object.values(companionLines).flat();
+  for (const index of [0, 1]) {
+    assert.equal(new Set(all.map(pair => pair[index])).size, all.length);
+    assert.ok(all.every(pair => pair[index].length > 0 && pair[index].length <= 90));
+  }
+});
+
+test("visiting different dates, bands and stages retains independent cursors", () => {
+  const focuses: CompanionFocus[] = [
+    { section: "overview" }, { section: "memory" }, { section: "memory", band: 0 },
+    { section: "memory", band: 1 }, { section: "activity", day: "2026-11-07" },
+    { section: "activity", day: "2026-11-08" }, { section: "stages", level: "P" },
+    { section: "stages", level: "1" },
+  ];
+  assert.equal(new Set(focuses.map(companionFocusKey)).size, focuses.length);
 });
 
 test("scroll follows a substantially visible card near the reading area", () => {

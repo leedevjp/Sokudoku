@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode, type PointerEvent, type FocusEvent, type MouseEvent } from "react";
 import type { DashboardSummary } from "@/lib/dashboard/summary";
-import { companionMessage, visibleCompanionSection, type CompanionFocus, type CompanionSection } from "@/lib/dashboard/companion";
+import { companionFocusKey, companionMessage, visibleCompanionSection, type CompanionFocus, type CompanionSection } from "@/lib/dashboard/companion";
 import css from "./dashboard-companion.module.css";
 
 type View = { focus: CompanionFocus; phase: "out" | "in" | "idle"; variant: number };
@@ -24,6 +24,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   const root = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ focus: { section: "overview" }, phase: "in", variant: 0 });
   const current = useRef(view);
+  const visits = useRef(new Map([[companionFocusKey({ section: "overview" }), 0]]));
   const hover = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const move = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -35,21 +36,27 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     if (!manual && performance.now() < lockUntil.current) return;
     clearTimeout(move.current); clearTimeout(settle.current);
     const old = current.current;
+    const key = companionFocusKey(focus);
+    const changed = key !== companionFocusKey(old.focus);
+    const variant = changed ? (visits.current.get(key) ?? -1) + 1 : old.variant;
     if (manual) {
       clearTimeout(hover.current);
       lockUntil.current = performance.now() + 2200;
     }
     if (focus.section === old.focus.section) {
       if (!manual) { if (old.phase !== "idle") publish({ ...old, phase: "idle" }); return; }
-      publish({ ...old, focus, phase: "idle" });
+      visits.current.set(key, variant);
+      publish({ ...old, focus, variant, phase: "idle" });
       return;
     }
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      publish({ ...old, focus, phase: "idle" }); return;
+      visits.current.set(key, variant);
+      publish({ ...old, focus, variant, phase: "idle" }); return;
     }
     publish({ ...old, phase: "out" });
     move.current = setTimeout(() => {
-      publish({ focus, phase: "in", variant: 0 });
+      visits.current.set(key, variant);
+      publish({ focus, phase: "in", variant });
       settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 450);
     }, 160);
   }, [publish]);
@@ -105,7 +112,9 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   };
   const cheer = () => {
     clearTimeout(move.current); clearTimeout(settle.current);
-    publish({ ...current.current, variant: current.current.variant + 1, phase: "in" });
+    const variant = current.current.variant + 1;
+    visits.current.set(companionFocusKey(current.current.focus), variant);
+    publish({ ...current.current, variant, phase: "in" });
     lockUntil.current = performance.now() + 2200;
     settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 450);
   };
