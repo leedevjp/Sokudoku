@@ -1,0 +1,45 @@
+{
+  "image": "/battle/mage-idle-v1.png",
+  "generator": "Built-in image_gen",
+  "prompt": "Create a production pixel-art idle sprite sheet using the attached mage as identity reference. Transparent background. Exact 4 columns x 2 rows, eight equal square cells. Same silver-haired chibi mage, navy gold star witch hat, ivory gold outfit, brown boots, facing LEFT as reference. Each cell is the SAME stationary standing pose at identical scale and horizontal position. CRITICAL feet and boots must be pixel-identical at exactly the same ground baseline in every cell, no body translation, no bouncing, no rotation, no squash/stretch, no camera motion. Eight frames form one subtle resting blink cycle: eyes open, open with tiny hair-tip change, half closed, closed, half open, open, tiny sleeve settling, original open. Only eyelids and a few hair/sleeve pixels vary. Keep silhouette and hat aligned, head fixed, staff/arms stationary. Whole character visible with generous identical transparent padding. No shadows, effects, particles, labels, gridlines or background. Crisp matching pixel art. Intended stationary game idle animation with fixed foot pivot.",
+  "frameSize": 400,
+  "footPivot": [
+    200,
+    394
+  ],
+  "cropOrigins": [
+    [
+      3,
+      0
+    ],
+    [
+      446,
+      0
+    ],
+    [
+      890,
+      0
+    ],
+    [
+      1333,
+      0
+    ],
+    [
+      3,
+      444
+    ],
+    [
+      446,
+      444
+    ],
+    [
+      890,
+      444
+    ],
+    [
+      1333,
+      444
+    ]
+  ],
+  "note": "Runtime crops align boot midpoints and soles; idle changes texture frames only, never position, scale or rotation."
+}

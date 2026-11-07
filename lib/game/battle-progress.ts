@@ -15,14 +15,10 @@ export function comboTier(combo: number) {
 }
 export function battleRegion(correct: number) { return Math.floor(correct / 10) % 3; }
 
-export function idleBattlePose(elapsed: number, reduced: boolean) {
-  if (reduced) return { mageX: 0, mageY: 0, monsterX: 0, monsterY: 0 };
-  const cycle = (elapsed % 2400) / 2400;
-  const hop = cycle < .24 ? Math.sin(cycle / .24 * Math.PI) : 0;
-  return {
-    mageX: Math.sin(elapsed / 900) * 2,
-    mageY: -Math.abs(Math.sin(elapsed / 650)) * 1.5,
-    monsterX: Math.sin(elapsed / 750) * 7,
-    monsterY: -hop * 9,
-  };
+/** A brief blink followed by a long rest. Actor transforms never animate at idle. */
+export function battleIdleFrame(elapsed: number, reduced: boolean) {
+  if (reduced) return 0;
+  const phase = Math.max(0, elapsed) % 4200;
+  if (phase < 2400) return 0;
+  return Math.min(7, 1 + Math.floor((phase - 2400) / 150));
 }

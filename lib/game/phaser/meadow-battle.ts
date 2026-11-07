@@ -1,7 +1,6 @@
 import { EmotionEffect, preloadEmotions } from "./emotion-effects";
 import Phaser from "phaser";
 import type { Result } from "../types";
-import { petFrame } from "../pet-motion";
 import {
   magicEncounter,
   magicCastFrame,
@@ -11,10 +10,14 @@ import {
   SPELL_HIT_STOP_MS,
 } from "../magic-presentation";
 import type { TrainingView } from "./board";
-import { battleRegion, comboTier, idleBattlePose } from "../battle-progress";
+import { battleRegion, comboTier, battleIdleFrame } from "../battle-progress";
 
 const MEADOW = "battle-meadow-original-v4";
 const MAGE = "battle-mage-v5";
+const IDLE = "battle-mage-idle-v1";
+// Equal 400px frames, aligned to the measured boot midpoint and sole (200,394).
+// Explicit integer crops avoid rounding drift in the generated 1774x887 atlas.
+const IDLE_CROPS = [[3, 0], [446, 0], [890, 0], [1333, 0], [3, 444], [446, 444], [890, 444], [1333, 444]];
 const LOCOMOTION = "battle-mage-locomotion-v1";
 const MONSTERS = "battle-mandrakes-v5";
 const MAGIC = "battle-magic-v5";
@@ -25,6 +28,7 @@ export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
     [MEADOW, "meadow-original-v4.png"],
     [MAGE, "mage-v5.png"],
+    [IDLE, "mage-idle-v1.png"],
     [LOCOMOTION, "mage-locomotion-v1.png"],
     [MONSTERS, "mandrakes-v5.png"],
     [MAGIC, "magic-v5.png"],
@@ -106,6 +110,13 @@ export class MeadowBattle {
       12 * s, region === 2 ? 0xffffff : 0x254d48, true).setOrigin(1, .5);
     if (scene.textures.exists(MAGE)) {
       frames(scene, MAGE, 4, 5);
+      if (scene.textures.exists(IDLE)) {
+        const texture = scene.textures.get(IDLE);
+        IDLE_CROPS.forEach(([x, y], i) => {
+          if (!texture.has(String(i))) texture.add(String(i), 0, x, y, 400, 400);
+        });
+        texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
       if (scene.textures.exists(LOCOMOTION)) frames(scene, LOCOMOTION, 4, 2);
       this.mage = scene.add
         .image(this.startX, this.baseline, MAGE, "0")
@@ -174,22 +185,15 @@ export class MeadowBattle {
     this.comboEffect?.setVisible(false);
     this.mageEmotion?.hide();
     this.monsterEmotion?.hide();
-    this.mage?.setTexture(MAGE, "0").setFlipX(true).setDisplaySize(154 * this.s, 154 * this.s);
+    this.mage?.setTexture(MAGE, "0").setOrigin(.5, .88).setFlipX(true).setDisplaySize(154 * this.s, 154 * this.s);
     if (!this.result) {
-      const pose = idleBattlePose(this.idleElapsed, reduced);
-      this.mage?.setPosition(this.startX + pose.mageX * this.s, this.baseline + pose.mageY * this.s);
-      this.monster?.setPosition(this.enemyX + pose.monsterX * this.s, this.baseline + pose.monsterY * this.s);
-      this.mage?.setFrame(String(petFrame("idle", this.idleElapsed, reduced)));
-      this.monster?.setFrame(
-        String(
-          this.monsterRow +
-            (reduced ? 0 : Math.floor(this.idleElapsed / 460) % 2),
-        ),
-      );
-      if (!reduced && this.idleElapsed < 560) {
-        this.travel(this.idleElapsed, false, true);
-        this.mage?.setPosition(this.startX - 30 * (1 - this.idleElapsed / 560) * this.s, this.baseline);
+      // Planted feet: no per-question entrance, bob, sway, scale or rotation.
+      this.mage?.setPosition(this.startX, this.baseline);
+      if (this.mage?.scene.textures.exists(IDLE)) {
+        this.mage.setTexture(IDLE, String(battleIdleFrame(this.idleElapsed, reduced)))
+          .setOrigin(.5, 394 / 400).setDisplaySize(140 * this.s, 140 * this.s);
       }
+      this.monster?.setPosition(this.enemyX, this.baseline).setFrame(String(this.monsterRow));
       return;
     }
     this.elapsed += Math.max(0, delta);

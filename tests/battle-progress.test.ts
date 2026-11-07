@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BattleProgress, battleRegion, comboTier, idleBattlePose } from "../lib/game/battle-progress";
+import { BattleProgress, battleRegion, comboTier, battleIdleFrame } from "../lib/game/battle-progress";
 
 test("combo rewards follow consecutive correct answers and reset on mistakes or timeout", () => {
   const progress = new BattleProgress();
@@ -20,11 +20,9 @@ test("combo rewards follow consecutive correct answers and reset on mistakes or 
 test("regions advance every ten correct answers and cycle through all three maps", () => {
   assert.deepEqual([0, 9, 10, 19, 20, 29, 30].map(battleRegion), [0, 0, 1, 1, 2, 2, 0]);
 });
-test("idle motion stays within the arena and reduced motion is static", () => {
+test("idle holds a resting sprite, blinks briefly, and respects reduced motion", () => {
+  assert.deepEqual([0, 2399, 2400, 2550, 2700, 3300, 4199, 4200].map(t => battleIdleFrame(t, false)), [0, 0, 1, 2, 3, 7, 7, 0]);
   for (let t = 0; t < 10000; t += 16) {
-    const pose = idleBattlePose(t, false);
-    assert.ok(Math.abs(pose.mageX) <= 2 && Math.abs(pose.mageY) <= 1.5);
-    assert.ok(Math.abs(pose.monsterX) <= 7 && pose.monsterY >= -9 && pose.monsterY <= 0);
-    assert.deepEqual(idleBattlePose(t, true), { mageX: 0, mageY: 0, monsterX: 0, monsterY: 0 });
+    assert.equal(battleIdleFrame(t, true), 0);
   }
 });
