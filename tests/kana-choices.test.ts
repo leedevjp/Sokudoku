@@ -20,7 +20,7 @@ function catalog(type: "hiragana" | "katakana") {
     [..."ゃゅょ"].forEach((tail, i) => add(head + tail, labels[i]));
   return words;
 }
-const key = (words: Word[]) => words.map(w => w.meaning_ko).sort().join("|");
+const key = (words: Pick<Word, "meaning_ko">[]) => words.map(w => w.meaning_ko).sort().join("|");
 for (const type of ["hiragana", "katakana"] as const) {
   test(type + ": balanced dynamic choices keep basic and yoon pools separate", () => {
     const pool = catalog(type);

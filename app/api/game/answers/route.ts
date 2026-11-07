@@ -67,9 +67,11 @@ export async function POST(request: Request) {
       word_id: source === "personal" ? null : a.word_id,
       personal_word_id: source === "personal" ? a.word_id : null,
       selected_word_id:
-        selected_source === "personal" ? null : a.selected_word_id,
+        selected_source === "personal" || selected_source === "extra" ? null : a.selected_word_id,
       selected_personal_word_id:
         selected_source === "personal" ? a.selected_word_id : null,
+      selected_extra_meaning_choice_id:
+        selected_source === "extra" ? a.selected_word_id : null,
     }));
     const { error } = await client
       .from("answer_log")

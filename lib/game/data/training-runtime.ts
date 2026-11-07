@@ -30,7 +30,7 @@ export class TrainingRuntime {
   private ended = false;
 
   constructor(private options: RuntimeOptions) {
-    this.loader = new GameDataLoader(options.levels, options.onLoginRequired);
+    this.loader = new GameDataLoader(options.levels, options.onLoginRequired, options.kinds.includes("meaning"));
   }
   private filter(data: Bootstrap): Bootstrap {
     return { ...data, words: wordsForKinds(data.words, this.options.kinds) };

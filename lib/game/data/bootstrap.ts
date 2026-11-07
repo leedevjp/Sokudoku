@@ -9,6 +9,8 @@ import { readWords, readWordCache, mergeWords } from "./word-cache";
 import { createClient } from "@/lib/supabase/client";
 import { database, storageDeadline } from "./database";
 import { emptyLearning, type LearningSnapshot } from "../learning/types";
+import { loadMeaningBank, readMeaningBank } from "./meaning-bank";
+import { withMeaningBank } from "../meaning-bank";
 
 export type Bootstrap = {
   words: Word[];
@@ -25,6 +27,7 @@ export class GameDataLoader {
   constructor(
     levels: string | null,
     private onLoginRequired: () => void,
+    private needsMeaning = true,
   ) {
     const selected = parseLevels(levels);
     this.levels = selected;
@@ -35,6 +38,9 @@ export class GameDataLoader {
     return words.filter((word) =>
       wordMatchesLevels(word, this.levels, this.difficulties),
     );
+  }
+  private bankLevels() {
+    return this.levels.filter((level) => /^[1-5]$/.test(level)).join(",");
   }
   async fetchData(): Promise<Bootstrap> {
     const [sets, state] = await Promise.all([
@@ -137,7 +143,10 @@ export class GameDataLoader {
       data.words,
       data.synced_at,
     );
-    return { ...data, words: this.filterCommon(words) };
+    const selected = this.filterCommon(words);
+    return { ...data, words: this.needsMeaning && this.bankLevels()
+      ? withMeaningBank(selected, await loadMeaningBank(this.bankLevels(), this.onLoginRequired))
+      : selected };
   }
 
   async loadOffline(): Promise<Bootstrap> {
@@ -156,8 +165,12 @@ export class GameDataLoader {
         : Promise.resolve([]),
     ]);
     if (!common || !personal) throw Error("LOAD");
+    const selected = this.filterCommon(common);
+    const bank = this.needsMeaning && this.bankLevels()
+      ? await readMeaningBank(this.bankLevels()).catch(() => undefined) : undefined;
+    if (this.needsMeaning && this.bankLevels() && !bank) throw Error("MEANING_BANK");
     return {
-      words: [...this.filterCommon(common), ...personal],
+      words: [...(bank ? withMeaningBank(selected, bank) : selected), ...personal],
       stats: [],
       user_id: session.user.id,
       learning:

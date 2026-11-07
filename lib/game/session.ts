@@ -33,6 +33,7 @@ export class TrainingSession {
       question_type: question.kind,
       mode: question.mode,
       selected_word_id: selected?.id ?? null,
+      selected_source: selected?.source ?? "word",
       result,
       response_ms: timeout ? maxTime : Math.min(maxTime - 1, elapsed),
       time_limit_ms: maxTime,

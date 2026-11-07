@@ -1,10 +1,12 @@
 import { kanaChoices } from "./kana-choices";
+import { nearbyReadings, normalizedReading } from "./reading-choices";
 import {
   entryType,
   type Word,
   type Stat,
   type Kind,
   type Question,
+  type Choice,
 } from "./types";
 import { trainingKinds, wordsForKinds } from "./selection";
 
@@ -13,9 +15,9 @@ const tokens = (s: string) =>
     .split(/[,，、;·()（）]/)
     .map((x) => x.trim())
     .filter(Boolean);
-function overlaps(a: Word, b: Word, kind: Kind) {
+function overlaps(a: Choice, b: Choice, kind: Kind) {
   return kind === "reading"
-    ? a.kana === b.kana
+    ? normalizedReading(a.kana) === normalizedReading(b.kana)
     : tokens(a.meaning_ko).some((t) => tokens(b.meaning_ko).includes(t));
 }
 function shuffle<T>(items: T[], rng: () => number) {
@@ -34,6 +36,22 @@ export function questionFor(
   rng = Math.random,
 ): Question | null {
   if (entryType(word) !== "word" && kind !== "meaning") return null;
+  if (entryType(word) === "word" && kind === "meaning" && word.meaning_choices) {
+    const candidates = shuffle(word.meaning_choices, rng).filter(
+      (other) => other.id !== word.id && !overlaps(word, other, kind),
+    );
+    // Search the small bank rather than letting a greedy overlapping choice
+    // hide another valid triple. Each question samples the bank again.
+    for (let i = 0; i < candidates.length; i++)
+      for (let j = i + 1; j < candidates.length; j++) {
+        if (overlaps(candidates[i], candidates[j], kind)) continue;
+        for (let k = j + 1; k < candidates.length; k++)
+          if (!overlaps(candidates[i], candidates[k], kind) &&
+              !overlaps(candidates[j], candidates[k], kind))
+            return { word, kind, options: shuffle([word, candidates[i], candidates[j], candidates[k]], rng) };
+      }
+    return null;
+  }
   if (entryType(word) !== "word") {
     const choices = kanaChoices(word, pool, rng);
     if (choices === null) return null;
@@ -42,7 +60,7 @@ export function questionFor(
     // the existing distinct-answer fallback; never fabricate missing entries.
   }
   const options: Word[] = [];
-  for (const other of shuffle(pool, rng)) {
+  for (const other of shuffle(kind === "reading" ? nearbyReadings(word, pool) : pool, rng)) {
     if (
       entryType(other) !== entryType(word) ||
       other.id === word.id ||

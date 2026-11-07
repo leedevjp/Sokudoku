@@ -1,6 +1,6 @@
 type Reference = {
   source?: "word" | "personal";
-  selected_source?: "word" | "personal";
+  selected_source?: "word" | "personal" | "extra";
   word_id: string;
   selected_word_id: string | null;
 };

@@ -4,7 +4,7 @@ export const answerSchema = z
   .object({
     id: z.uuid(),
     source: z.enum(["word", "personal"]).optional(),
-    selected_source: z.enum(["word", "personal"]).optional(),
+    selected_source: z.enum(["word", "personal", "extra"]).optional(),
     word_id: z.uuid(),
     question_type: z.enum(["meaning", "reading"]),
     mode: z.enum(["exploration", "review", "exam"]).optional(),
@@ -15,6 +15,8 @@ export const answerSchema = z
     answered_at: z.iso.datetime({ offset: true }),
   })
   .strict()
+  .refine((a) => a.selected_source !== "extra" ||
+    (a.question_type === "meaning" && a.result === "incorrect" && a.source !== "personal"))
   .refine((a) =>
     a.result === "timeout"
       ? a.selected_word_id === null && a.response_ms === a.time_limit_ms

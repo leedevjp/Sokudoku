@@ -9,7 +9,13 @@ export type Word = Omit<
   Partial<Pick<Tables<"word">, "created_at" | "updated_at" | "note">> & {
     source?: "personal";
     entry_type?: EntryType;
+    meaning_choices?: Choice[];
   };
+/** Extra labels can be selected, but are never words in the learning catalog. */
+export type Choice = Pick<Word, "id" | "kana" | "hanja_reading" | "meaning_ko"> & {
+  source?: "personal" | "extra";
+  entry_type?: EntryType;
+};
 export const entryType = (word: Pick<Word, "entry_type">): EntryType =>
   word.entry_type ?? "word";
 export type Stat = Tables<"word_recent_stat">;
@@ -18,7 +24,7 @@ export type Result = "correct" | "incorrect" | "timeout";
 export type Answer = {
   mode?: "exploration" | "review" | "exam";
   source?: "word" | "personal";
-  selected_source?: "word" | "personal";
+  selected_source?: "word" | "personal" | "extra";
   id: string;
   word_id: string;
   question_type: Kind;
@@ -31,6 +37,6 @@ export type Answer = {
 export type Question = {
   word: Word;
   kind: Kind;
-  options: Word[];
+  options: Choice[];
   mode?: "exploration" | "review" | "exam";
 };

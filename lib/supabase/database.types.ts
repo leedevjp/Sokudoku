@@ -16,17 +16,18 @@ export type Database = {
     Tables: {
       answer_log: {
         Row: {
-          mode: string | null
           answered_at: string
           id: string
           learning_processed_at: string | null
           learning_rating: number | null
           learning_version: string | null
+          mode: string | null
           personal_word_id: string | null
           question_type: string
           received_at: string
           response_ms: number
           result: string
+          selected_extra_meaning_choice_id: string | null
           selected_personal_word_id: string | null
           selected_word_id: string | null
           time_limit_ms: number
@@ -34,17 +35,18 @@ export type Database = {
           word_id: string | null
         }
         Insert: {
-          mode?: string | null
           answered_at: string
           id: string
           learning_processed_at?: string | null
           learning_rating?: number | null
           learning_version?: string | null
+          mode?: string | null
           personal_word_id?: string | null
           question_type: string
           received_at?: string
           response_ms: number
           result: string
+          selected_extra_meaning_choice_id?: string | null
           selected_personal_word_id?: string | null
           selected_word_id?: string | null
           time_limit_ms: number
@@ -52,17 +54,18 @@ export type Database = {
           word_id?: string | null
         }
         Update: {
-          mode?: string | null
           answered_at?: string
           id?: string
           learning_processed_at?: string | null
           learning_rating?: number | null
           learning_version?: string | null
+          mode?: string | null
           personal_word_id?: string | null
           question_type?: string
           received_at?: string
           response_ms?: number
           result?: string
+          selected_extra_meaning_choice_id?: string | null
           selected_personal_word_id?: string | null
           selected_word_id?: string | null
           time_limit_ms?: number
@@ -76,6 +79,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "personal_word"
             referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "answer_log_selected_extra_meaning_choice_id_fkey"
+            columns: ["selected_extra_meaning_choice_id"]
+            isOneToOne: false
+            referencedRelation: "extra_meaning_choice"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "answer_log_selected_personal_word_fkey"
@@ -99,6 +109,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      extra_meaning_choice: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          normalized_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          normalized_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          normalized_label?: string | null
+        }
+        Relationships: []
       }
       learner_state: {
         Row: {
@@ -138,6 +169,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      meaning_distractor: {
+        Row: {
+          batch_id: string
+          candidate_id: string
+          candidate_source: string
+          created_at: string
+          question_type: string
+          rank: number
+          reason: string
+          status: string
+          target_word_id: string
+        }
+        Insert: {
+          batch_id: string
+          candidate_id: string
+          candidate_source: string
+          created_at?: string
+          question_type?: string
+          rank: number
+          reason: string
+          status?: string
+          target_word_id: string
+        }
+        Update: {
+          batch_id?: string
+          candidate_id?: string
+          candidate_source?: string
+          created_at?: string
+          question_type?: string
+          rank?: number
+          reason?: string
+          status?: string
+          target_word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meaning_distractor_target_word_id_fkey"
+            columns: ["target_word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       personal_word: {
         Row: {
@@ -325,6 +400,7 @@ export type Database = {
         Args: { personal?: boolean; since?: string }
         Returns: Json
       }
+      game_meaning_bank: { Args: { difficulties: number[] }; Returns: Json }
       game_sync: { Args: { since?: string }; Returns: Json }
       learning_dashboard: { Args: { p_timezone?: string }; Returns: Json }
       learning_history: { Args: { pending_only?: boolean }; Returns: Json }

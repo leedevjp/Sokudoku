@@ -28,6 +28,7 @@ export class AnswerJournal {
       source:
         this.sources.get(answer.word_id) === "personal" ? "personal" : "word",
       selected_source:
+        answer.selected_source === "extra" ? "extra" :
         answer.selected_word_id &&
         this.sources.get(answer.selected_word_id) === "personal"
           ? "personal"
