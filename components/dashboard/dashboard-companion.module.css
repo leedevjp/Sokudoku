@@ -19,6 +19,12 @@
 .dismiss { position: absolute; right: -5px; top: -8px; width: 28px; height: 28px; border: 1px solid #92819f; background: #fffdf5; color: #75608d; border-radius: 8px; cursor: pointer; pointer-events: auto; }
 .dismiss:focus-visible { outline: 3px solid #2b7bf0; }
 .floating .sprite { animation: touch 560ms steps(1, end) 1, curious 12s 560ms steps(1, end) infinite; }
+.floating[data-motion="walk"] .sprite, .floating[data-motion="run"] .sprite { background-image: url('/battle/mage-locomotion-v1.png'); background-size: 400% 200%; animation: walk 640ms steps(1, end) infinite; }
+.floating[data-motion="run"] .sprite { animation: run 360ms steps(1, end) infinite; }
+.floating[data-motion="walk"][data-direction="right"] .sprite, .floating[data-motion="run"][data-direction="left"] .sprite { transform: scaleX(-1); }
+.floating[data-motion="walk"] .bubble, .floating[data-motion="run"] .bubble { opacity: .8; }
+@keyframes walk { 0% { background-position: 0 0; } 25% { background-position: 33.333333% 0; } 50% { background-position: 66.666667% 0; } 75%, 100% { background-position: 100% 0; } }
+@keyframes run { 0% { background-position: 0 100%; } 25% { background-position: 33.333333% 100%; } 50% { background-position: 66.666667% 100%; } 75%, 100% { background-position: 100% 100%; } }
 .friend:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 16px; }
 .friend::before { content: ""; position: absolute; bottom: 4px; left: 8px; width: 56px; height: 15px; border: 1px solid #a6bff5; border-radius: 50%; background: radial-gradient(ellipse, #91bbff38, transparent 70%); }
 /* Fractional source cells are sampled as normalized quarters: no integer crop drift.

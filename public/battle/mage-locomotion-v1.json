@@ -1,0 +1,9 @@
+{
+  "image": "/battle/mage-locomotion-v1.png",
+  "columns": 4,
+  "rows": 2,
+  "transparent": true,
+  "walk": { "frames": [0, 1, 2, 3], "frameMs": 160, "nativeFacing": "left" },
+  "run": { "frames": [4, 5, 6, 7], "frameMs": 90, "nativeFacing": "right" },
+  "generation": "Built-in image_gen; mage-v5.png identity reference. Four-frame alternating walk cycle and four-frame forward-leaning run cycle, consistent scale and ground baseline, transparent 4x2 atlas. Runtime mirrors each row according to its actual native direction."
+}

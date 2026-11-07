@@ -15,6 +15,7 @@ import { battleRegion, comboTier, idleBattlePose } from "../battle-progress";
 
 const MEADOW = "battle-meadow-original-v4";
 const MAGE = "battle-mage-v5";
+const LOCOMOTION = "battle-mage-locomotion-v1";
 const MONSTERS = "battle-mandrakes-v5";
 const MAGIC = "battle-magic-v5";
 const REGIONS = [MEADOW, "battle-forest-v1", "battle-moon-ruins-v1"];
@@ -24,6 +25,7 @@ export function preloadBattle(scene: Phaser.Scene) {
   for (const [key, file] of [
     [MEADOW, "meadow-original-v4.png"],
     [MAGE, "mage-v5.png"],
+    [LOCOMOTION, "mage-locomotion-v1.png"],
     [MONSTERS, "mandrakes-v5.png"],
     [MAGIC, "magic-v5.png"],
     [REGIONS[1], "forest-v1.png"],
@@ -104,6 +106,7 @@ export class MeadowBattle {
       12 * s, region === 2 ? 0xffffff : 0x254d48, true).setOrigin(1, .5);
     if (scene.textures.exists(MAGE)) {
       frames(scene, MAGE, 4, 5);
+      if (scene.textures.exists(LOCOMOTION)) frames(scene, LOCOMOTION, 4, 2);
       this.mage = scene.add
         .image(this.startX, this.baseline, MAGE, "0")
         .setOrigin(0.5, 0.88)
@@ -159,6 +162,11 @@ export class MeadowBattle {
       .setDisplaySize(size * this.s, size * this.s)
       .setVisible(true);
   }
+  private travel(elapsed: number, run: boolean, right: boolean) {
+    if (!this.mage?.scene.textures.exists(LOCOMOTION)) return;
+    this.mage.setTexture(LOCOMOTION, String((run ? 4 : 0) + Math.floor(elapsed / (run ? 90 : 160)) % 4))
+      .setFlipX(run ? !right : right).setDisplaySize(154 * this.s, 154 * this.s);
+  }
   update(delta: number, paused: boolean, reduced: boolean) {
     if (paused) return;
     this.idleElapsed += Math.max(0, delta);
@@ -166,6 +174,7 @@ export class MeadowBattle {
     this.comboEffect?.setVisible(false);
     this.mageEmotion?.hide();
     this.monsterEmotion?.hide();
+    this.mage?.setTexture(MAGE, "0").setFlipX(true).setDisplaySize(154 * this.s, 154 * this.s);
     if (!this.result) {
       const pose = idleBattlePose(this.idleElapsed, reduced);
       this.mage?.setPosition(this.startX + pose.mageX * this.s, this.baseline + pose.mageY * this.s);
@@ -177,6 +186,10 @@ export class MeadowBattle {
             (reduced ? 0 : Math.floor(this.idleElapsed / 460) % 2),
         ),
       );
+      if (!reduced && this.idleElapsed < 560) {
+        this.travel(this.idleElapsed, false, true);
+        this.mage?.setPosition(this.startX - 30 * (1 - this.idleElapsed / 560) * this.s, this.baseline);
+      }
       return;
     }
     this.elapsed += Math.max(0, delta);
@@ -206,6 +219,10 @@ export class MeadowBattle {
       : this.result === "correct" ? 12 * Math.max(0, 1 - (t - SPELL_HIT_MS) / 200)
       : -12 * Math.min(1, (t - SPELL_HIT_MS) / 180);
     this.mage?.setPosition(this.startX + step * this.s, this.baseline);
+    if (this.result === "correct" && t >= SPELL_HIT_MS + SPELL_HIT_STOP_MS && t < SPELL_HIT_MS + 240) {
+      this.travel(t - SPELL_HIT_MS, true, false);
+      this.mage?.setPosition(this.startX + 20 * Math.max(0, 1 - (t - SPELL_HIT_MS - SPELL_HIT_STOP_MS) / 192) * this.s, this.baseline);
+    }
     if (t < SPELL_HIT_MS) {
       const progress = Math.max(0, (t - 60) / (SPELL_HIT_MS - 60));
       this.effect(

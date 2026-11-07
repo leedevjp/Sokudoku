@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, preload } from "react-dom";
 import type { DashboardSummary } from "@/lib/dashboard/summary";
 import { companionFocusKey, companionMessage, visibleCompanionSection, type CompanionFocus, type CompanionSection } from "@/lib/dashboard/companion";
 import css from "./dashboard-companion.module.css";
@@ -49,16 +49,25 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const x = Math.max(minX, Math.min(maxX, leftSide ? rect.left - 46 : rect.right - 26));
     const y = Math.max(offset + 125, Math.min(offset + height - 100, rect.top + Math.min(rect.height, 120) / 2 + 12));
     const old = previousPlace.current;
+    const rendered = floating.current.getBoundingClientRect();
     floating.current.getAnimations().forEach(animation => animation.cancel());
     floating.current.dataset.side = leftSide ? "left" : "right";
     floating.current.style.left = `${x}px`; floating.current.style.top = `${y}px`;
-    if (old && old.target !== target && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const distance = Math.hypot(x - old.x, y - old.y);
-      if (distance < 190) floating.current.animate([
-        { transform: `translate(${old.x - x}px, ${old.y - y}px)` },
-        { transform: "translate(0, -5px)", offset: .7 }, { transform: "translate(0, 0)" },
-      ], { duration: 240, easing: "ease-out" });
-      else floating.current.querySelector("button[data-companion-sprite]")?.animate([
+    floating.current.dataset.motion = "idle";
+    if (old && rendered.left >= 0 && rendered.right <= width && rendered.top >= offset && rendered.bottom <= offset + height && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const distance = Math.hypot(x - rendered.x, y - rendered.y);
+      if (distance > 2 && distance < Math.max(1000, height * 1.8)) {
+        const element = floating.current;
+        const running = distance > 150;
+        element.dataset.motion = running ? "run" : "walk";
+        element.dataset.direction = x < rendered.x ? "left" : "right";
+        const animation = element.animate([
+          { transform: `translate(${rendered.x - x}px, ${rendered.y - y}px)` },
+          { transform: "translate(0, 0)" },
+        ], { duration: Math.max(120, distance / (running ? 430 : 190) * 1000), easing: "linear" });
+        animation.onfinish = () => { element.dataset.motion = "idle"; };
+      }
+      else if (distance >= Math.max(1000, height * 1.8)) floating.current.querySelector("button[data-companion-sprite]")?.animate([
         { filter: "brightness(1.8)", transform: "scale(.85)" },
         { filter: "brightness(1)", transform: "scale(1)" },
       ], { duration: 180, easing: "ease-out" });
@@ -66,6 +75,8 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     previousPlace.current = { x, y, target };
   }, []);
   useEffect(() => {
+    preload("/battle/mage-locomotion-v1.png", { as: "image" });
+    const floatingElement = floating.current;
     let frame = 0;
     const measure = () => {
       frame = 0;
@@ -98,6 +109,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     window.visualViewport?.addEventListener("resize", schedule); window.visualViewport?.addEventListener("scroll", schedule);
     const observer = new ResizeObserver(schedule); if (root.current) observer.observe(root.current);
     return () => {
+      floatingElement?.getAnimations().forEach(animation => animation.cancel());
       cancelAnimationFrame(frame); observer.disconnect();
       window.removeEventListener("scroll", schedule); window.removeEventListener("resize", schedule);
       window.visualViewport?.removeEventListener("resize", schedule); window.visualViewport?.removeEventListener("scroll", schedule);
