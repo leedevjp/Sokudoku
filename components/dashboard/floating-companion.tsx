@@ -25,6 +25,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   const current = useRef(view);
   const visits = useRef(new Map([["overview:::", 0]]));
   const [speaking, setSpeaking] = useState(true);
+  const previousPlace = useRef<{ x: number; y: number; target: Element } | null>(null);
   const activate = useCallback((focus: CompanionFocus, manual = false) => {
     const old = current.current;
     if (!manual && focus.section === old.focus.section) return;
@@ -33,18 +34,41 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const next = { focus, variant: (visits.current.get(key) ?? -1) + 1 };
     visits.current.set(key, next.variant); current.current = next; setView(next);
   }, []);
-  const place = useCallback((focusY?: number) => {
+  const place = useCallback((target?: Element | null) => {
     if (!floating.current || !root.current) return;
+    if (!target) return;
     const viewport = window.visualViewport, height = viewport?.height ?? innerHeight, width = viewport?.width ?? innerWidth;
     const offset = viewport?.offsetTop ?? 0;
-    const x = Math.max(8, Math.min(width - 80, root.current.getBoundingClientRect().right + 12));
-    const y = Math.max(offset + 150, Math.min(offset + height - 110, (focusY ?? offset + height / 2) + 44));
+    const rect = target.getBoundingClientRect();
+    const section = sectionOf(target);
+    const level = target.closest<HTMLElement>("[data-companion-level]")?.dataset.companionLevel;
+    const leftSide = level ? Number(level) % 2 === 0 : section === "memory" || section === "stages";
+    const bubbleWidth = Math.min(224, width - 32);
+    const minX = leftSide ? 8 : bubbleWidth - 59;
+    const maxX = leftSide ? width - bubbleWidth - 13 : width - 80;
+    const x = Math.max(minX, Math.min(maxX, leftSide ? rect.left - 46 : rect.right - 26));
+    const y = Math.max(offset + 125, Math.min(offset + height - 100, rect.top + Math.min(rect.height, 120) / 2 + 12));
+    const old = previousPlace.current;
+    floating.current.getAnimations().forEach(animation => animation.cancel());
+    floating.current.dataset.side = leftSide ? "left" : "right";
     floating.current.style.left = `${x}px`; floating.current.style.top = `${y}px`;
+    if (old && old.target !== target && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const distance = Math.hypot(x - old.x, y - old.y);
+      if (distance < 190) floating.current.animate([
+        { transform: `translate(${old.x - x}px, ${old.y - y}px)` },
+        { transform: "translate(0, -5px)", offset: .7 }, { transform: "translate(0, 0)" },
+      ], { duration: 240, easing: "ease-out" });
+      else floating.current.querySelector("button[data-companion-sprite]")?.animate([
+        { filter: "brightness(1.8)", transform: "scale(.85)" },
+        { filter: "brightness(1)", transform: "scale(1)" },
+      ], { duration: 180, easing: "ease-out" });
+    }
+    previousPlace.current = { x, y, target };
   }, []);
   useEffect(() => {
     let frame = 0;
     const measure = () => {
-      frame = 0; place();
+      frame = 0;
       const offset = window.visualViewport?.offsetTop ?? 0, height = window.visualViewport?.height ?? innerHeight;
       const rects = [...(root.current?.querySelectorAll<HTMLElement>("[data-companion-section]") ?? [])].map(el => {
         const rect = el.getBoundingClientRect();
@@ -58,6 +82,14 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
           return sectionOf(el) === section && rect.top <= center && rect.bottom >= center;
         });
         activate({ section, ...(detail ? detailOf(detail) : {}) }, true);
+        const container = root.current?.querySelector<HTMLElement>(`[data-companion-section="${section}"]`);
+        const anchors = [...(container?.querySelectorAll<HTMLElement>("summary,button,p") ?? [])]
+          .filter(el => { const r = el.getBoundingClientRect(); return r.height > 0 && r.bottom > offset && r.top < offset + height; });
+        anchors.sort((a, b) => {
+          const distance = (el: Element) => { const r = el.getBoundingClientRect(); return Math.abs(r.top + r.height / 2 - center); };
+          return distance(a) - distance(b);
+        });
+        place(anchors[0] ?? detail ?? container);
       }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
@@ -79,18 +111,17 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     <div ref={root} className={css.group}
       onPointerOverCapture={event => {
         if (event.pointerType !== "mouse" || sectionOf(event.target) === sectionOf(event.relatedTarget)) return;
-        const section = sectionOf(event.target); if (section) { activate({ section }); place(event.clientY); }
+        const section = sectionOf(event.target); if (section) { activate({ section }); place((event.target as Element).closest("button,summary,p,section")); }
       }}
       onClickCapture={event => {
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place(event.clientY); }
+        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place((event.target as Element).closest("button,summary,p,section")); }
       }}
       onFocusCapture={event => {
         if (!event.target.matches(":focus-visible")) return;
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place(event.target.getBoundingClientRect().top); }
+        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place(event.target); }
       }}>{children}</div>
     {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true">
       {speaking && <div className={css.bubble}>
-        <span className={css.bubbleName}>{lang === "jp" ? "小さな応援団" : "작은 응원단"}</span>
         <p id="companion-speech" data-companion-message={view.focus.section} aria-live="off">{companionMessage(summary, view.focus, lang, view.variant)}</p>
         <button className={css.dismiss} onClick={() => setSpeaking(false)} aria-label={lang === "jp" ? "吹き出しを閉じる" : "말풍선 접기"}>×</button>
       </div>}

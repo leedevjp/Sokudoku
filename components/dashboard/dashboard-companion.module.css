@@ -10,11 +10,13 @@
 .friend { width: 72px; height: 88px; display: block; position: relative; border: 0; padding: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .floating { position: fixed; left: calc(100vw - 80px); top: calc(50dvh + 44px); z-index: 1000; width: 72px; height: 88px; pointer-events: none; isolation: isolate; }
 .floating .friend { pointer-events: auto; touch-action: manipulation; }
-.bubble { position: absolute; right: 5px; bottom: 90px; width: min(224px, calc(100vw - 32px)); padding: 12px 24px 12px 14px; background: #fffdf5; color: #453858; border: 2px solid #75608d; border-radius: 7px; box-shadow: 0 3px 0 #514365, 3px 0 0 #514365, -3px 0 0 #514365, inset 0 0 0 3px #eee4f5, 0 7px 16px #30234622; pointer-events: none; }
-.bubble::after { content: ""; position: absolute; bottom: -10px; right: 22px; width: 14px; height: 14px; background: #fffdf5; border-right: 2px solid #75608d; border-bottom: 2px solid #75608d; transform: skewY(35deg); }
-.bubble p { margin: 6px 0 0; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.bubble { position: absolute; right: 5px; bottom: 90px; width: min(224px, calc(100vw - 32px)); padding: 12px 24px 12px 14px; background: #fffdf5; color: #453858; border: 1px solid #92819f; border-radius: 8px; box-shadow: 0 2px 0 #d8cddd, 0 5px 12px #30234618; pointer-events: none; }
+.bubble::after { content: ""; position: absolute; bottom: -8px; right: 22px; width: 12px; height: 12px; background: #fffdf5; border-right: 1px solid #92819f; border-bottom: 1px solid #92819f; transform: skewY(35deg); }
+.bubble p { margin: 0; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.floating[data-side="left"] .bubble { left: 5px; right: auto; }
+.floating[data-side="left"] .bubble::after { left: 22px; right: auto; }
 .bubbleName { font-size: 10px; font-weight: 800; letter-spacing: .03em; color: #947043; }
-.dismiss { position: absolute; right: -5px; top: -8px; width: 32px; height: 32px; border: 2px solid #75608d; background: #fffdf5; color: #75608d; border-radius: 8px; cursor: pointer; pointer-events: auto; }
+.dismiss { position: absolute; right: -5px; top: -8px; width: 28px; height: 28px; border: 1px solid #92819f; background: #fffdf5; color: #75608d; border-radius: 8px; cursor: pointer; pointer-events: auto; }
 .dismiss:focus-visible { outline: 3px solid #2b7bf0; }
 .floating .sprite { animation: touch 560ms steps(1, end) 1, curious 12s 560ms steps(1, end) infinite; }
 .friend:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 16px; }
