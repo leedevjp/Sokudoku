@@ -34,7 +34,7 @@ export function createTraining(parent: HTMLElement, options: TrainingOptions) {
     render: { antialias: true, antialiasGL: true, pixelArt: false },
     input: { activePointers: 3 },
     scene: [scene],
-    audio: { noAudio: true },
+    audio: { noAudio: false },
   });
   const resizeCanvas = () => {
     if (!game.isBooted) return;

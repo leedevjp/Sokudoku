@@ -21,6 +21,8 @@ import { TrainingView } from "./board";
 import { answerImpact, burst } from "./effects";
 import { resizeProgress } from "./resize-progress";
 import { Correction } from "../correction";
+import { BattleProgress, comboTier } from "../battle-progress";
+import { BattleAudio, preloadBattleAudio } from "./battle-audio";
 import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
 export class TrainingScene extends Phaser.Scene {
@@ -40,6 +42,8 @@ export class TrainingScene extends Phaser.Scene {
   private gate = new AnswerGate();
   private question!: Question;
   private session = new TrainingSession();
+  private battleProgress = new BattleProgress();
+  private battleAudio?: BattleAudio;
   private get hearts() {
     return this.session.hearts;
   }
@@ -115,6 +119,7 @@ export class TrainingScene extends Phaser.Scene {
   preload() {
     preloadRabbit(this);
     preloadBattle(this);
+    preloadBattleAudio(this);
   }
   create() {
     try {
@@ -137,6 +142,7 @@ export class TrainingScene extends Phaser.Scene {
     );
     this.game.canvas.setAttribute("tabindex", "0");
     this.trainingInput.attach();
+    this.battleAudio = new BattleAudio(this);
     this.scale.on("resize", this.resize, this);
     this.events.once("shutdown", () => { this.nextGeneration++; this.trainingInput.detach(); });
     this.startRun();
@@ -165,6 +171,7 @@ export class TrainingScene extends Phaser.Scene {
     this.reviewComplete = false;
     this.correction = undefined;
     this.session.reset();
+    this.battleProgress.reset();
     this.petMotion.play("hop");
     this.options.planner.resetSet();
     this.persistence.reset();
@@ -219,7 +226,7 @@ export class TrainingScene extends Phaser.Scene {
   private drawBoard() {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
-    this.battle = new MeadowBattle(this, this.view, this.question.word.id);
+    this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
     this.notifyReady();
   }
   private notifyReady() {
@@ -304,9 +311,13 @@ export class TrainingScene extends Phaser.Scene {
     this.options.planner.record(a, this.question.word);
     this.options.onAnswer(a);
     const result = a.result;
+    this.battleProgress.record(result);
+    const tier = comboTier(this.battleProgress.combo);
+    this.battleAudio?.play(result === "correct" ? (tier ? "hybrid-combo" : "dash") : "miss-combo");
     this.correction =
       result === "correct" ? undefined : new Correction(this.question);
     const hit = () => {
+      if (result === "correct" && !tier) this.battleAudio?.play("hybrid");
       this.phase = "feedback";
       paintAnswerFeedback(this.view, a, this.hearts, this.correct);
       this.petMotion.play(result === "correct" ? "happy" : "encourage");
@@ -321,7 +332,7 @@ export class TrainingScene extends Phaser.Scene {
     const impact = () =>
       answerImpact(this, this.view, index, result, hit, false);
     if (this.battle)
-      this.battle.attack(result, this.reducedMotion?.matches ?? false, impact);
+      this.battle.attack(result, this.reducedMotion?.matches ?? false, impact, this.battleProgress.combo);
     else impact();
   }
 
@@ -373,6 +384,7 @@ export class TrainingScene extends Phaser.Scene {
     this.pause();
   };
   private pause() {
+    this.battleAudio?.stop();
     if (this.preparingQuestion) { this.pauseRequested = true; return; }
     if (this.phase === "paused" || this.phase === "end") return;
     this.beforePause = this.phase;
@@ -393,6 +405,8 @@ export class TrainingScene extends Phaser.Scene {
         this.finish();
       },
       preferences: this.prefs,
+      soundEnabled: this.battleAudio?.enabled ?? false,
+      toggleSound: () => { this.battleAudio?.toggle(); this.drawPause(); },
       changePreferences: (preferences) => {
         this.prefs = preferences;
         this.options.onPreferences(preferences);
@@ -535,6 +549,7 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
   private finish(reviewComplete = false) {
+    this.battleAudio?.stop();
     this.nextGeneration++;
     this.preparingQuestion = false;
     this.pauseRequested = false;

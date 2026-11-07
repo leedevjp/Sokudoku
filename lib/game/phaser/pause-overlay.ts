@@ -7,6 +7,8 @@ type PauseActions = {
   finish: () => void;
   preferences: Preferences;
   changePreferences: (preferences: Preferences) => void;
+  soundEnabled: boolean;
+  toggleSound: () => void;
 };
 function drawSettings(
   view: TrainingView,
@@ -16,9 +18,9 @@ function drawSettings(
   const prefs = actions.preferences;
   view.button(
     prefs.lang === "jp" ? "JP ⇄ KR" : "KR ⇄ JP",
-    view.w / 2 - 72,
+    view.w / 2 - 96,
     view.h / 2 + 150,
-    130,
+    88,
     () =>
       actions.changePreferences({
         ...prefs,
@@ -31,9 +33,9 @@ function drawSettings(
     prefs.theme === "light"
       ? view.t("☾ ダーク", "☾ 다크")
       : view.t("☀ ライト", "☀ 라이트"),
-    view.w / 2 + 72,
+    view.w / 2,
     view.h / 2 + 150,
-    130,
+    88,
     () =>
       actions.changePreferences({
         ...prefs,
@@ -41,6 +43,11 @@ function drawSettings(
       }),
     false,
     parent,
+  );
+  view.button(
+    actions.soundEnabled ? view.t("音 ON", "소리 켬") : view.t("音 OFF", "소리 끔"),
+    view.w / 2 + 96, view.h / 2 + 150, 88,
+    actions.toggleSound, false, parent,
   );
 }
 
