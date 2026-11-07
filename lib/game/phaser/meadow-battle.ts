@@ -234,6 +234,13 @@ export class MeadowBattle {
     }
     const age = t - SPELL_HIT_MS;
     const tier = comboTier(this.combo);
+    // Hold the casting pose and locally compress/flash the target at contact.
+    // Keep the question and choices still; only the enemy carries the impact.
+    if (age < SPELL_HIT_STOP_MS) this.mage?.setFrame("6");
+    const punch = Math.max(0, 1 - age / 110);
+    this.monster?.setDisplaySize((112 - 13 * punch) * this.s, (112 + 9 * punch) * this.s);
+    if (age < 32) this.monster?.setTint(0xfff3cb).setTintFill();
+    else this.monster?.clearTint();
     if (tier && age < 280) this.comboEffect?.setFrame(String((tier - 1) * 4 + Math.min(3, Math.floor(age / 70))))
       .setDisplaySize((92 + tier * 12) * this.s, (92 + tier * 12) * this.s).setVisible(true);
     const push =

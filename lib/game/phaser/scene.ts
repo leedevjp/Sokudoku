@@ -21,7 +21,7 @@ import { TrainingView } from "./board";
 import { answerImpact, burst } from "./effects";
 import { resizeProgress } from "./resize-progress";
 import { Correction } from "../correction";
-import { BattleProgress, comboTier } from "../battle-progress";
+import { BattleProgress, battleRegion, comboTier } from "../battle-progress";
 import { BattleAudio, preloadBattleAudio } from "./battle-audio";
 import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
@@ -242,6 +242,7 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   update(_time: number, delta: number) {
+    this.battleAudio?.update(battleRegion(this.correct), !["paused", "end", "settling", "arming"].includes(this.phase), delta);
     this.petMotion.tick(
       delta,
       this.phase === "paused" || this.phase === "settling",
@@ -313,11 +314,12 @@ export class TrainingScene extends Phaser.Scene {
     const result = a.result;
     this.battleProgress.record(result);
     const tier = comboTier(this.battleProgress.combo);
-    this.battleAudio?.play(result === "correct" ? (tier ? "hybrid-combo" : "dash") : "miss-combo");
+    this.battleAudio?.play(result === "timeout" ? "jelly" : "dash", result === "timeout" ? .10 : .12);
     this.correction =
       result === "correct" ? undefined : new Correction(this.question);
     const hit = () => {
-      if (result === "correct" && !tier) this.battleAudio?.play("hybrid");
+      if (result === "correct") this.battleAudio?.impact(tier);
+      else if (result === "incorrect") this.battleAudio?.play("jelly", .12);
       this.phase = "feedback";
       paintAnswerFeedback(this.view, a, this.hearts, this.correct);
       this.petMotion.play(result === "correct" ? "happy" : "encourage");
