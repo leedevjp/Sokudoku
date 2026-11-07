@@ -4,7 +4,7 @@ import type { DashboardSummary } from "@/lib/dashboard/summary";
 import { companionFocusKey, companionMessage, visibleCompanionSection, type CompanionFocus, type CompanionSection } from "@/lib/dashboard/companion";
 import css from "./dashboard-companion.module.css";
 
-type View = { focus: CompanionFocus; phase: "out" | "in" | "idle"; variant: number };
+type View = { focus: CompanionFocus; phase: "out" | "in" | "idle" | "touch"; variant: number };
 type Companion = { view: View; message: string; lang: string; cheer: () => void };
 const Context = createContext<Companion | null>(null);
 function sectionOf(target: EventTarget | null): CompanionSection | undefined {
@@ -57,8 +57,8 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     move.current = setTimeout(() => {
       visits.current.set(key, variant);
       publish({ focus, phase: "in", variant });
-      settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 450);
-    }, 160);
+      settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 400);
+    }, 320);
   }, [publish]);
   useEffect(() => {
     settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 650);
@@ -114,9 +114,10 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     clearTimeout(move.current); clearTimeout(settle.current);
     const variant = current.current.variant + 1;
     visits.current.set(companionFocusKey(current.current.focus), variant);
-    publish({ ...current.current, variant, phase: "in" });
+    clearTimeout(hover.current);
+    publish({ ...current.current, variant, phase: "touch" });
     lockUntil.current = performance.now() + 2200;
-    settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 450);
+    settle.current = setTimeout(() => publish({ ...current.current, phase: "idle" }), 560);
   };
   return <Context.Provider value={{ view, message: companionMessage(summary, view.focus, lang, view.variant), lang, cheer }}>
     <div ref={root} className={css.group} onPointerOverCapture={pointerOver} onPointerOutCapture={pointerOut}
@@ -141,7 +142,7 @@ export function CompanionIntro({ section, title, caption, tag, children }: { sec
     </div>
     <div className={css.spot}>{active && <button type="button" className={css.friend} data-companion-sprite={section} data-phase={companion.view.phase}
       aria-label={companion.lang === "jp" ? "もうひとこと応援してもらう" : "응원 한마디 더 듣기"} aria-describedby={"dashboard-companion-" + section} onClick={companion.cheer}>
-      <span className={css.sprite} aria-hidden="true" /><span className={css.spark} aria-hidden="true">✦</span><span className={css.spark} aria-hidden="true">✧</span>
+      <span key={companion.view.phase + companion.view.variant} className={css.sprite} aria-hidden="true" /><span className={css.spark} aria-hidden="true">✦</span><span className={css.spark} aria-hidden="true">✧</span>
     </button>}</div>
   </div>;
 }

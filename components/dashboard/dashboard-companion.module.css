@@ -10,20 +10,31 @@
 .friend { width: 72px; height: 88px; display: block; position: relative; border: 0; padding: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .friend:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 16px; }
 .friend::before { content: ""; position: absolute; bottom: 4px; left: 8px; width: 56px; height: 15px; border: 1px solid #a6bff5; border-radius: 50%; background: radial-gradient(ellipse, #91bbff38, transparent 70%); }
-.sprite { position: absolute; width: 88px; height: 88px; left: -8px; top: -3px; background: url('/battle/mage-v5.png') 0 0 / 400% 500% no-repeat; image-rendering: pixelated; animation: idle 2.45s steps(1, end) infinite; }
-.friend[data-phase="out"] { animation: vanish 160ms ease-in forwards; }
-.friend[data-phase="in"] { animation: appear 360ms cubic-bezier(.2,.8,.3,1) both; }
-.friend[data-phase="in"] .sprite { animation: happy 450ms steps(1, end) both; }
+/* Fractional source cells are sampled as normalized quarters: no integer crop drift.
+   Use the new neutral pose for idle too, keeping the outfit and scale continuous. */
+.sprite { position: absolute; width: 96px; height: 96px; left: -12px; top: -7px; background: url('/battle/mage-dashboard-v1.png') 0 0 / 400% 400% no-repeat; image-rendering: pixelated; animation: curious 18s steps(1, end) infinite; }
+.friend[data-phase="out"] { animation: vanish 320ms ease-in forwards; }
+.friend[data-phase="out"] .sprite { animation: depart 320ms steps(1, end) both; }
+.friend[data-phase="in"] { animation: appear 400ms ease-out both; }
+.friend[data-phase="in"] .sprite { animation: arrive 400ms steps(1, end) both; }
+.friend[data-phase="touch"] .sprite { animation: touch 560ms steps(1, end) both; }
+.friend[data-phase="out"]::before { animation: portal-out 320ms ease-in both; }
+.friend[data-phase="in"]::before { animation: portal-in 400ms ease-out both; }
 .spark { position: absolute; font-size: 17px; color: #84a8f6; opacity: 0; pointer-events: none; }
 .spark:nth-of-type(2) { left: 1px; top: 17px; }
 .spark:nth-of-type(3) { right: -2px; top: 40px; font-size: 12px; color: #c6a2ec; }
-.friend[data-phase="in"] .spark { animation: sparkle 450ms ease-out both; }
+.friend[data-phase="in"] .spark, .friend[data-phase="touch"] .spark { animation: sparkle 450ms ease-out both; }
 .welcome { padding: 10px 16px; background: var(--card); border: 2px solid var(--line); border-bottom: 4px solid var(--shade); border-radius: 22px; }
 .welcome .heading h2 { color: var(--accent-dark); font-size: 13px; }
-@keyframes idle { 0%, 42%, 100% { background-position: 0 0; } 43%, 56% { background-position: 33.3333% 0; } 57%, 70% { background-position: 66.6667% 0; } 71%, 84% { background-position: 100% 0; } }
-@keyframes happy { 0%, 100% { background-position: 0 100%; } 34% { background-position: 33.3333% 100%; } 67% { background-position: 66.6667% 100%; } }
-@keyframes vanish { to { opacity: 0; transform: scale(.45); filter: brightness(1.5); } }
-@keyframes appear { 0% { opacity: 0; transform: scale(.45); filter: brightness(1.8); } 70% { opacity: 1; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); filter: brightness(1); } }
+@keyframes curious { 0%, 100% { background-position: 0 0; } 88% { background-position: 0 100%; } 90% { background-position: 33.333333% 100%; } 92% { background-position: 66.666667% 100%; } 97% { background-position: 100% 100%; } }
+@keyframes touch { 0% { background-position: 0 0; } 25% { background-position: 33.333333% 0; } 50% { background-position: 66.666667% 0; } 75%, 100% { background-position: 100% 0; } }
+@keyframes depart { 0% { background-position: 0 33.333333%; } 25% { background-position: 33.333333% 33.333333%; } 50% { background-position: 66.666667% 33.333333%; } 75%, 100% { background-position: 100% 33.333333%; } }
+@keyframes arrive { 0% { background-position: 0 66.666667%; } 25% { background-position: 33.333333% 66.666667%; } 50% { background-position: 66.666667% 66.666667%; } 75%, 100% { background-position: 100% 66.666667%; } }
+@keyframes vanish { 0%, 65% { opacity: 1; } 100% { opacity: 0; filter: brightness(1.6); } }
+@keyframes appear { 0% { opacity: 0; filter: brightness(1.6); } 35%, 100% { opacity: 1; filter: brightness(1); } }
+@keyframes portal-out { 0% { transform: scale(1); } 60% { transform: scale(1.25); box-shadow: 0 0 10px #91bbff80; } 100% { transform: scale(.2); opacity: 0; } }
+@keyframes portal-in { 0% { transform: scale(.2); opacity: 0; } 40% { transform: scale(1.25); box-shadow: 0 0 10px #91bbff80; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes sparkle { 0% { opacity: 0; transform: scale(.3); } 35% { opacity: 1; } 100% { opacity: 0; transform: translateY(-13px) scale(1.3); } }
 @media (max-width: 350px) { .intro { grid-template-columns: minmax(0, 1fr) 60px; gap: 5px; } .spot { width: 60px; } .friend { margin-left: -6px; } }
-@media (prefers-reduced-motion: reduce) { .friend, .sprite, .spark { animation: none !important; } .spark { display: none; } }
+@media (prefers-reduced-motion: reduce) { .friend, .friend::before, .sprite, .spark { animation: none !important; } .spark { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .friend:active .sprite { filter: brightness(1.08); } }
