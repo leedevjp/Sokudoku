@@ -1,0 +1,16 @@
+{
+  "image": "/battle/mage-dashboard-v1.png",
+  "purpose": "Dashboard companion animation artwork",
+  "width": 1254,
+  "height": 1254,
+  "columns": 4,
+  "rows": 4,
+  "transparent": true,
+  "layout": "Equal normalized UV cells; source artwork, not a 128px-cell runtime atlas",
+  "clips": {
+    "touch": { "frames": [0, 1, 2, 3], "frameMs": 140, "loop": false },
+    "teleportOut": { "frames": [4, 5, 6, 7], "frameMs": 80, "loop": false },
+    "teleportIn": { "frames": [8, 9, 10, 11], "frameMs": 100, "loop": false },
+    "curious": { "frames": [12, 13, 14, 15], "frameMs": 220, "loop": false }
+  }
+}
