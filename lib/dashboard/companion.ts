@@ -67,7 +67,7 @@ export function companionMessage(summary: DashboardSummary, focus: CompanionFocu
 export function visibleCompanionSection(rects: { section: CompanionSection; top: number; bottom: number }[], height: number): CompanionSection | null {
   const visible = rects.filter(r => Math.min(r.bottom, height - 16) - Math.max(r.top, 16) >= 64);
   visible.sort((a, b) => {
-    const score = (r: typeof a) => Math.abs((Math.max(r.top, 16) + Math.min(r.bottom, height - 16)) / 2 - height * 0.4);
+    const score = (r: typeof a) => Math.max(r.top - height / 2, height / 2 - r.bottom, 0);
     return score(a) - score(b);
   });
   return visible[0]?.section ?? null;

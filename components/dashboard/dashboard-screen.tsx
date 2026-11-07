@@ -13,7 +13,8 @@ import { useDashboardData } from "./use-dashboard-data";
 import { DashboardFilters } from "./dashboard-filters";
 import { DashboardState } from "./dashboard-state";
 import { SummaryCards } from "./summary-cards";
-import { DashboardCompanion, CompanionWelcome } from "./dashboard-companion";
+import { CompanionWelcome } from "./dashboard-companion";
+import { DashboardCompanion } from "./floating-companion";
 
 export default function DashboardScreen() {
   const { prefs, change } = useSettings();
