@@ -3,6 +3,7 @@ import { useState } from "react";
 import { percentageShares } from "@/lib/dashboard/summary";
 import type { Translate } from "@/lib/dashboard/types";
 import styles from "./dashboard-styles";
+import { CompanionIntro } from "./dashboard-companion";
 export function MemoryDistribution({
   counts,
   scope,
@@ -22,9 +23,9 @@ export function MemoryDistribution({
     t("長く覚えている項目", "오래 기억하는 항목"),
   ];
   return (
-    <section className={styles.card}>
-      <div className={styles.sectionHeading}>
-        <h2>{t("記憶の状態", "기억 상태")}</h2>
+    <section className={styles.card} data-companion-section="memory">
+      <CompanionIntro section="memory" title={t("記憶の状態", "기억 상태")} tag={scope}
+        caption={t("学習記録から推定した記憶の状態です。", "학습 기록을 바탕으로 추정한 기억 상태예요.")}>
         <button
           className={styles.help}
           onClick={() => setHelp(!help)}
@@ -34,14 +35,7 @@ export function MemoryDistribution({
         >
           ?
         </button>
-        <span className={styles.tag}>{scope}</span>
-      </div>
-      <p className={styles.caption}>
-        {t(
-          "学習記録から推定した記憶の状態です。",
-          "학습 기록을 바탕으로 추정한 기억 상태예요.",
-        )}
-      </p>
+      </CompanionIntro>
       {help && (
         <div className={styles.helpBox} id="memory-help">
           <p>
@@ -77,6 +71,7 @@ export function MemoryDistribution({
         {counts.map((n, i) => (
           <button
             key={i}
+            data-companion-band={i}
             className={styles.memoryRow}
             aria-pressed={selected === i}
             onClick={() => setSelected(selected === i ? null : i)}

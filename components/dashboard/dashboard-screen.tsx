@@ -13,6 +13,7 @@ import { useDashboardData } from "./use-dashboard-data";
 import { DashboardFilters } from "./dashboard-filters";
 import { DashboardState } from "./dashboard-state";
 import { SummaryCards } from "./summary-cards";
+import { DashboardCompanion, CompanionWelcome } from "./dashboard-companion";
 
 export default function DashboardScreen() {
   const { prefs, change } = useSettings();
@@ -85,10 +86,14 @@ export default function DashboardScreen() {
         onKindChange={setKind}
       />
       <div aria-live="polite" aria-busy={!data && !error}>
-        {error || !summary || summary.learned === 0 ? (
+        {error || !summary ? (
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
         ) : (
-          <div className={styles.sections}>
+          <DashboardCompanion key={entry + ":" + actualKind} summary={summary} lang={prefs.lang}>
+          <div data-companion-section="overview" className={styles.sections}>
+            <CompanionWelcome title={t("今日も、いっしょに。", "오늘도, 같이 한 걸음.")}
+              caption={t("あなたのペースで進もう。", "네 속도로 천천히 가자.")} />
+            {summary.learned === 0 ? <DashboardState error={null} summary={summary} t={t} retry={retry} /> :
             <SummaryCards
               summary={summary}
               entry={entry}
@@ -96,6 +101,9 @@ export default function DashboardScreen() {
               t={t}
               number={number}
             />
+            }
+          </div>
+          {summary.learned > 0 && <>
             <MemoryDistribution counts={summary.memory} scope={scope} t={t} />
             <ActivityChart
               summary={summary}
@@ -109,7 +117,8 @@ export default function DashboardScreen() {
               scope={scope}
               t={t}
             />
-          </div>
+          </>}
+          </DashboardCompanion>
         )}
       </div>
       {data && (

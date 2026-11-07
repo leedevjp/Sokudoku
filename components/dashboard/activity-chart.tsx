@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { dashboardSummary } from "@/lib/dashboard/summary";
 import type { Translate } from "@/lib/dashboard/types";
 import styles from "./dashboard-styles";
+import { CompanionIntro } from "./dashboard-companion";
 export function ActivityChart({
   summary,
   scope,
@@ -32,11 +33,9 @@ export function ActivityChart({
     ? Math.round((week.correct / week.attempts) * 100)
     : null;
   return (
-    <section className={styles.card}>
-      <div className={styles.sectionHeading}>
-        <h2>{t("最近7日間", "최근 7일")}</h2>
-        <span className={styles.tag}>{scope}</span>
-      </div>
+    <section className={styles.card} data-companion-section="activity">
+      <CompanionIntro section="activity" title={t("最近7日間", "최근 7일")} tag={scope}
+        caption={t("ひとつひとつの記録を振り返ろう。", "하나하나 쌓인 기록을 돌아보자.")} />
       <p className={styles.caption}>
         <b>
           {t("合計", "총 ")}
@@ -62,6 +61,7 @@ export function ActivityChart({
         {days.map((d, i) => (
           <button
             key={d.day}
+            data-companion-day={d.day}
             className={styles.dayColumn}
             aria-pressed={i === selected}
             aria-label={

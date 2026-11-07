@@ -2,6 +2,7 @@ import type { dashboardSummary } from "@/lib/dashboard/summary";
 import type { EntryType } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
 import styles from "./dashboard-styles";
+import { CompanionIntro } from "./dashboard-companion";
 export function StageProgress({
   summary,
   entry,
@@ -16,21 +17,10 @@ export function StageProgress({
   const levels =
     entry === "word" ? ["1", "2", "3", "4", "5", "P"] : ["kana", "P"];
   return (
-    <section className={styles.card}>
-      <div className={styles.sectionHeading}>
-        <h2>
-          {entry === "word"
-            ? t("段階ごとの状況", "단계별 현황")
-            : t("文字の学習状況", "글자 학습 현황")}
-        </h2>
-        <span className={styles.tag}>{scope}</span>
-      </div>
-      <p className={styles.caption}>
-        {t(
-          "学習した数 / 学習できる全項目",
-          "학습한 개수 / 학습 가능한 전체 개수",
-        )}
-      </p>
+    <section className={styles.card} data-companion-section="stages">
+      <CompanionIntro section="stages" tag={scope}
+        title={entry === "word" ? t("段階ごとの状況", "단계별 현황") : t("文字の学習状況", "글자 학습 현황")}
+        caption={t("学習した数 / 学習できる全項目", "학습한 개수 / 학습 가능한 전체 개수")} />
       {levels.map((level) => {
         const groups = summary.groups.filter((g) =>
           level === "kana" ? g.level !== "P" : g.level === level,
@@ -47,7 +37,7 @@ export function StageProgress({
               ? scope
               : level + t("段階", "단계");
         return (
-          <details className={styles.stage} key={level}>
+          <details className={styles.stage} key={level} data-companion-level={level}>
             <summary>
               <span className={styles.badge}>
                 {level === "kana"
