@@ -67,3 +67,50 @@
 .floating[data-companion-mode="fixed"] { position: absolute; left: 0; top: 0; right: auto; bottom: auto; }
 .floating[data-companion-mode="fixed"] .bubble { left: 82px; right: auto; bottom: auto; top: 4px; width: min(224px, calc(100vw - 128px)); }
 .floating[data-companion-mode="fixed"] .bubble::after { left: -7px; right: auto; bottom: 18px; transform: rotate(135deg); }
+
+/* Compact single-open dashboard sections. Existing inner visualizations remain unchanged. */
+.accordion {
+  min-width: 0;
+  border: 2px solid var(--line);
+  border-bottom: 4px solid var(--shade);
+  border-radius: 22px;
+  background: var(--card);
+  overflow: hidden;
+}
+.accordion[data-expanded="true"] { border-color: var(--line); }
+.accordionButton {
+  width: 100%;
+  min-height: 68px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.accordionButton:focus-visible { outline: 3px solid var(--accent); outline-offset: -4px; border-radius: 18px; }
+.accordionHeading { min-width: 0; display: grid; gap: 5px; }
+.accordionHeading strong { font-size: 16px; font-weight: 800; letter-spacing: -.025em; }
+.accordionPreview { font-size: 12px; line-height: 1.55; color: var(--muted); overflow-wrap: anywhere; }
+.accordionChevron { flex-shrink: 0; font-size: 22px; line-height: 1; color: var(--accent-dark); }
+.accordionBody { padding: 0 14px 16px; }
+.accordionBody[hidden] { display: none; }
+/* Avoid cards nested inside cards for memory, activity and stages. */
+.accordion:not([data-companion-section="overview"]) .accordionBody > section {
+  padding: 6px 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.accordion[data-companion-section="overview"] .accordionBody { display: grid; gap: 14px; }
+@media (max-width: 350px) {
+  .accordionButton { padding: 12px; min-height: 62px; }
+  .accordionHeading strong { font-size: 15px; }
+  .accordionPreview { font-size: 11px; }
+  .accordionBody { padding: 0 10px 12px; }
+}
