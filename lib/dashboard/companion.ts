@@ -95,9 +95,8 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
     [`${days}日も机に向かったんだね。私も見習わなきゃ！`, `${days}일이나 공부하러 왔네. 나도 본받아야겠어!`],
   ];
   if (topic === "dayDetail") {
-    const count = summary.days[6].attempts;
     return [
-      [`今日も${fmt(count)}問。今日の一歩も大切にしよう。`, `오늘도 ${fmt(count)}문제. 오늘의 한 걸음도 소중해.`],
+      ["その日に積み重ねた一問一問、ちゃんと残ってるよ。", "그날 하나씩 풀었던 문제들이 전부 남아 있네."],
       ["今日の頑張り、ちゃんとここに残ってるよ。", "오늘 노력한 것도 여기 잘 남아 있어."],
     ];
   }
