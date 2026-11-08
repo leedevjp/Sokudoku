@@ -11,16 +11,21 @@ function getSnapshot(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw !== rawSnapshot) {
-      rawSnapshot = raw;
-      const parsed = JSON.parse(raw ?? "null");
-      snapshot = parsed
+      // Ignore malformed/legacy storage without locking the in-memory snapshot.
+      let parsed: unknown;
+      try { parsed = JSON.parse(raw ?? "null"); } catch { parsed = null; }
+      const saved = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Partial<Preferences>
+        : null;
+      snapshot = saved
         ? {
-            lang: parsed.lang === "kr" ? "kr" : "jp",
-            theme: parsed.theme === "dark" ? "dark" : "light",
-            pronunciation: parsed.pronunciation === "always" || parsed.pronunciation === "wrong" || parsed.pronunciation === "off" ? parsed.pronunciation : "always",
-            pronunciationSource: parsed.pronunciationSource === "kana" ? "kana" : "term",
+            lang: saved.lang === "kr" ? "kr" : "jp",
+            theme: saved.theme === "dark" ? "dark" : "light",
+            pronunciation: saved.pronunciation === "always" || saved.pronunciation === "wrong" || saved.pronunciation === "off" ? saved.pronunciation : "always",
+            pronunciationSource: saved.pronunciationSource === "kana" ? "kana" : "term",
           }
         : defaultPreferences;
+      rawSnapshot = raw;
     }
   } catch {
     /* Keep session preferences when storage is unavailable. */
@@ -33,6 +38,7 @@ function change(patch: Partial<Preferences>) {
   try {
     localStorage.setItem(KEY, raw);
     rawSnapshot = raw;
+    memoryOnly = false;
   } catch {
     memoryOnly = true;
   }
