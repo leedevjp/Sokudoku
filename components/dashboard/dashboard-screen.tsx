@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { EntryType, Kind } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
-import { dashboardSummary } from "@/lib/dashboard/summary";
+import { dashboardSummary, percentageShares } from "@/lib/dashboard/summary";
 import { MemoryDistribution } from "./memory-distribution";
 import { ActivityChart } from "./activity-chart";
 import { StageProgress } from "./stage-progress";
@@ -16,11 +16,41 @@ import { SummaryCards } from "./summary-cards";
 import { DashboardCompanion } from "./floating-companion";
 import companionCss from "./dashboard-companion.module.css";
 
+type DashboardPanel = "overview" | "memory" | "activity" | "stages";
+function AccordionPanel({
+  section, title, preview, open, onToggle, children,
+}: {
+  section: DashboardPanel;
+  title: string;
+  preview: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const panelId = "dashboard-panel-" + section;
+  return (
+    <section className={companionCss.accordion} data-companion-section={section} data-expanded={open}>
+      <button type="button" className={companionCss.accordionButton} data-companion-topic={section === "overview" ? "learned" : undefined}
+        onClick={onToggle} aria-expanded={open} aria-controls={panelId}>
+        <span className={companionCss.accordionHeading}>
+          <strong>{title}</strong>
+          <span className={companionCss.accordionPreview}>{preview}</span>
+        </span>
+        <span className={companionCss.accordionChevron} aria-hidden="true">{open ? "⌃" : "⌄"}</span>
+      </button>
+      <div id={panelId} className={companionCss.accordionBody} hidden={!open}>
+        {open ? children : null}
+      </div>
+    </section>
+  );
+}
+
 export default function DashboardScreen() {
   const { prefs, change } = useSettings();
   const t: Translate = (jp, kr) => (prefs.lang === "jp" ? jp : kr);
   const [entry, setEntry] = useState<EntryType>("word");
   const [kind, setKind] = useState<Kind>("meaning");
+  const [expandedPanel, setExpandedPanel] = useState<DashboardPanel | null>("memory");
   const [companionMode, setCompanionMode] = useState<"fixed" | "follow">("fixed");
   useEffect(() => {
     try { if (localStorage.getItem("sokudoku-companion-mode") === "follow") setCompanionMode("follow"); } catch {}
@@ -111,32 +141,35 @@ export default function DashboardScreen() {
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
         ) : (
           <DashboardCompanion key={entry + ":" + actualKind} summary={summary} lang={prefs.lang} mode={companionMode}>
-          <div data-companion-section="overview" className={styles.sections}>
-            {summary.learned === 0 ? <DashboardState error={null} summary={summary} t={t} retry={retry} /> :
-            <SummaryCards
-              summary={summary}
-              entry={entry}
-              unit={unit}
-              t={t}
-              number={number}
-            />
-            }
-          </div>
-          {summary.learned > 0 && <>
-            <MemoryDistribution counts={summary.memory} scope={scope} t={t} />
-            <ActivityChart
-              summary={summary}
-              scope={scope}
-              t={t}
-              lang={prefs.lang}
-            />
-            <StageProgress
-              summary={summary}
-              entry={entry}
-              scope={scope}
-              t={t}
-            />
-          </>}
+            <AccordionPanel section="overview" title={t("学習のまとめ", "학습 요약")}
+              preview={<>{number(summary.learned)}{unit} {t("学習", "학습")} · {number(summary.attempts)}{t("回回答", "회 답변")}</>}
+              open={expandedPanel === "overview"} onToggle={() => setExpandedPanel(old => old === "overview" ? null : "overview")}>
+              {summary.learned === 0 ? (
+                <DashboardState error={null} summary={summary} t={t} retry={retry} />
+              ) : (
+                <SummaryCards summary={summary} entry={entry} unit={unit} t={t} number={number} />
+              )}
+            </AccordionPanel>
+            {summary.learned > 0 && <>
+              <AccordionPanel section="memory" title={t("記憶の状態", "기억 상태")}
+                preview={percentageShares(summary.memory).map((percent, index) =>
+                  `${t(["学び始め", "なじみ", "長期"][index], ["처음", "익숙함", "장기"][index])} ${percent}%`
+                ).join(" · ")}
+                open={expandedPanel === "memory"} onToggle={() => setExpandedPanel(old => old === "memory" ? null : "memory")}>
+                <MemoryDistribution counts={summary.memory} scope={scope} t={t} />
+              </AccordionPanel>
+              <AccordionPanel section="activity" title={t("最近7日間", "최근 7일")}
+                preview={<>{number(summary.week.attempts)}{t("回回答", "회 답변")} · {summary.days.filter(d => d.attempts > 0).length}{t("日学習", "일 학습")}</>}
+                open={expandedPanel === "activity"} onToggle={() => setExpandedPanel(old => old === "activity" ? null : "activity")}>
+                <ActivityChart summary={summary} scope={scope} t={t} lang={prefs.lang} />
+              </AccordionPanel>
+              <AccordionPanel section="stages"
+                title={entry === "word" ? t("段階ごとの状況", "단계별 현황") : t("文字の学習状況", "글자 학습 현황")}
+                preview={entry === "word" ? t("1〜5段階 · 個人単語 P", "1~5단계 · 개인 단어 P") : t("かな · 個人単語 P", "가나 · 개인 단어 P")}
+                open={expandedPanel === "stages"} onToggle={() => setExpandedPanel(old => old === "stages" ? null : "stages")}>
+                <StageProgress summary={summary} entry={entry} scope={scope} t={t} />
+              </AccordionPanel>
+            </>}
           </DashboardCompanion>
         )}
       </div>
