@@ -45,14 +45,16 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const offset = viewport?.offsetTop ?? 0;
     const rect = target.getBoundingClientRect();
     const section = sectionOf(target);
-    const level = target.closest<HTMLElement>("[data-companion-level]")?.dataset.companionLevel;
-    const leftSide = level ? Number(level) % 2 === 0 : section === "memory" || section === "stages";
+    // Keep every stage (1-5, P, kana) on the same side to avoid zigzagging.
+    const leftSide = section === "memory" || section === "stages";
     const bubbleWidth = Math.min(224, width - 32);
     const minX = leftSide ? 8 : bubbleWidth - 59;
     const maxX = leftSide ? width - bubbleWidth - 13 : width - 80;
     const x = Math.max(minX, Math.min(maxX, leftSide ? rect.left - 46 : rect.right - 26));
     const y = Math.max(offset + 125, Math.min(offset + height - 100, rect.top + Math.min(rect.height, 120) / 2 + 12));
     const old = previousPlace.current;
+    // Ignore tiny repositioning caused by moving between nested text nodes.
+    if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 18) return;
     const rendered = floating.current.getBoundingClientRect();
     floating.current.getAnimations().forEach(animation => animation.cancel());
     floating.current.dataset.side = leftSide ? "left" : "right";
@@ -104,7 +106,9 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
           const distance = (el: Element) => { const r = el.getBoundingClientRect(); return Math.abs(r.top + r.height / 2 - center); };
           return distance(a) - distance(b);
         });
-        place(anchors[0] ?? detail ?? container);
+        // Scrolling should not make the companion chase every nearby label.
+        // Follow the active section; direct hover/click still uses exact targets.
+        place(container);
       }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
