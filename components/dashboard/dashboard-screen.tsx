@@ -13,7 +13,6 @@ import { useDashboardData } from "./use-dashboard-data";
 import { DashboardFilters } from "./dashboard-filters";
 import { DashboardState } from "./dashboard-state";
 import { SummaryCards } from "./summary-cards";
-import { CompanionWelcome } from "./dashboard-companion";
 import { DashboardCompanion } from "./floating-companion";
 
 export default function DashboardScreen() {
@@ -92,8 +91,6 @@ export default function DashboardScreen() {
         ) : (
           <DashboardCompanion key={entry + ":" + actualKind} summary={summary} lang={prefs.lang}>
           <div data-companion-section="overview" className={styles.sections}>
-            <CompanionWelcome title={t("今日も、いっしょに。", "오늘도, 같이 한 걸음.")}
-              caption={t("あなたのペースで進もう。", "네 속도로 천천히 가자.")} />
             {summary.learned === 0 ? <DashboardState error={null} summary={summary} t={t} retry={retry} /> :
             <SummaryCards
               summary={summary}
