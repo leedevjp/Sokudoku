@@ -61,23 +61,32 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
   const groupName = focus.level === "P" ? ["自分の単語", "내 단어"] : focus.level === "kana" ? ["かな", "가나"] : [`${focus.level ?? ""}段階`, `${focus.level ?? ""}단계`];
   const positive = (value: number, ja: string, ko: string, emptyJa: string, emptyKo: string): CompanionLine[] =>
     value > 0 ? [[ja, ko]] : [[emptyJa, emptyKo]];
+  const zero: CompanionLine[] = [
+    ["ここはまだこれからだね。一緒に少しずつ育てよう。", "여긴 아직 시작 전이네. 하나씩 채워가자."],
+    ["空っぽの場所には、これからの楽しみが詰まってるよ。", "비어 있는 곳에는 앞으로의 가능성이 가득하지."],
+    ["焦らなくていいよ。最初の一歩を待ってるね。", "서두르지 않아도 돼. 첫걸음을 기다릴게."],
+  ];
   const topic = focus.topic;
   if (topic === "learned" || topic === "total" || topic === "common") {
     const count = topic === "common" ? summary.common.learned : learned;
+    if (count === 0) return zero;
     return [
       ...positive(count, `もう${fmt(count)}個も学んだんだね！すごい！`, `벌써 ${fmt(count)}개나 공부했네! 굉장해!`, "最初のひとつ、楽しみにしてるよ。", "첫 단어부터 같이 시작해보자!"),
       [`${fmt(count)}個との出会い、ひとつひとつ積み重ねたんだね。`, `${fmt(count)}개를 만날 때까지 하나씩 쌓아왔구나.`],
       ["ここまで来た自分を、ちょっと褒めてあげてね。", "여기까지 온 자신을 조금 칭찬해줘도 좋아."],
     ];
   }
+  if (topic === "personal" && summary.personal.learned === 0) return zero;
   if (topic === "personal") return [
     [`自分で集めた言葉が${fmt(summary.personal.learned)}個！宝物が増えてるね。`, `직접 모은 단어가 ${fmt(summary.personal.learned)}개! 보물상자가 커지고 있네.`],
     ["君だけの単語帳、どんな言葉でいっぱいになるかな。", "너만의 단어장이 어떤 말들로 채워질지 궁금해."],
   ];
+  if (topic === "review" && summary.review === 0) return [["復習待ちは今はゼロ！また新しい言葉に会いに行こう。", "지금 복습 대기 중인 단어는 없네! 새로운 단어를 만나러 가볼까?"], ...zero];
   if (topic === "review") return [
     [`また会いたい言葉が${fmt(summary.review)}個。私も一緒に行くよ！`, `다시 만나볼 단어가 ${fmt(summary.review)}개네. 나도 같이 갈게!`],
     ["忘れても、戻ってきてくれるのがうれしいな。", "잊어도 다시 만나러 와주는 게 기뻐."],
   ];
+  if (topic === "attempts" && summary.attempts === 0) return zero;
   if (topic === "attempts") return [
     [`なんと${fmt(summary.attempts)}回も挑戦したんだね！`, `무려 ${fmt(summary.attempts)}번이나 도전했네!`],
     ["間違えた日も含めて、全部君が進んだ足跡だよ。", "틀린 날까지 전부 네가 걸어온 발자국이야."],
@@ -86,15 +95,18 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
     ["数字だけじゃなくて、ここまで続けた君も見ていたいな。", "숫자도 좋지만, 여기까지 이어온 너를 더 보고 싶어."],
     ["今日はどの記録がいちばんうれしい？", "오늘은 어떤 기록이 가장 마음에 들어?"],
   ];
+  if (topic === "memoryTotal" && learned === 0) return zero;
   if (topic === "memoryTotal") return [
     [`${fmt(learned)}個もの言葉が君の記録に並んでる！`, `${fmt(learned)}개의 단어가 네 기록에 나란히 있네!`],
     ["少しずつ積み上げてきたんだね。えらいなあ。", "조금씩 쌓아온 거구나. 정말 수고했어."],
   ];
+  if (topic === "weekTotal" && week.attempts === 0) return zero;
   if (topic === "weekTotal") return [
     [`7日間で${fmt(week.attempts)}問！よく頑張ったね。`, `7일 동안 ${fmt(week.attempts)}문제! 정말 열심히 했네.`],
     [`${days}日も机に向かったんだね。私も見習わなきゃ！`, `${days}일이나 공부하러 왔네. 나도 본받아야겠어!`],
   ];
   if (topic === "dayDetail") {
+    if (summary.days[6].attempts === 0) return zero;
     return [
       ["その日に積み重ねた一問一問、ちゃんと残ってるよ。", "그날 하나씩 풀었던 문제들이 전부 남아 있네."],
       ["今日の頑張り、ちゃんとここに残ってるよ。", "오늘 노력한 것도 여기 잘 남아 있어."],
@@ -111,6 +123,7 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
     [`正解まで平均${(week.correct_ms / week.correct / 1000).toFixed(1)}秒！言葉が少しずつ身近になってるね。`, `정답까지 평균 ${(week.correct_ms / week.correct / 1000).toFixed(1)}초! 단어가 점점 친숙해지고 있네.`],
     ["速さもいいけど、覚えていく過程も大事にしよう。", "속도도 좋지만 익혀가는 과정도 소중해."],
   ] : [["これからどんな記録ができるか楽しみだね。", "앞으로 어떤 기록이 생길지 기대돼."]];
+  if ((topic === "stageProgress" || topic === "stageUnlearned") && groupLearned === 0) return zero;
   if (topic === "stageProgress" || topic === "stageUnlearned") return [
     [`${groupName[0]}で${fmt(groupLearned)}個も学んだんだ！`, `${groupName[1]}에서 ${fmt(groupLearned)}개나 배웠네!`],
     ["次の言葉にも、きっと出会えるよ。", "다음 단어도 분명 만나게 될 거야."],
@@ -118,6 +131,7 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
   if (topic === "stage0" || topic === "stage1" || topic === "stage2") {
     const i = Number(topic.slice(-1));
     const count = groupMemory(i);
+    if (count === 0) return zero;
     return i === 2 ? [
       [`長く覚えている言葉が${fmt(count)}個！頼もしいね。`, `오래 기억하는 단어가 ${fmt(count)}개! 든든한데?`],
       ["しっかり育ってきた記憶、大事にしよう。", "차곡차곡 자란 기억을 소중히 하자."],
@@ -131,6 +145,7 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
   }
   if (focus.section === "memory" && focus.band !== undefined) {
     const count = memory[focus.band] ?? 0;
+    if (count === 0) return zero;
     if (focus.band === 2) return [
       [`${fmt(count)}個も長く覚えているんだね！すごい！`, `${fmt(count)}개나 오래 기억하고 있네! 대단해!`],
       ["何度も会った言葉たちが、心強い仲間になったね。", "여러 번 만난 단어들이 든든한 친구가 됐네."],
@@ -144,6 +159,19 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
       ["ここからが楽しみだね。私も応援してる！", "이제부터가 기대돼. 나도 응원할게!"],
     ];
   }
+  if (focus.section === "overview" && learned > 0) return [
+    [`もう${fmt(learned)}個も学んだんだね！私、びっくりしちゃった。`, `벌써 ${fmt(learned)}개나 배웠네! 나 깜짝 놀랐어.`],
+    [`${fmt(summary.attempts)}回も挑戦してきたんだね。ちゃんと見てるよ。`, `${fmt(summary.attempts)}번이나 도전했구나. 나 다 보고 있었어.`],
+    ["昨日の自分には見えなかった言葉が、今日は読めるかもね。", "어제는 낯설던 단어가 오늘은 읽힐지도 모르지."],
+  ];
+  if (focus.section === "memory" && learned > 0) return [
+    [`${fmt(memory[1] + memory[2])}個の言葉が少しずつなじんでるね。`, `${fmt(memory[1] + memory[2])}개 단어가 점점 익숙해지고 있네.`],
+    ["何度も会って、少しずつ仲良くなっていこう。", "여러 번 만나면서 천천히 친해지자."],
+  ];
+  if (focus.section === "activity" && week.attempts > 0) return [
+    [`この7日間で${fmt(week.attempts)}問！頑張ったね。`, `최근 7일 동안 ${fmt(week.attempts)}문제! 수고했어.`],
+    [`${days}日も勉強したんだ。続けてきたんだね。`, `${days}일이나 공부했네. 꾸준히 해왔구나.`],
+  ];
   return [];
 }
 
