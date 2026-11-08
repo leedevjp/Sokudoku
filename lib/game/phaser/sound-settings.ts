@@ -1,7 +1,8 @@
 import type { BattleAudio } from "./battle-audio";
+import type { Preferences } from "../preferences";
 
 /** Native dialog keeps sliders keyboard accessible above the paused canvas. */
-export function openSoundSettings(audio: BattleAudio, t: (jp: string, kr: string) => string, onClose: () => void) {
+export function openSoundSettings(audio: BattleAudio, t: (jp: string, kr: string) => string, onClose: () => void, preferences: Preferences, changePreferences: (p: Preferences) => void) {
   const previousFocus = document.activeElement;
   const dialog = document.createElement("dialog");
   dialog.setAttribute("aria-label", t("音の設定", "소리 설정"));
@@ -46,6 +47,30 @@ export function openSoundSettings(audio: BattleAudio, t: (jp: string, kr: string
   preview.textContent = t("効果音を試す", "효과음 미리듣기");
   preview.onclick = () => audio.play("dash");
   dialog.append(preview);
+  const selectSetting = (labelText: string, options: { value: string; text: string }[], value: string, update: (value: string) => void) => {
+    const label = document.createElement("label");
+    label.style.cssText = "display:block;margin:16px 0";
+    const caption = document.createElement("span");
+    caption.textContent = labelText;
+    const select = document.createElement("select");
+    select.style.cssText = "display:block;width:100%;margin-top:8px;min-height:44px;padding:8px;border-radius:12px;border:1px solid #b9cce6;background:white;color:#20354f;font:inherit";
+    for (const option of options) { const node = document.createElement("option"); node.value = option.value; node.textContent = option.text; select.append(node); }
+    select.value = value;
+    select.onchange = () => update(select.value);
+    label.append(caption, select);
+    dialog.append(label);
+  };
+  let current = preferences;
+  const change = (patch: Partial<Preferences>) => { current = { ...current, ...patch }; changePreferences(current); };
+  selectSetting(t("単語の発音", "단어 발음"), [
+    { value: "off", text: t("オフ", "끄기") },
+    { value: "always", text: t("正解・不正解の両方", "정답·오답 모두") },
+    { value: "wrong", text: t("不正解のみ", "오답일 때만") },
+  ], current.pronunciation, value => change({ pronunciation: value as Preferences["pronunciation"] }));
+  selectSetting(t("読み上げる文字", "발음에 사용할 텍스트"), [
+    { value: "term", text: t("単語（漢字表記）", "단어 원문(term)") },
+    { value: "kana", text: t("かな（読み）", "가나(kana)") },
+  ], current.pronunciationSource, value => change({ pronunciationSource: value as Preferences["pronunciationSource"] }));
   // Capture key input so Escape closes only this dialog and number keys never answer.
   const keydown = (event: KeyboardEvent) => {
     if (event.key === "Escape") { event.preventDefault(); dialog.close(); }
