@@ -676,6 +676,7 @@ export class TrainingScene extends Phaser.Scene {
         retry: () => this.retry(),
         sync: () => this.finish(),
         exit: () => this.options.onExit(),
+        exam: () => this.options.onExam(),
       },
     );
     const s = Math.min(1, (this.h - 32) / 680);
