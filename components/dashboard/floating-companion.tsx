@@ -134,7 +134,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
       }}>{children}</div>
     {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true">
       {speaking && <div className={css.bubble}>
-        <p id="companion-speech" data-companion-message={view.focus.section} aria-live="off">{companionMessage(summary, view.focus, lang, view.variant)}</p>
+        <p id="companion-speech" data-companion-message={view.focus.section} aria-live="off">{companionMessage(summary, view.focus, lang, view.variant, new Date().getHours())}</p>
         <button className={css.dismiss} onClick={() => setSpeaking(false)} aria-label={lang === "jp" ? "吹き出しを閉じる" : "말풍선 접기"}>×</button>
       </div>}
       <button type="button" className={css.friend} data-companion-sprite={view.focus.section}
