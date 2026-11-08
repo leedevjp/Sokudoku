@@ -44,6 +44,38 @@
 .footer { min-height: 36px; font-size: 11px; color: var(--muted); }
 .footer button, .action { border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; background: var(--card); box-shadow: 0 3px 0 var(--shade); color: var(--text); font-size: 12px; }
 .action { display: block; margin: 24px 0; background: var(--accent); color: var(--on-brand); }
+.brand { display: flex; align-items: center; gap: 7px; font-size: 15px; }
+.brand > span { display: grid; place-items: center; height: 34px; width: 34px; background: var(--accent); color: var(--on-brand); border-radius: 11px; box-shadow: 0 3px 0 var(--accent-dark); font-size: 21px; }
+.brand b { color: var(--accent); margin-left: -6px; }
+.headerActions { display: flex; align-items: center; gap: 7px; }
+.headerActions :global(.settings-bar button) { font-size: 10px; padding: 7px; }
+.iconButton { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--accent); box-shadow: 0 3px 0 var(--shade); font-size: 18px; font-weight: 800; }
+.score, .position { display: flex; gap: 8px; align-items: baseline; }
+.score strong { color: var(--text); font-size: 29px; line-height: 1; }
+.position strong { font-size: 27px; line-height: 1; color: var(--accent); }
+.position span { font-size: 12px; }
+.progress { flex-basis: 9px; height: 9px; border-radius: 9px; background: var(--press); margin: 0; }
+.progress::-webkit-progress-bar { background: var(--press); }
+.progress::-webkit-progress-value { background: linear-gradient(90deg, var(--accent), #6fb4ff); }
+.badges { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; font-size: 11px; font-weight: 700; }
+.badges span { padding: 5px 13px; background: var(--press); color: var(--accent); border-radius: 30px; }
+.badges span:last-child { color: #7960bf; background: color-mix(in srgb, #9d80e0 14%, var(--card)); }
+.card { text-align: center; border-radius: 28px; }
+.eyebrow { font-weight: 400; }
+.sentence { text-align: left; }
+.choices, .review { flex: 0 0 clamp(172px, 26dvh, 210px); }
+.review { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-rows: minmax(0, 1fr) auto; gap: 5px 12px; margin-top: 4px; padding: 14px 16px 10px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); box-shadow: 0 4px 0 var(--shade); min-height: 0; }
+.reviewText { align-self: center; min-height: 0; }
+.reviewLabel { color: var(--accent); font-size: 11px; }
+.answerText { color: var(--text); font-size: 19px; font-weight: 700; margin: 5px 0; overflow-wrap: anywhere; line-height: 1.3; }
+.translation { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 5px 0 0; overflow-wrap: anywhere; }
+.reviewControls { display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+.reviewControls .iconButton { background: var(--press); box-shadow: none; border: 0; }
+.nextButton { position: relative; width: 44px; height: 44px; padding: 0; background: transparent; color: var(--accent); border: 0; }
+.nextButton svg { width: 40px; height: 40px; fill: none; stroke: var(--line); stroke-width: 2.5; transform: rotate(-90deg); }
+.nextButton .countdown { stroke: var(--accent); stroke-linecap: round; }
+.nextButton span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 21px; }
+.reviewHint { grid-column: 1 / -1; color: var(--muted); font-size: 10px; }
 @media (max-height: 650px) {
   .shell { gap: 9px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
   .header { min-height: 34px; font-size: 17px; }
@@ -51,15 +83,16 @@
   .eyebrow { font-size: 10px; margin-bottom: 6px; }
   .feedback { min-height: 72px; margin-top: 6px; padding-top: 6px; font-size: 12px; }
   .feedback small { font-size: 9px; }
-  .choices { gap: 8px; flex-basis: 122px; }
+  .choices { gap: 8px; }
+  .choices, .review { flex-basis: 172px; }
   .choices button { padding: 9px; font-size: 14px; }
 }
 @media (max-width: 360px) { .shell { padding-left: 12px; padding-right: 12px; } .choices button { gap: 6px; font-size: 13px; } }
 @media (orientation: landscape) and (max-height: 500px) {
-  .shell { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 34px 28px 4px minmax(0, 1fr) 34px; gap: 8px 16px; }
-  .header, .topline, .progress, .footer { grid-column: 1 / -1; }
-  .card, .choices { grid-row: 4; }
-  .choices { grid-column: 2; margin: 0; }
+  .shell { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 34px 28px 4px 24px minmax(0, 1fr) 24px; gap: 6px 16px; }
+  .header, .topline, .progress, .badges, .footer { grid-column: 1 / -1; }
+  .card, .choices, .review { grid-row: 5; }
+  .choices, .review { grid-column: 2; margin: 0; }
   .card { grid-column: 1; }
   .feedback { min-height: 0; font-size: 11px; }
 }
