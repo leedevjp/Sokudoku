@@ -36,7 +36,7 @@ export function ActivityChart({
     <section className={styles.card} data-companion-section="activity">
       <CompanionIntro section="activity" title={t("最近7日間", "최근 7일")} tag={scope}
         caption={t("ひとつひとつの記録を振り返ろう。", "하나하나 쌓인 기록을 돌아보자.")} />
-      <p className={styles.caption}>
+      <p className={styles.caption} data-companion-topic="weekTotal">
         <b>
           {t("合計", "총 ")}
           {week.attempts.toLocaleString()}
@@ -44,7 +44,7 @@ export function ActivityChart({
           {t("日学習", "일 학습")}
         </b>
       </p>
-      <div className={styles.dayDetail} aria-live="polite">
+      <div className={styles.dayDetail} aria-live="polite" data-companion-topic="dayDetail">
         <b>
           {dates[selected].detail}
           {selected === 6 ? " · " + t("今日", "오늘") : ""}
@@ -95,7 +95,7 @@ export function ActivityChart({
         </p>
       )}
       <div className={styles.twoColumns}>
-        <div className={styles.tile}>
+        <div className={styles.tile} data-companion-topic="accuracy">
           <p className={styles.label}>{t("正答率", "정답률")}</p>
           <strong className={styles.metric}>
             {accuracy ?? "—"}
@@ -113,7 +113,7 @@ export function ActivityChart({
             {week.correct} / {week.attempts}
           </p>
         </div>
-        <div className={styles.tile}>
+        <div className={styles.tile} data-companion-topic="responseTime">
           <p className={styles.label}>
             {t("平均正答時間", "평균 정답 응답 시간")}
           </p>
@@ -128,7 +128,7 @@ export function ActivityChart({
           </p>
         </div>
       </div>
-      <p className={styles.caption}>
+      <p className={styles.caption} data-companion-topic="activityNote">
         {t(
           "時間切れも正答率に含めます。応答時間は参考記録で、記憶状態には反映されません。",
           "시간 초과도 정답률 계산에 포함돼요. 응답 시간은 참고 기록으로, 기억 상태에는 반영되지 않아요.",
