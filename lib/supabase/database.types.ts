@@ -262,50 +262,252 @@ export type Database = {
         }
         Relationships: []
       }
+      sentence: {
+        Row: {
+          batch: string
+          created_at: string
+          id: string
+          status: string
+          text_ja: string
+          translation_ko: string
+          updated_at: string
+        }
+        Insert: {
+          batch: string
+          created_at?: string
+          id: string
+          status?: string
+          text_ja: string
+          translation_ko: string
+          updated_at?: string
+        }
+        Update: {
+          batch?: string
+          created_at?: string
+          id?: string
+          status?: string
+          text_ja?: string
+          translation_ko?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sentence_option: {
+        Row: {
+          display_text: string
+          id: string
+          is_accepted: boolean
+          reading: string | null
+          socket_id: string
+          word_id: string | null
+        }
+        Insert: {
+          display_text: string
+          id?: string
+          is_accepted: boolean
+          reading?: string | null
+          socket_id: string
+          word_id?: string | null
+        }
+        Update: {
+          display_text?: string
+          id?: string
+          is_accepted?: boolean
+          reading?: string | null
+          socket_id?: string
+          word_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentence_option_socket_id_fkey"
+            columns: ["socket_id"]
+            isOneToOne: false
+            referencedRelation: "sentence_socket"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sentence_option_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sentence_socket: {
+        Row: {
+          end_offset: number
+          id: string
+          original_text: string
+          sentence_id: string
+          start_offset: number
+        }
+        Insert: {
+          end_offset: number
+          id?: string
+          original_text: string
+          sentence_id: string
+          start_offset: number
+        }
+        Update: {
+          end_offset?: number
+          id?: string
+          original_text?: string
+          sentence_id?: string
+          start_offset?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentence_socket_sentence_id_fkey"
+            columns: ["sentence_id"]
+            isOneToOne: false
+            referencedRelation: "sentence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       word: {
         Row: {
+          adjective_stem: string | null
+          adjective_stem_kana: string | null
+          can_be_adverb: boolean | null
+          can_be_conjunction: boolean | null
+          can_be_expression: boolean | null
+          can_be_i_adjective: boolean | null
+          can_be_na_adjective: boolean | null
+          can_be_noun: boolean | null
+          can_be_prefix: boolean | null
+          can_be_suffix: boolean | null
+          can_be_verb: boolean | null
           created_at: string
           deleted_at: string | null
           difficulty: number
           entry_type: string
+          grammar_batch: string | null
+          grammar_status: string
           hanja_reading: string | null
           has_kanji: boolean
           id: string
           kana: string
           meaning_ko: string
           note: string | null
+          sentence_reading: string | null
+          sentence_surface: string | null
           term: string
           updated_at: string
+          verb_class: string | null
+          verb_stem: string | null
+          verb_stem_kana: string | null
         }
         Insert: {
+          adjective_stem?: string | null
+          adjective_stem_kana?: string | null
+          can_be_adverb?: boolean | null
+          can_be_conjunction?: boolean | null
+          can_be_expression?: boolean | null
+          can_be_i_adjective?: boolean | null
+          can_be_na_adjective?: boolean | null
+          can_be_noun?: boolean | null
+          can_be_prefix?: boolean | null
+          can_be_suffix?: boolean | null
+          can_be_verb?: boolean | null
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
           entry_type?: string
+          grammar_batch?: string | null
+          grammar_status?: string
           hanja_reading?: string | null
           has_kanji: boolean
           id?: string
           kana: string
           meaning_ko: string
           note?: string | null
+          sentence_reading?: string | null
+          sentence_surface?: string | null
           term: string
           updated_at?: string
+          verb_class?: string | null
+          verb_stem?: string | null
+          verb_stem_kana?: string | null
         }
         Update: {
+          adjective_stem?: string | null
+          adjective_stem_kana?: string | null
+          can_be_adverb?: boolean | null
+          can_be_conjunction?: boolean | null
+          can_be_expression?: boolean | null
+          can_be_i_adjective?: boolean | null
+          can_be_na_adjective?: boolean | null
+          can_be_noun?: boolean | null
+          can_be_prefix?: boolean | null
+          can_be_suffix?: boolean | null
+          can_be_verb?: boolean | null
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
           entry_type?: string
+          grammar_batch?: string | null
+          grammar_status?: string
           hanja_reading?: string | null
           has_kanji?: boolean
           id?: string
           kana?: string
           meaning_ko?: string
           note?: string | null
+          sentence_reading?: string | null
+          sentence_surface?: string | null
           term?: string
           updated_at?: string
+          verb_class?: string | null
+          verb_stem?: string | null
+          verb_stem_kana?: string | null
         }
         Relationships: []
+      }
+      word_form_override: {
+        Row: {
+          created_at: string
+          form_key: string
+          id: string
+          note: string | null
+          reading: string
+          review_status: string
+          surface: string
+          updated_at: string
+          word_id: string
+        }
+        Insert: {
+          created_at?: string
+          form_key: string
+          id?: string
+          note?: string | null
+          reading: string
+          review_status?: string
+          surface: string
+          updated_at?: string
+          word_id: string
+        }
+        Update: {
+          created_at?: string
+          form_key?: string
+          id?: string
+          note?: string | null
+          reading?: string
+          review_status?: string
+          surface?: string
+          updated_at?: string
+          word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_form_override_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "word"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       word_learning_state: {
         Row: {

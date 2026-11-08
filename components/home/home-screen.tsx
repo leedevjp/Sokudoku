@@ -185,6 +185,7 @@ export default function HomeScreen() {
             </button>
           )}
           <div className="home-secondary-actions">
+            <Link className="notebook-link" href="/sentence">{t('文章を読む','문장 읽기')} ↗</Link>
             <Link
               className="notebook-link"
               href="/dashboard"

@@ -2,9 +2,9 @@ import type { Tables } from "@/lib/supabase/database.types";
 export type EntryType = "word" | "hiragana" | "katakana";
 // The lean catalog omits audit dates/notes; old cache entries may retain them.
 // entry_type is optional for older caches; absent means ordinary vocabulary.
-export type Word = Omit<
+export type Word = Pick<
   Tables<"word">,
-  "entry_type" | "created_at" | "updated_at" | "note"
+  "id" | "term" | "kana" | "hanja_reading" | "meaning_ko" | "has_kanji" | "difficulty" | "deleted_at"
 > &
   Partial<Pick<Tables<"word">, "created_at" | "updated_at" | "note">> & {
     source?: "personal";
