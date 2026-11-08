@@ -127,7 +127,6 @@ export default function DashboardScreen() {
           {prefs.theme === "dark" ? "☀" : "☾"}
         </button>
       </header>
-      <div id="dashboard-companion-home" className={companionCss.companionHome} aria-label={t("キャラクターの応援", "캐릭터 응원")} />
       <DashboardFilters
         entry={entry}
         kind={kind}
@@ -136,6 +135,7 @@ export default function DashboardScreen() {
         onEntryChange={setEntry}
         onKindChange={setKind}
       />
+      <div id="dashboard-companion-home" className={companionCss.companionHome} aria-label={t("キャラクターの応援", "캐릭터 응원")} />
       <div aria-live="polite" aria-busy={!data && !error}>
         {error || !summary ? (
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
