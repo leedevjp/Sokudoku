@@ -56,8 +56,8 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const x = Math.max(minX, Math.min(maxX, leftSide ? sectionRect.left - 46 : sectionRect.right - 26));
     const y = Math.max(offset + 125, Math.min(offset + height - 100, rect.top + Math.min(rect.height, 120) / 2 + 12));
     const old = previousPlace.current;
-    // Keep small changes in the same visual position.
-    if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 24) return;
+    // Ignore horizontal jitter only; always follow vertical changes.
+    if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 2) return;
     const rendered = floating.current.getBoundingClientRect();
     floating.current.getAnimations().forEach(animation => animation.cancel());
     floating.current.dataset.side = leftSide ? "left" : "right";
@@ -109,9 +109,8 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
           const distance = (el: Element) => { const r = el.getBoundingClientRect(); return Math.abs(r.top + r.height / 2 - center); };
           return distance(a) - distance(b);
         });
-        // Scrolling should not make the companion chase every nearby label.
-        // Follow the active section; direct hover/click still uses exact targets.
-        place(container);
+        // Follow the nearest visible inner item vertically while keeping the card lane horizontally.
+        place(anchors[0] ?? detail ?? container);
       }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
@@ -134,7 +133,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     <div ref={root} className={css.group}
       onPointerOverCapture={event => {
         if (event.pointerType !== "mouse" || (sectionOf(event.target) === sectionOf(event.relatedTarget) && (event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-level],[data-companion-day]") === (event.relatedTarget as Element | null)?.closest?.("[data-companion-topic],[data-companion-band],[data-companion-level],[data-companion-day]"))) return;
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }); place((event.target as Element).closest("[data-companion-topic],button,summary,p,section")); }
+        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }); place((event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-day],[data-companion-level],button,summary,p,section")); }
       }}
       onClickCapture={event => {
         const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place((event.target as Element).closest("[data-companion-topic],button,summary,p,section")); }
