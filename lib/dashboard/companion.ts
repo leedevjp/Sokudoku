@@ -49,7 +49,7 @@ function recordMessage(summary: DashboardSummary, focus: CompanionFocus, lang: s
 }
 
 /** A full cycle is exhausted before repeating; extra lines match the current context. */
-export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0) {
+export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0, hour?: number) {
   let specific: readonly CompanionLine[] = [];
   if (focus.section === "overview" && summary.learned === 0) specific = companionLines.first;
   if (focus.section === "memory" && focus.band !== undefined && summary.memory[focus.band] > 0) {
@@ -60,7 +60,9 @@ export function companionMessage(summary: DashboardSummary, focus: CompanionFocu
     if (day ? day.attempts === 0 : summary.week.attempts === 0) specific = companionLines.rest;
   }
   if (focus.section === "stages" && focus.level === "P") specific = companionLines.personal;
-  const lines = [recordMessage(summary, focus, lang), ...[...specific, ...companionLines[focus.section]].map(line => line[lang === "jp" ? 0 : 1])];
+  const timeKey = hour === undefined ? null : hour < 5 ? "night" : hour < 11 ? "morning" : hour < 17 ? "afternoon" : hour < 22 ? "evening" : "night";
+  const extra = [...specific, ...companionLines[focus.section], ...(focus.section === "overview" && timeKey ? companionLines[timeKey] : [])];
+  const lines = [recordMessage(summary, focus, lang), ...extra.map(line => line[lang === "jp" ? 0 : 1])];
   return lines[((variant % lines.length) + lines.length) % lines.length];
 }
 
