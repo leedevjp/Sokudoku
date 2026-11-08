@@ -18,13 +18,13 @@ export function SummaryCards({
 }) {
   return (
     <>
-      <section className={styles.card}>
+      <section className={styles.card} data-companion-topic="learned">
         <p className={styles.label}>
           {entry === "word"
             ? t("学習した単語", "학습한 단어")
             : t("学習した文字", "학습한 글자")}
         </p>
-        <div className={styles.headline}>
+        <div className={styles.headline} data-companion-topic="learned">
           <strong>{number(summary.learned)}</strong>
           <span>{unit}</span>
         </div>
@@ -32,21 +32,21 @@ export function SummaryCards({
           <p className={styles.caption}>
             {t("一度以上答えた異なる項目", "한 번 이상 답한 서로 다른 항목")}
           </p>
-          <span className={styles.tag}>
+          <span className={styles.tag} data-companion-topic="total">
             {t("全", "전체 ")}
             {number(summary.total)}
             {unit}
           </span>
         </div>
         {summary.personal.total > 0 && (
-          <p className={styles.caption}>
+          <p className={styles.caption} data-companion-topic="common">
             {t("共通", "공통")} {number(summary.common.learned)} ·{" "}
             {t("個人", "개인")} {number(summary.personal.learned)}
           </p>
         )}
       </section>
       <div className={styles.twoColumns}>
-        <section className={styles.card + " " + styles.reviewCard}>
+        <section className={styles.card + " " + styles.reviewCard} data-companion-topic="review">
           <p className={styles.label}>
             {t("いま復習する項目", "지금 복습할 항목")}
           </p>
@@ -58,7 +58,7 @@ export function SummaryCards({
             {t("復習候補に含まれる数", "복습 후보에 해당하는 수")}
           </p>
         </section>
-        <section className={styles.card}>
+        <section className={styles.card} data-companion-topic="attempts">
           <p className={styles.label}>{t("累計回答", "누적 답변")}</p>
           <strong className={styles.metric}>
             {number(summary.attempts)}
