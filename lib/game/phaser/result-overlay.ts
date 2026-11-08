@@ -10,7 +10,7 @@ type ResultData = {
   syncing: boolean;
   syncOK: boolean | null;
 };
-type ResultActions = { retry: () => void; sync: () => void; exit: () => void };
+type ResultActions = { retry: () => void; sync: () => void; exit: () => void; exam: () => void };
 
 export function drawEnd(
   view: TrainingView,
@@ -36,8 +36,8 @@ export function drawEnd(
     -290,
     data.reviewComplete
       ? view.t(
-          "選択した学習は今のところ完了です",
-          "선택한 학습을 지금은 모두 마쳤어요",
+          "今回の学習は完了しました！",
+          "이번 학습을 완료했어요!",
         )
       : view.t("おつかれさまでした", "수고했어요"),
     17,
@@ -99,7 +99,9 @@ export function drawEnd(
             },
           )
         : view.t("次の復習予定はありません", "예정된 다음 복습이 없어요");
-  label(4, nextDue, 14, view.c.muted);
+  label(4, data.progress.nextDue && data.progress.nextDue <= Date.now() && data.progress.review === 0
+    ? view.t("復習予定を更新しています", "복습 일정을 확인하고 있어요")
+    : nextDue, 14, view.c.muted);
   const state = data.preview
     ? view.t("プレビュー · 保存しません", "미리보기 · 저장하지 않습니다")
     : data.syncing
@@ -111,55 +113,51 @@ export function drawEnd(
             "저장하지 못했어요. 동기화를 다시 시도해주세요",
           );
   label(56, state, 16, data.syncOK ? view.c.green : view.c.muted);
-  if (data.reviewComplete)
+  if (data.reviewComplete) {
     label(
-      94,
-      data.progress.review > 0
-        ? view.t(
-            "復習を選ぶと、続けて学べます。",
-            "복습을 선택하면 이어서 학습할 수 있어요.",
-          )
-        : data.progress.unseen > 0
-          ? view.t(
-              "探索を選ぶと、新しい単語を学べます。",
-              "탐색을 선택하면 새 단어를 학습할 수 있어요.",
-            )
-          : view.t(
-              "次の復習時期になったら、また学びましょう。",
-              "다음 복습 시각이 되면 다시 학습하세요.",
-            ),
+      93,
+      view.t(
+        "探索・復習の出題が今はありません。",
+        "탐색할 단어와 지금 복습할 단어가 없어요.",
+      ),
       14,
       view.c.muted,
     );
+    label(
+      126,
+      view.t(
+        "もっと学ぶなら、テストモードで学習済みの単語をもう一度解けます。",
+        "더 공부하고 싶나요? 시험 모드에서는 배운 단어를 다시 풀 수 있어요.",
+      ),
+      14,
+      view.c.ink,
+    );
+  }
   const buttonWidth = Math.min(280, width - 48);
-  view.button(
-    data.reviewComplete
-      ? view.t("ホームへ →", "메인으로 →")
-      : view.t("もう一度 →", "다시 하기 →"),
-    x,
-    y + 150 * s,
-    buttonWidth,
-    data.reviewComplete ? actions.exit : actions.retry,
-    true,
-    undefined,
-    data.syncing,
-  );
-  if (!data.reviewComplete)
+  if (data.reviewComplete) {
+    view.button(
+      view.t("テストモードで続ける →", "시험 모드로 계속 공부하기 →"),
+      x, y + 202 * s, buttonWidth, actions.exam, true, undefined, data.syncing || (!data.preview && !data.syncOK),
+    );
+    view.button(
+      view.t("ホームへ", "메인으로"),
+      x, y + 262 * s, buttonWidth, actions.exit, false, undefined, data.syncing || (!data.preview && !data.syncOK),
+    );
+  } else {
+    view.button(
+      view.t("もう一度 →", "다시 하기 →"),
+      x, y + 150 * s, buttonWidth, actions.retry, true, undefined, data.syncing,
+    );
     view.button(
       view.t("ホームへ", "홈으로"),
-      x,
-      y + 212 * s,
-      buttonWidth,
-      actions.exit,
-      false,
-      undefined,
-      data.syncing,
+      x, y + 212 * s, buttonWidth, actions.exit, false, undefined, data.syncing,
     );
+  }
   if (!data.syncOK && !data.syncing && !data.preview)
     view.button(
       view.t("同期を再試行", "동기화 재시도"),
       x,
-      y + 274 * s,
+      y + (data.reviewComplete ? 310 : 274) * s,
       buttonWidth,
       actions.sync,
     );
