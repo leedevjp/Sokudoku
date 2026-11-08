@@ -53,11 +53,11 @@ export default function DashboardScreen() {
   const [expandedPanel, setExpandedPanel] = useState<DashboardPanel | null>("memory");
   const [companionMode, setCompanionMode] = useState<"fixed" | "follow">("fixed");
   useEffect(() => {
-    try { if (localStorage.getItem("sokudoku-companion-mode") === "follow") setCompanionMode("follow"); } catch {}
+    try { if (localStorage.getItem("sokudoku-companion-mode-v2") === "follow") setCompanionMode("follow"); } catch {}
   }, []);
   const toggleCompanion = () => setCompanionMode(old => {
     const next = old === "fixed" ? "follow" : "fixed";
-    try { localStorage.setItem("sokudoku-companion-mode", next); } catch {}
+    try { localStorage.setItem("sokudoku-companion-mode-v2", next); } catch {}
     return next;
   });
   const companionToggle = () => (
