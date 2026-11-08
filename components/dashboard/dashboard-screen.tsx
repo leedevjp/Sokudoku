@@ -30,11 +30,11 @@ export default function DashboardScreen() {
     try { localStorage.setItem("sokudoku-companion-mode", next); } catch {}
     return next;
   });
-  const companionToggle = (location: "top" | "bottom") => (
+  const companionToggle = () => (
     <button type="button" className={companionCss.modeToggle} onClick={toggleCompanion}
       aria-label={companionMode === "fixed" ? t("キャラクターを追従させる", "캐릭터 이동 모드로 전환") : t("キャラクターを固定する", "캐릭터 고정 모드로 전환")}
       title={companionMode === "fixed" ? t("固定中 · クリックで追従", "고정 중 · 클릭하면 이동") : t("追従中 · クリックで固定", "이동 중 · 클릭하면 고정")}
-      aria-pressed={companionMode === "fixed"} data-companion-toggle={location}>
+      aria-pressed={companionMode === "fixed"} data-companion-toggle="top">
       <span aria-hidden="true">{companionMode === "fixed" ? "🔒" : "🔓"}</span>
     </button>
   );
@@ -79,7 +79,7 @@ export default function DashboardScreen() {
           </svg>
         </Link>
         <h1>{t("学習状況", "학습 현황")}</h1>
-        {companionToggle("top")}
+        {companionToggle()}
         <button
           className={styles.language}
           onClick={() => change({ lang: prefs.lang === "jp" ? "kr" : "jp" })}
@@ -97,6 +97,7 @@ export default function DashboardScreen() {
           {prefs.theme === "dark" ? "☀" : "☾"}
         </button>
       </header>
+      <div id="dashboard-companion-home" className={companionCss.companionHome} aria-label={t("キャラクターの応援", "캐릭터 응원")} />
       <DashboardFilters
         entry={entry}
         kind={kind}
@@ -139,7 +140,6 @@ export default function DashboardScreen() {
           </DashboardCompanion>
         )}
       </div>
-      <div className={companionCss.bottomToggle}>{companionToggle("bottom")}</div>
       {data && (
         <footer className={styles.footer}>
           {new Date(data.updated_at).toLocaleTimeString(
