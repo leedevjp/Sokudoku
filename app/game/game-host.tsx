@@ -78,6 +78,11 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         onFinish: () => runtime.finish(),
         onRetry: () => runtime.retry(),
         onExit: () => router.push("/"),
+        onExam: () => {
+          const params = new URLSearchParams(window.location.search);
+          params.set("modes", "exam");
+          window.location.assign(`/game?${params.toString()}`);
+        },
       });
     }
     void init().catch((error) => {
