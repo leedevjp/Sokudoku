@@ -44,17 +44,15 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const viewport = window.visualViewport, height = viewport?.height ?? innerHeight, width = viewport?.width ?? innerWidth;
     const offset = viewport?.offsetTop ?? 0;
     const rect = target.getBoundingClientRect();
-    const section = sectionOf(target);
-    // Keep every stage (1-5, P, kana) on the same side to avoid zigzagging.
-    const leftSide = section === "memory" || section === "stages";
-    const bubbleWidth = Math.min(224, width - 32);
-    const minX = leftSide ? 8 : bubbleWidth - 59;
-    const maxX = leftSide ? width - bubbleWidth - 13 : width - 80;
-    const x = Math.max(minX, Math.min(maxX, leftSide ? rect.left - 46 : rect.right - 26));
+    // One consistent horizontal lane across all dashboard sections.
+    // Hovering a metric only changes the vertical destination and speech.
+    // This prevents left/right zigzags between nearby cards or expanded rows.
+    const leftSide = false;
+    const x = Math.max(8, width - 80);
     const y = Math.max(offset + 125, Math.min(offset + height - 100, rect.top + Math.min(rect.height, 120) / 2 + 12));
     const old = previousPlace.current;
-    // Ignore tiny repositioning caused by moving between nested text nodes.
-    if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 18) return;
+    // Keep small changes in the same visual position.
+    if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 24) return;
     const rendered = floating.current.getBoundingClientRect();
     floating.current.getAnimations().forEach(animation => animation.cancel());
     floating.current.dataset.side = leftSide ? "left" : "right";
