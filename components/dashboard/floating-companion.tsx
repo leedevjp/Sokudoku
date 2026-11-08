@@ -28,7 +28,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   const previousPlace = useRef<{ x: number; y: number; target: Element } | null>(null);
   const activate = useCallback((focus: CompanionFocus, manual = false) => {
     const old = current.current;
-    if (!manual && focus.section === old.focus.section) return;
+    if (!manual && companionFocusKey(focus) === companionFocusKey(old.focus)) return;
     const key = companionFocusKey(focus);
     if (key === companionFocusKey(old.focus)) {
       if (!manual) return;
