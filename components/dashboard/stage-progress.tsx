@@ -17,7 +17,7 @@ export function StageProgress({
   const levels =
     entry === "word" ? ["1", "2", "3", "4", "5", "P"] : ["kana", "P"];
   return (
-    <section className={styles.card} data-companion-section="stages">
+    <section className={styles.card}>
       <CompanionIntro section="stages" tag={scope}
         title={entry === "word" ? t("段階ごとの状況", "단계별 현황") : t("文字の学習状況", "글자 학습 현황")}
         caption={t("学習した数 / 学習できる全項目", "학습한 개수 / 학습 가능한 전체 개수")} />
