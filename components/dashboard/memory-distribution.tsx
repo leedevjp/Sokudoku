@@ -28,6 +28,7 @@ export function MemoryDistribution({
         caption={t("学習記録から推定した記憶の状態です。", "학습 기록을 바탕으로 추정한 기억 상태예요.")}>
         <button
           className={styles.help}
+          data-companion-topic="memoryHelp"
           onClick={() => setHelp(!help)}
           aria-expanded={help}
           aria-controls="memory-help"
@@ -37,7 +38,7 @@ export function MemoryDistribution({
         </button>
       </CompanionIntro>
       {help && (
-        <div className={styles.helpBox} id="memory-help">
+        <div className={styles.helpBox} id="memory-help" data-companion-topic="memoryHelp">
           <p>
             {t(
               "長期的な記憶の安定性をもとに、7日未満・7〜21日未満・21日以上の3段階に分けます。最後に間違えた項目は最初のグループに含めます。",
@@ -83,7 +84,7 @@ export function MemoryDistribution({
           </button>
         ))}
       </div>
-      <p className={styles.totalLine}>
+      <p className={styles.totalLine} data-companion-topic="memoryTotal">
         {t("合計", "합계 ")}
         {total.toLocaleString()} ·{" "}
         {t("学習した項目数と一致します。", "학습한 항목 수와 같아요.")}
