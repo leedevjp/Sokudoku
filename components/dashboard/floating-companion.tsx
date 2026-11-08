@@ -18,7 +18,7 @@ function detailOf(target: EventTarget | null): Partial<CompanionFocus> {
   const topic = target.closest<HTMLElement>("[data-companion-topic]")?.dataset.companionTopic;
   return { ...(day ? { day } : band !== undefined ? { band: Number(band) } : level ? { level } : {}), ...(topic ? { topic } : {}) };
 }
-export function DashboardCompanion({ summary, lang, children }: { summary: DashboardSummary; lang: string; children: ReactNode }) {
+export function DashboardCompanion({ summary, lang, children, mode }: { summary: DashboardSummary; lang: string; children: ReactNode; mode: "fixed" | "follow" }) {
   const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const root = useRef<HTMLDivElement>(null), floating = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ focus: { section: "overview" } as CompanionFocus, variant: 0 });
@@ -41,6 +41,19 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   }, []);
   const place = useCallback((target?: Element | null) => {
     if (!floating.current || !root.current) return;
+    if (mode === "fixed") {
+      floating.current.getAnimations().forEach(animation => animation.cancel());
+      floating.current.dataset.motion = "idle";
+      floating.current.dataset.side = "right";
+      floating.current.style.left = "auto";
+      floating.current.style.right = "16px";
+      floating.current.style.top = "auto";
+      floating.current.style.bottom = "max(12px, env(safe-area-inset-bottom))";
+      previousPlace.current = null;
+      return;
+    }
+    floating.current.style.right = "auto";
+    floating.current.style.bottom = "auto";
     if (!target) return;
     const viewport = window.visualViewport, height = viewport?.height ?? innerHeight, width = viewport?.width ?? innerWidth;
     const offset = viewport?.offsetTop ?? 0;
@@ -84,7 +97,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
       ], { duration: 180, easing: "ease-out" });
     }
     previousPlace.current = { x, y, target };
-  }, []);
+  }, [mode]);
   useEffect(() => {
     preload("/battle/mage-locomotion-v1.png", { as: "image" });
     const floatingElement = floating.current;
@@ -151,7 +164,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
         if (!event.target.matches(":focus-visible")) return;
         const section = sectionOf(event.target); if (section) { interactionTarget.current = event.target; activate({ section, ...detailOf(event.target) }, true); place(event.target); }
       }}>{children}</div>
-    {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true">
+    {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true" data-companion-mode={mode} style={mode === "fixed" ? {left:"auto",right:16,top:"auto",bottom:12} : undefined}>
       {speaking && <div className={css.bubble}>
         <p id="companion-speech" data-companion-message={view.focus.section} aria-live="off">{companionMessage(summary, view.focus, lang, view.variant, new Date().getHours())}</p>
         <button className={css.dismiss} onClick={() => setSpeaking(false)} aria-label={lang === "jp" ? "吹き出しを閉じる" : "말풍선 접기"}>×</button>
