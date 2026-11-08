@@ -15,22 +15,26 @@ function detailOf(target: EventTarget | null): Partial<CompanionFocus> {
   const day = target.closest<HTMLElement>("[data-companion-day]")?.dataset.companionDay;
   const band = target.closest<HTMLElement>("[data-companion-band]")?.dataset.companionBand;
   const level = target.closest<HTMLElement>("[data-companion-level]")?.dataset.companionLevel;
-  return day ? { day } : band !== undefined ? { band: Number(band) }
-    : level && !(target.closest("summary") && target.closest("details")?.open) ? { level } : {};
+  const topic = target.closest<HTMLElement>("[data-companion-topic]")?.dataset.companionTopic;
+  return { ...(day ? { day } : band !== undefined ? { band: Number(band) } : level ? { level } : {}), ...(topic ? { topic } : {}) };
 }
 export function DashboardCompanion({ summary, lang, children }: { summary: DashboardSummary; lang: string; children: ReactNode }) {
   const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   const root = useRef<HTMLDivElement>(null), floating = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ focus: { section: "overview" } as CompanionFocus, variant: 0 });
   const current = useRef(view);
-  const visits = useRef(new Map([["overview:::", 0]]));
+  const visits = useRef(new Map<string, number>());
   const [speaking, setSpeaking] = useState(true);
   const previousPlace = useRef<{ x: number; y: number; target: Element } | null>(null);
   const activate = useCallback((focus: CompanionFocus, manual = false) => {
     const old = current.current;
     if (!manual && focus.section === old.focus.section) return;
     const key = companionFocusKey(focus);
-    if (key === companionFocusKey(old.focus)) return;
+    if (key === companionFocusKey(old.focus)) {
+      if (!manual) return;
+      const next = { focus, variant: old.variant + 1 };
+      current.current = next; setView(next); return;
+    }
     const next = { focus, variant: (visits.current.get(key) ?? -1) + 1 };
     visits.current.set(key, next.variant); current.current = next; setView(next);
   }, []);
@@ -88,13 +92,13 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
       const section = visibleCompanionSection(rects, height);
       if (section) {
         const center = offset + height / 2;
-        const detail = [...(root.current?.querySelectorAll<HTMLElement>("[data-companion-level], [data-companion-band]") ?? [])].find(el => {
+        const detail = [...(root.current?.querySelectorAll<HTMLElement>("[data-companion-level], [data-companion-band], [data-companion-topic]") ?? [])].find(el => {
           const rect = el.getBoundingClientRect();
           return sectionOf(el) === section && rect.top <= center && rect.bottom >= center;
         });
-        activate({ section, ...(detail ? detailOf(detail) : {}) }, true);
+        activate({ section, ...(detail ? detailOf(detail) : {}) });
         const container = root.current?.querySelector<HTMLElement>(`[data-companion-section="${section}"]`);
-        const anchors = [...(container?.querySelectorAll<HTMLElement>("summary,button,p") ?? [])]
+        const anchors = [...(container?.querySelectorAll<HTMLElement>("[data-companion-topic],summary,button,p") ?? [])]
           .filter(el => { const r = el.getBoundingClientRect(); return r.height > 0 && r.bottom > offset && r.top < offset + height; });
         anchors.sort((a, b) => {
           const distance = (el: Element) => { const r = el.getBoundingClientRect(); return Math.abs(r.top + r.height / 2 - center); };
@@ -122,11 +126,11 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   return <>
     <div ref={root} className={css.group}
       onPointerOverCapture={event => {
-        if (event.pointerType !== "mouse" || sectionOf(event.target) === sectionOf(event.relatedTarget)) return;
-        const section = sectionOf(event.target); if (section) { activate({ section }); place((event.target as Element).closest("button,summary,p,section")); }
+        if (event.pointerType !== "mouse" || (sectionOf(event.target) === sectionOf(event.relatedTarget) && (event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-level],[data-companion-day]") === (event.relatedTarget as Element | null)?.closest?.("[data-companion-topic],[data-companion-band],[data-companion-level],[data-companion-day]"))) return;
+        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }); place((event.target as Element).closest("[data-companion-topic],button,summary,p,section")); }
       }}
       onClickCapture={event => {
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place((event.target as Element).closest("button,summary,p,section")); }
+        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place((event.target as Element).closest("[data-companion-topic],button,summary,p,section")); }
       }}
       onFocusCapture={event => {
         if (!event.target.matches(":focus-visible")) return;
