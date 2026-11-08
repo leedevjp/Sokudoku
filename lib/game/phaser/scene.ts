@@ -401,8 +401,8 @@ export class TrainingScene extends Phaser.Scene {
   }
   private speakWord(result: "correct" | "incorrect" | "timeout") {
     this.stopPronunciation();
-    if (result === "timeout" || this.prefs.pronunciation === "off" ||
-        (this.prefs.pronunciation === "wrong" && result !== "incorrect") ||
+    if (this.prefs.pronunciation === "off" ||
+        (this.prefs.pronunciation === "wrong" && result === "correct") ||
         !("speechSynthesis" in window)) return;
     const value = this.prefs.pronunciationSource === "kana" ? this.question.word.kana : this.question.word.term;
     if (!value?.trim()) return;
