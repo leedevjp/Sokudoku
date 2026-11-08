@@ -266,6 +266,7 @@ export type Database = {
         Row: {
           batch: string
           created_at: string
+          difficulty: number | null
           id: string
           status: string
           text_ja: string
@@ -275,6 +276,7 @@ export type Database = {
         Insert: {
           batch: string
           created_at?: string
+          difficulty?: number | null
           id: string
           status?: string
           text_ja: string
@@ -284,6 +286,7 @@ export type Database = {
         Update: {
           batch?: string
           created_at?: string
+          difficulty?: number | null
           id?: string
           status?: string
           text_ja?: string

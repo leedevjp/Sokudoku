@@ -5,6 +5,7 @@ import { useSettings } from "@/components/settings/settings-provider";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import type { ReadingSentence, SentenceSocket } from "@/lib/sentence/content";
 import styles from "./sentence.module.css";
+import { sentenceStage } from '@/lib/sentence/difficulty';
 
 type Question = { sentence: ReadingSentence; socket: SentenceSocket };
 const REVIEW_MS = 3500;
@@ -123,11 +124,12 @@ export default function SentenceGame({ sentences }: { sentences: ReadingSentence
       <section className={styles.card}>
         <p className={styles.eyebrow}>READING COMPLETE</p>
         <h1>{questions.length ? t("おつかれさま！", "수고했어요!") : t("文章がありません", "준비된 문장이 없어요")}</h1>
+        {questions.length===0&&<p>{t('選んだ範囲の文章はまだありません。ホームで別の範囲を選んでください。','선택한 단계에는 아직 지문이 없어요. 홈에서 다른 출제 범위를 선택해주세요.')}</p>}
         <p>{t("読んだ文章", "읽은 문장")} {index} · {t("正答", "정답")} {correct}</p>
         <button className={styles.action} onClick={() => { guard.current = false; remaining.current = REVIEW_MS; setRatio(1); setQuestions(deck(sentences)); setIndex(0); setSelected(null); setCorrect(0); setPaused(false); }}>{t("もう一度", "다시 읽기")}</button>
         <Link href="/">{t("ホームへ", "홈으로")}</Link>
       </section> : q ? <>
-        <div className={styles.badges}><span>● {t("文章", "문장")}</span><span>{t("読解", "독해")}</span></div>
+        <div className={styles.badges}><span>● {t("文章", "문장")}</span><span title={`${t('難易度','난이도')} ${q.sentence.difficulty}`}>{t("読解", "독해")} · {sentenceStage(q.sentence.difficulty)}{t('段階','단계')}</span></div>
         <section className={styles.card} aria-label={t("問題", "문제")}>
           <p className={styles.eyebrow}>{t("文脈に合う言葉を選ぼう", "문맥에 맞는 표현을 골라주세요")}</p>
           <div className={styles.reading} ref={readingRef}><p ref={sentenceRef} lang="ja" className={styles.sentence}>

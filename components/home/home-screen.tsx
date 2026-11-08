@@ -39,6 +39,7 @@ export default function HomeScreen() {
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
+  const sentenceLevels=levels.filter(level=>['1','2','3','4','5'].includes(level));
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -185,7 +186,7 @@ export default function HomeScreen() {
             </button>
           )}
           <div className="home-secondary-actions">
-            <Link className="notebook-link" href="/sentence">{t('文章を読む','문장 읽기')} ↗</Link>
+            <Link className="notebook-link" href={`/sentence?levels=${sentenceLevels.join(',')}`} aria-disabled={sentenceLevels.length===0} onClick={event=>{if(sentenceLevels.length===0)event.preventDefault();}}>{t('文章を読む','문장 읽기')} ↗</Link>
             <Link
               className="notebook-link"
               href="/dashboard"
@@ -214,6 +215,7 @@ export default function HomeScreen() {
               <span aria-hidden="true">↗</span>
             </Link>
           </div>
+          {sentenceLevels.length===0&&<p className="level-hint">{t('文章は範囲1〜5から選んでください。','문장 읽기는 출제 범위 1~5를 선택해주세요.')}</p>}
         </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">

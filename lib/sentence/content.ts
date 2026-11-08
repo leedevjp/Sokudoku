@@ -1,7 +1,8 @@
 import { families } from './candidate-banks';
+import { contextualDifficulties } from './difficulty';
 export type SentenceOption={text:string;accepted:boolean;word?:string;reason?:string};
 export type SentenceSocket={original:string;start:number;options:SentenceOption[]};
-export type ReadingSentence={id:string;text:string;translation:string;sockets:SentenceSocket[]};
+export type ReadingSentence={id:string;text:string;translation:string;difficulty:number;sockets:SentenceSocket[]};
 const baseWords:Record<string,string>={
  '増やします':'増やす','減らします':'減らす','早めます':'早める','遅らせます':'遅らせる',
  '延ばします':'延ばす','短くします':'短い','止めます':'止める','続けます':'続ける',
@@ -130,5 +131,6 @@ export const pilotSentences:ReadingSentence[]=source.trim().split('\n').map((row
   ]});
   text+=original;cursor=match.index!+match[0].length;
  }
- text+=marked.slice(cursor);return{id:`reading-v2-${String(i+1).padStart(3,'0')}`,text,translation,sockets};
+ const difficulty=contextualDifficulties[i];if(difficulty===undefined)throw Error(`Missing difficulty at ${i+1}`);
+ text+=marked.slice(cursor);return{id:`reading-v2-${String(i+1).padStart(3,'0')}`,text,translation,difficulty,sockets};
 });
