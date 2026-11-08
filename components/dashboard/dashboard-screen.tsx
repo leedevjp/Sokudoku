@@ -69,7 +69,7 @@ export default function DashboardScreen() {
     </button>
   );
 
-  const { data, error, retry } = useDashboardData();
+  const { data, error, refreshing, retry } = useDashboardData();
   const actualKind = entry === "word" ? kind : "meaning";
   const summary = useMemo(() => data ? dashboardSummary(data, entry, actualKind) : null,
     [data, entry, actualKind]);
@@ -135,12 +135,27 @@ export default function DashboardScreen() {
         onEntryChange={setEntry}
         onKindChange={setKind}
       />
+      {data && (refreshing || error === "load") && (
+        <div className={companionCss.refreshStatus} role="status" aria-live="polite">
+          {refreshing ? (
+            <>
+              <span className={companionCss.refreshSpinner} aria-hidden="true" />
+              <span>{t("最新の学習記録を確認中…", "최신 학습 기록 확인 중…")}</span>
+            </>
+          ) : (
+            <>
+              <span>{t("最新の記録を確認できませんでした。前回の記録を表示しています。", "최신 기록을 확인하지 못했어요. 이전 기록을 표시하고 있어요.")}</span>
+              <button type="button" onClick={retry}>{t("再試行", "다시 시도")}</button>
+            </>
+          )}
+        </div>
+      )}
       <div id="dashboard-companion-home" className={companionCss.companionHome}
         style={companionMode === "fixed" ? undefined : { display: "none" }}
         aria-hidden={companionMode !== "fixed"}
         aria-label={companionMode === "fixed" ? t("キャラクターの応援", "캐릭터 응원") : undefined} />
       <div aria-live="polite" aria-busy={!data && !error}>
-        {error || !summary ? (
+        {!summary ? (
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
         ) : (
           <DashboardCompanion key={entry + ":" + actualKind} summary={summary} lang={prefs.lang} mode={companionMode}>
