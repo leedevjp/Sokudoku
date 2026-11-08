@@ -38,7 +38,7 @@ export function StageProgress({
               : level + t("段階", "단계");
         return (
           <details className={styles.stage} key={level} data-companion-level={level}>
-            <summary>
+            <summary data-companion-topic="stageProgress">
               <span className={styles.badge}>
                 {level === "kana"
                   ? entry === "hiragana"
@@ -70,7 +70,7 @@ export function StageProgress({
                 </p>
               ) : (
                 <>
-                  <p>
+                  <p data-companion-topic="stageUnlearned">
                     {t("まだ学習していない項目：", "아직 학습하지 않은 항목: ")}
                     {(total - learned).toLocaleString()}
                   </p>
@@ -79,7 +79,7 @@ export function StageProgress({
                     t("覚えつつある", "익숙해지는 중"),
                     t("長く覚えている項目", "오래 기억하는 항목"),
                   ].map((name, i) => (
-                    <div className={styles.row} key={name}>
+                    <div className={styles.row} key={name} data-companion-topic={"stage" + i}>
                       <span>{name}</span>
                       <b>{counts[i].toLocaleString()}</b>
                     </div>
@@ -91,7 +91,7 @@ export function StageProgress({
         );
       })}
       {summary.personal.total > 0 && (
-        <p className={styles.caption}>
+        <p className={styles.caption} data-companion-topic="stageNote">
           {t(
             "個人単語は共通単語の段階別集計に含めません。",
             "개인 단어는 공통 단어의 단계별 집계와 구분해요.",
