@@ -33,7 +33,7 @@ export function ActivityChart({
     ? Math.round((week.correct / week.attempts) * 100)
     : null;
   return (
-    <section className={styles.card} data-companion-section="activity">
+    <section className={styles.card}>
       <CompanionIntro section="activity" title={t("最近7日間", "최근 7일")} tag={scope}
         caption={t("ひとつひとつの記録を振り返ろう。", "하나하나 쌓인 기록을 돌아보자.")} />
       <p className={styles.caption} data-companion-topic="weekTotal">
