@@ -48,27 +48,105 @@ function recordMessage(summary: DashboardSummary, focus: CompanionFocus, lang: s
   return say("ひらいてみて。次に会いたい単語を一緒に探そう。", "단계를 펼쳐봐. 다음에 만날 단어를 같이 찾아보자.");
 }
 
-const topicLines: Record<string, readonly CompanionLine[]> = {
-  learned: [["ここは一度でも答えた項目の数だよ。", "여긴 한 번이라도 답한 항목 수야."],["少しずつ増えていく足跡だね。","조금씩 늘어나는 발자국이네."]],
-  total: [["まだ出会っていない言葉も含めた全体の数だよ。","아직 만나지 않은 단어까지 포함한 전체 수야."]],
-  common: [["みんなで使う共通の単語たちだよ。","모두가 사용하는 공통 단어들이야."]],
-  personal: [["自分で集めた言葉も、ここに入ってるよ。","직접 모은 단어도 여기에 있어."]],
-  review: [["今、復習の候補になっている項目だよ。","지금 복습 후보로 잡힌 항목이야."],["忘れかけた言葉に会いに行こうか。","잊혀가는 단어들을 만나러 갈까?"]],
-  attempts: [["正解も間違いも、時間切れも数えているよ。","정답도 오답도 시간 초과도 세고 있어."]],
-  memoryHelp: [["この三段階は記憶の安定度の目安なんだ。","이 세 단계는 기억 안정성의 기준이야."],["ずっと覚えている保証ではないんだよ。","영원히 기억한다는 보장은 아니야."]],
-  memoryTotal: [["三つのグループを合わせた数だよ。","세 그룹을 모두 합친 숫자야."]],
-  weekTotal: [["この七日間に答えた回数と学習した日数だよ。","최근 7일 답변 횟수와 학습한 날짜 수야."]],
-  dayDetail: [["選んだ日の回答数がここに出るよ。","선택한 날의 답변 수가 여기 나와."]],
-  accuracy: [["正答数を全回答数で割った割合だよ。","전체 답변 중 정답의 비율이야."],["時間切れも回答数に含まれるよ。","시간 초과도 답변 수에 포함돼."]],
-  responseTime: [["正解したときの平均回答時間だよ。","정답을 맞혔을 때의 평균 응답 시간이야."],["速さは参考記録。記憶の段階には影響しないよ。","속도는 참고 기록이고 기억 단계에는 영향을 주지 않아."]],
-  activityNote: [["速さと記憶の安定度は別々に見ているよ。","응답 속도와 기억 안정성은 따로 보고 있어."]],
-  stageProgress: [["この段階で出会った数と全体の数だよ。","이 단계에서 학습한 수와 전체 수야."]],
-  stageUnlearned: [["まだ出会っていない項目がここにあるよ。","아직 만나지 않은 항목들이 여기 있어."]],
-  stage0: [["ここは覚え始めた言葉の数だよ。","여긴 처음 학습 중인 단어 수야."]],
-  stage1: [["少しずつなじんでいる言葉だね。","조금씩 익숙해지는 단어들이네."]],
-  stage2: [["長く覚えていられると推定された言葉だよ。","오래 기억할 것으로 추정되는 단어들이야."]],
-  stageNote: [["自分で追加した言葉は別に集計するよ。","직접 추가한 단어는 따로 집계해."]],
-};
+/** Speak to the learner's progress rather than reading labels or help text aloud. */
+function progressLines(summary: DashboardSummary, focus: CompanionFocus): readonly CompanionLine[] {
+  const fmt = (value: number) => value.toLocaleString("en-US");
+  const learned = summary.learned;
+  const memory = summary.memory;
+  const week = summary.week;
+  const days = summary.days.filter(d => d.attempts > 0).length;
+  const groups = focus.level ? summary.groups.filter(g => focus.level === "kana" ? g.level !== "P" : g.level === focus.level) : [];
+  const groupLearned = groups.reduce((sum, g) => sum + g.learned, 0);
+  const groupMemory = (i: number) => groups.reduce((sum, g) => sum + g.memory[i], 0);
+  const groupName = focus.level === "P" ? ["自分の単語", "내 단어"] : focus.level === "kana" ? ["かな", "가나"] : [`${focus.level ?? ""}段階`, `${focus.level ?? ""}단계`];
+  const positive = (value: number, ja: string, ko: string, emptyJa: string, emptyKo: string): CompanionLine[] =>
+    value > 0 ? [[ja, ko]] : [[emptyJa, emptyKo]];
+  const topic = focus.topic;
+  if (topic === "learned" || topic === "total" || topic === "common") {
+    const count = topic === "common" ? summary.common.learned : learned;
+    return [
+      ...positive(count, `もう${fmt(count)}個も学んだんだね！すごい！`, `벌써 ${fmt(count)}개나 공부했네! 굉장해!`, "最初のひとつ、楽しみにしてるよ。", "첫 단어부터 같이 시작해보자!"),
+      [`${fmt(count)}個との出会い、ひとつひとつ積み重ねたんだね。`, `${fmt(count)}개를 만날 때까지 하나씩 쌓아왔구나.`],
+      ["ここまで来た自分を、ちょっと褒めてあげてね。", "여기까지 온 자신을 조금 칭찬해줘도 좋아."],
+    ];
+  }
+  if (topic === "personal") return [
+    [`自分で集めた言葉が${fmt(summary.personal.learned)}個！宝物が増えてるね。`, `직접 모은 단어가 ${fmt(summary.personal.learned)}개! 보물상자가 커지고 있네.`],
+    ["君だけの単語帳、どんな言葉でいっぱいになるかな。", "너만의 단어장이 어떤 말들로 채워질지 궁금해."],
+  ];
+  if (topic === "review") return [
+    [`また会いたい言葉が${fmt(summary.review)}個。私も一緒に行くよ！`, `다시 만나볼 단어가 ${fmt(summary.review)}개네. 나도 같이 갈게!`],
+    ["忘れても、戻ってきてくれるのがうれしいな。", "잊어도 다시 만나러 와주는 게 기뻐."],
+  ];
+  if (topic === "attempts") return [
+    [`なんと${fmt(summary.attempts)}回も挑戦したんだね！`, `무려 ${fmt(summary.attempts)}번이나 도전했네!`],
+    ["間違えた日も含めて、全部君が進んだ足跡だよ。", "틀린 날까지 전부 네가 걸어온 발자국이야."],
+  ];
+  if (topic === "memoryHelp" || topic === "activityNote" || topic === "stageNote") return [
+    ["数字だけじゃなくて、ここまで続けた君も見ていたいな。", "숫자도 좋지만, 여기까지 이어온 너를 더 보고 싶어."],
+    ["今日はどの記録がいちばんうれしい？", "오늘은 어떤 기록이 가장 마음에 들어?"],
+  ];
+  if (topic === "memoryTotal") return [
+    [`${fmt(learned)}個もの言葉が君の記録に並んでる！`, `${fmt(learned)}개의 단어가 네 기록에 나란히 있네!`],
+    ["少しずつ積み上げてきたんだね。えらいなあ。", "조금씩 쌓아온 거구나. 정말 수고했어."],
+  ];
+  if (topic === "weekTotal") return [
+    [`7日間で${fmt(week.attempts)}問！よく頑張ったね。`, `7일 동안 ${fmt(week.attempts)}문제! 정말 열심히 했네.`],
+    [`${days}日も机に向かったんだね。私も見習わなきゃ！`, `${days}일이나 공부하러 왔네. 나도 본받아야겠어!`],
+  ];
+  if (topic === "dayDetail") {
+    const count = summary.days[6].attempts;
+    return [
+      [`今日も${fmt(count)}問。今日の一歩も大切にしよう。`, `오늘도 ${fmt(count)}문제. 오늘의 한 걸음도 소중해.`],
+      ["今日の頑張り、ちゃんとここに残ってるよ。", "오늘 노력한 것도 여기 잘 남아 있어."],
+    ];
+  }
+  if (topic === "accuracy") {
+    const accuracy = week.attempts ? Math.round(week.correct / week.attempts * 100) : null;
+    return accuracy === null ? [["まだこれからだね。一緒に始めよう！", "아직 시작 전이네. 같이 해보자!"]] : [
+      [`正解率${accuracy}%！積み重ねが見えてきたね。`, `정답률 ${accuracy}%! 쌓아온 노력이 보이네.`],
+      ["間違えた問題も、次の正解につながるよ。", "틀린 문제도 다음 정답으로 이어질 거야."],
+    ];
+  }
+  if (topic === "responseTime") return week.correct ? [
+    [`正解まで平均${(week.correct_ms / week.correct / 1000).toFixed(1)}秒！言葉が少しずつ身近になってるね。`, `정답까지 평균 ${(week.correct_ms / week.correct / 1000).toFixed(1)}초! 단어가 점점 친숙해지고 있네.`],
+    ["速さもいいけど、覚えていく過程も大事にしよう。", "속도도 좋지만 익혀가는 과정도 소중해."],
+  ] : [["これからどんな記録ができるか楽しみだね。", "앞으로 어떤 기록이 생길지 기대돼."]];
+  if (topic === "stageProgress" || topic === "stageUnlearned") return [
+    [`${groupName[0]}で${fmt(groupLearned)}個も学んだんだ！`, `${groupName[1]}에서 ${fmt(groupLearned)}개나 배웠네!`],
+    ["次の言葉にも、きっと出会えるよ。", "다음 단어도 분명 만나게 될 거야."],
+  ];
+  if (topic === "stage0" || topic === "stage1" || topic === "stage2") {
+    const i = Number(topic.slice(-1));
+    const count = groupMemory(i);
+    return i === 2 ? [
+      [`長く覚えている言葉が${fmt(count)}個！頼もしいね。`, `오래 기억하는 단어가 ${fmt(count)}개! 든든한데?`],
+      ["しっかり育ってきた記憶、大事にしよう。", "차곡차곡 자란 기억을 소중히 하자."],
+    ] : i === 1 ? [
+      [`${fmt(count)}個がだんだんなじんできたね！`, `${fmt(count)}개가 점점 익숙해지고 있네!`],
+      ["あと少しで、もっと仲良くなれそう。", "조금만 더 만나면 더 친해질 것 같아."],
+    ] : [
+      [`新しい出会いが${fmt(count)}個もあるね。`, `새로 만난 단어가 ${fmt(count)}개나 있네.`],
+      ["最初はみんな初対面。ゆっくり仲良くなろう。", "처음엔 모두 낯선 사이야. 천천히 친해지자."],
+    ];
+  }
+  if (focus.section === "memory" && focus.band !== undefined) {
+    const count = memory[focus.band] ?? 0;
+    if (focus.band === 2) return [
+      [`${fmt(count)}個も長く覚えているんだね！すごい！`, `${fmt(count)}개나 오래 기억하고 있네! 대단해!`],
+      ["何度も会った言葉たちが、心強い仲間になったね。", "여러 번 만난 단어들이 든든한 친구가 됐네."],
+    ];
+    if (focus.band === 1) return [
+      [`${fmt(count)}個がなじんできたね。いい感じ！`, `${fmt(count)}개가 익숙해지고 있네. 좋은데!`],
+      ["また会うたびに、きっと思い出しやすくなるよ。", "다시 만날수록 더 쉽게 떠오를 거야."],
+    ];
+    return [
+      [`${fmt(count)}個の言葉と仲良くなっている途中だね。`, `${fmt(count)}개 단어와 친해지는 중이네.`],
+      ["ここからが楽しみだね。私も応援してる！", "이제부터가 기대돼. 나도 응원할게!"],
+    ];
+  }
+  return [];
+}
 
 /** A full cycle is exhausted before repeating; extra lines match the current context. */
 export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0, hour?: number) {
@@ -83,9 +161,11 @@ export function companionMessage(summary: DashboardSummary, focus: CompanionFocu
   }
   if (focus.section === "stages" && focus.level === "P") specific = companionLines.personal;
   const timeKey = hour === undefined ? null : hour < 5 ? "night" : hour < 11 ? "morning" : hour < 17 ? "afternoon" : hour < 22 ? "evening" : "night";
-  if (focus.topic && topicLines[focus.topic]) specific = topicLines[focus.topic];
-  const extra = [...specific, ...companionLines[focus.section], ...(focus.section === "overview" && timeKey ? companionLines[timeKey] : [])];
-  const lines = focus.topic && topicLines[focus.topic]
+  const progress = progressLines(summary, focus);
+  // Contextual progress is always first. Generic lines add variety, never repeat UI definitions.
+  const extra = progress.length ? [...progress, ...companionLines[focus.section]] :
+    [...specific, ...companionLines[focus.section], ...(focus.section === "overview" && timeKey ? companionLines[timeKey] : [])];
+  const lines = progress.length
     ? extra.map(line => line[lang === "jp" ? 0 : 1])
     : [recordMessage(summary, focus, lang), ...extra.map(line => line[lang === "jp" ? 0 : 1])];
   return lines[((variant % lines.length) + lines.length) % lines.length];
