@@ -1,5 +1,8 @@
 import Phaser from "phaser";
 
+const MUSIC_GAIN = 0.5;
+const EFFECTS_GAIN = 3;
+
 const files = ["dash", "hybrid", "jelly", "hybrid-combo", "miss-combo"] as const;
 type Cue = typeof files[number];
 export function preloadBattleAudio(scene: Phaser.Scene) {
@@ -25,7 +28,7 @@ export class BattleAudio {
       if (typeof saved?.music === "number" && Number.isFinite(saved.music)) this.musicVolume = Math.max(0, Math.min(1, saved.music));
       if (typeof saved?.effects === "number" && Number.isFinite(saved.effects)) this.effectsVolume = Math.max(0, Math.min(1, saved.effects));
     } catch {}
-    scene.sound.volume = this.effectsVolume;
+    scene.sound.volume = this.effectsVolume * EFFECTS_GAIN;
     window.addEventListener("keydown", this.unlock);
     window.addEventListener("pointerdown", this.unlock);
     const cleanup = () => {
@@ -73,7 +76,7 @@ export class BattleAudio {
     }
     this.startMusic();
     if (this.music) {
-      const target = this.musicVolume * (performance.now() < this.duckUntil ? .6 : 1);
+      const target = this.musicVolume * MUSIC_GAIN * (performance.now() < this.duckUntil ? .6 : 1);
       this.music.volume += (target - this.music.volume) * Math.min(1, delta / (target < this.music.volume ? 35 : 450));
     }
   }
@@ -91,8 +94,8 @@ export class BattleAudio {
   setVolumes(music: number, effects: number) {
     this.musicVolume = Math.max(0, Math.min(1, music));
     this.effectsVolume = Math.max(0, Math.min(1, effects));
-    this.scene.sound.volume = this.effectsVolume;
-    if (this.music) this.music.volume = this.musicVolume;
+    this.scene.sound.volume = this.effectsVolume * EFFECTS_GAIN;
+    if (this.music) this.music.volume = this.musicVolume * MUSIC_GAIN;
     try { localStorage.setItem("sokudoku-audio-volumes", JSON.stringify({ music: this.musicVolume, effects: this.effectsVolume })); } catch {}
   }
   stop() { this.scene.sound.stopAll(); this.music?.pause(); this.playing = false; this.active = false; }
