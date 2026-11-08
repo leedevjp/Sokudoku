@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { EntryType, Kind } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
@@ -14,12 +14,31 @@ import { DashboardFilters } from "./dashboard-filters";
 import { DashboardState } from "./dashboard-state";
 import { SummaryCards } from "./summary-cards";
 import { DashboardCompanion } from "./floating-companion";
+import companionCss from "./dashboard-companion.module.css";
 
 export default function DashboardScreen() {
   const { prefs, change } = useSettings();
   const t: Translate = (jp, kr) => (prefs.lang === "jp" ? jp : kr);
   const [entry, setEntry] = useState<EntryType>("word");
   const [kind, setKind] = useState<Kind>("meaning");
+  const [companionMode, setCompanionMode] = useState<"fixed" | "follow">("fixed");
+  useEffect(() => {
+    try { if (localStorage.getItem("sokudoku-companion-mode") === "follow") setCompanionMode("follow"); } catch {}
+  }, []);
+  const toggleCompanion = () => setCompanionMode(old => {
+    const next = old === "fixed" ? "follow" : "fixed";
+    try { localStorage.setItem("sokudoku-companion-mode", next); } catch {}
+    return next;
+  });
+  const companionToggle = (location: "top" | "bottom") => (
+    <button type="button" className={companionCss.modeToggle} onClick={toggleCompanion}
+      aria-label={companionMode === "fixed" ? t("キャラクターを追従させる", "캐릭터 이동 모드로 전환") : t("キャラクターを固定する", "캐릭터 고정 모드로 전환")}
+      title={companionMode === "fixed" ? t("固定中 · クリックで追従", "고정 중 · 클릭하면 이동") : t("追従中 · クリックで固定", "이동 중 · 클릭하면 고정")}
+      aria-pressed={companionMode === "fixed"} data-companion-toggle={location}>
+      <span aria-hidden="true">{companionMode === "fixed" ? "🔒" : "🔓"}</span>
+    </button>
+  );
+
   const { data, error, retry } = useDashboardData();
   const actualKind = entry === "word" ? kind : "meaning";
   const summary = useMemo(() => data ? dashboardSummary(data, entry, actualKind) : null,
@@ -60,6 +79,7 @@ export default function DashboardScreen() {
           </svg>
         </Link>
         <h1>{t("学習状況", "학습 현황")}</h1>
+        {companionToggle("top")}
         <button
           className={styles.language}
           onClick={() => change({ lang: prefs.lang === "jp" ? "kr" : "jp" })}
@@ -89,7 +109,7 @@ export default function DashboardScreen() {
         {error || !summary ? (
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
         ) : (
-          <DashboardCompanion key={entry + ":" + actualKind} summary={summary} lang={prefs.lang}>
+          <DashboardCompanion key={entry + ":" + actualKind} summary={summary} lang={prefs.lang} mode={companionMode}>
           <div data-companion-section="overview" className={styles.sections}>
             {summary.learned === 0 ? <DashboardState error={null} summary={summary} t={t} retry={retry} /> :
             <SummaryCards
@@ -119,6 +139,7 @@ export default function DashboardScreen() {
           </DashboardCompanion>
         )}
       </div>
+      <div className={companionCss.bottomToggle}>{companionToggle("bottom")}</div>
       {data && (
         <footer className={styles.footer}>
           {new Date(data.updated_at).toLocaleTimeString(
