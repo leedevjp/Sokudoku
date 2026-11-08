@@ -68,8 +68,12 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
   ];
   const topic = focus.topic;
   if (topic === "learned" || topic === "total" || topic === "common") {
-    const count = topic === "common" ? summary.common.learned : learned;
+    const count = topic === "common" ? summary.common.learned : topic === "total" ? summary.total : learned;
     if (count === 0) return zero;
+    if (topic === "total") return [
+      [`全部で${fmt(count)}個の言葉が待ってるよ。楽しみがいっぱい！`, `전체 ${fmt(count)}개 단어가 기다리고 있어. 만날 친구가 정말 많네!`],
+      [`そのうち${fmt(learned)}個ともう出会ったんだね。`, `그중 ${fmt(learned)}개나 이미 만나봤구나!`],
+    ];
     return [
       ...positive(count, `もう${fmt(count)}個も学んだんだね！すごい！`, `벌써 ${fmt(count)}개나 공부했네! 굉장해!`, "最初のひとつ、楽しみにしてるよ。", "첫 단어부터 같이 시작해보자!"),
       [`${fmt(count)}個との出会い、ひとつひとつ積み重ねたんだね。`, `${fmt(count)}개를 만날 때까지 하나씩 쌓아왔구나.`],
@@ -106,7 +110,6 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
     [`${days}日も机に向かったんだね。私も見習わなきゃ！`, `${days}일이나 공부하러 왔네. 나도 본받아야겠어!`],
   ];
   if (topic === "dayDetail") {
-    if (summary.days[6].attempts === 0) return zero;
     return [
       ["その日に積み重ねた一問一問、ちゃんと残ってるよ。", "그날 하나씩 풀었던 문제들이 전부 남아 있네."],
       ["今日の頑張り、ちゃんとここに残ってるよ。", "오늘 노력한 것도 여기 잘 남아 있어."],
