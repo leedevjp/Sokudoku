@@ -544,6 +544,9 @@ export class TrainingScene extends Phaser.Scene {
       } else this.settle("correction", 0);
       return;
     }
+    // A resize during answer animation or pronunciation is visual only.
+    // Do not classify the answered question as consumed or end the run.
+    if (this.phase === "flight" || this.phase === "feedback") return;
     // Paused settings must never consume the current question on viewport changes.
     if (this.phase === "paused" && (this.beforePause === "flight" || this.beforePause === "feedback")) {
       this.drawPause();
