@@ -26,6 +26,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
   const visits = useRef(new Map<string, number>());
   const [speaking, setSpeaking] = useState(true);
   const previousPlace = useRef<{ x: number; y: number; target: Element } | null>(null);
+  const interactionTarget = useRef<Element | null>(null);
   const activate = useCallback((focus: CompanionFocus, manual = false) => {
     const old = current.current;
     if (!manual && companionFocusKey(focus) === companionFocusKey(old.focus)) return;
@@ -55,7 +56,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const maxX = leftSide ? width - bubbleWidth - 13 : width - 80;
     const x = Math.max(minX, Math.min(maxX, leftSide ? sectionRect.left - 46 : sectionRect.right - 26));
     // Align the companion's feet with the hovered item, keeping speech above the data.
-    const y = Math.max(offset + 8, Math.min(offset + height - 96, rect.top + rect.height / 2 - 88));
+    const y = Math.max(offset + 8, Math.min(offset + height - 96, rect.top + rect.height / 2 - 84));
     const old = previousPlace.current;
     // Ignore horizontal jitter only; always follow vertical changes.
     if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 2) return;
@@ -90,6 +91,13 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     let frame = 0;
     const measure = () => {
       frame = 0;
+      const active = interactionTarget.current;
+      if (active?.isConnected) {
+        const r = active.getBoundingClientRect();
+        const h = window.visualViewport?.height ?? innerHeight;
+        if (r.bottom > 0 && r.top < h) { place(active); return; }
+      }
+      interactionTarget.current = null;
       const offset = window.visualViewport?.offsetTop ?? 0, height = window.visualViewport?.height ?? innerHeight;
       const rects = [...(root.current?.querySelectorAll<HTMLElement>("[data-companion-section]") ?? [])].map(el => {
         const rect = el.getBoundingClientRect();
@@ -134,14 +142,14 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     <div ref={root} className={css.group}
       onPointerOverCapture={event => {
         if (event.pointerType !== "mouse" || (sectionOf(event.target) === sectionOf(event.relatedTarget) && (event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-level],[data-companion-day]") === (event.relatedTarget as Element | null)?.closest?.("[data-companion-topic],[data-companion-band],[data-companion-level],[data-companion-day]"))) return;
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }); place((event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-day],[data-companion-level],button,summary,p,section")); }
+        const section = sectionOf(event.target); if (section) { const target = (event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-day],[data-companion-level],button,summary,p,section"); interactionTarget.current = target; activate({ section, ...detailOf(event.target) }); place(target); }
       }}
       onClickCapture={event => {
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place((event.target as Element).closest("[data-companion-topic],button,summary,p,section")); }
+        const section = sectionOf(event.target); if (section) { const target = (event.target as Element).closest("[data-companion-topic],[data-companion-band],[data-companion-day],[data-companion-level],button,summary,p,section"); interactionTarget.current = target; activate({ section, ...detailOf(event.target) }, true); place(target); }
       }}
       onFocusCapture={event => {
         if (!event.target.matches(":focus-visible")) return;
-        const section = sectionOf(event.target); if (section) { activate({ section, ...detailOf(event.target) }, true); place(event.target); }
+        const section = sectionOf(event.target); if (section) { interactionTarget.current = event.target; activate({ section, ...detailOf(event.target) }, true); place(event.target); }
       }}>{children}</div>
     {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true">
       {speaking && <div className={css.bubble}>
