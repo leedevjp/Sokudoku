@@ -98,7 +98,7 @@
 .accordionPreview { font-size: 12px; line-height: 1.55; color: var(--muted); overflow-wrap: anywhere; }
 .accordionChevron { flex-shrink: 0; font-size: 22px; line-height: 1; color: var(--accent-dark); }
 .accordionBody { padding: 0 14px 16px; }
-.accordionBody[hidden] { display: none; }
+.accordionBody[hidden] { display: none !important; padding: 0; }
 /* Avoid cards nested inside cards for memory, activity and stages. */
 .accordion:not([data-companion-section="overview"]) .accordionBody > section {
   padding: 6px 2px 0;
