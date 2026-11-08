@@ -2,10 +2,10 @@ import type { DashboardSummary } from "./summary";
 import { companionLines, type CompanionLine } from "./companion-lines";
 
 export type CompanionSection = "overview" | "memory" | "activity" | "stages";
-export type CompanionFocus = { section: CompanionSection; day?: string; level?: string; band?: number };
+export type CompanionFocus = { section: CompanionSection; day?: string; level?: string; band?: number; topic?: string };
 
 export function companionFocusKey(focus: CompanionFocus) {
-  return [focus.section, focus.day ?? "", focus.level ?? "", focus.band ?? ""].join(":");
+  return [focus.section, focus.day ?? "", focus.level ?? "", focus.band ?? "", focus.topic ?? ""].join(":");
 }
 
 /** Encouragement is grounded in the selected scope; never a claim of mastery. */
@@ -48,6 +48,28 @@ function recordMessage(summary: DashboardSummary, focus: CompanionFocus, lang: s
   return say("ひらいてみて。次に会いたい単語を一緒に探そう。", "단계를 펼쳐봐. 다음에 만날 단어를 같이 찾아보자.");
 }
 
+const topicLines: Record<string, readonly CompanionLine[]> = {
+  learned: [["ここは一度でも答えた項目の数だよ。", "여긴 한 번이라도 답한 항목 수야."],["少しずつ増えていく足跡だね。","조금씩 늘어나는 발자국이네."]],
+  total: [["まだ出会っていない言葉も含めた全体の数だよ。","아직 만나지 않은 단어까지 포함한 전체 수야."]],
+  common: [["みんなで使う共通の単語たちだよ。","모두가 사용하는 공통 단어들이야."]],
+  personal: [["自分で集めた言葉も、ここに入ってるよ。","직접 모은 단어도 여기에 있어."]],
+  review: [["今、復習の候補になっている項目だよ。","지금 복습 후보로 잡힌 항목이야."],["忘れかけた言葉に会いに行こうか。","잊혀가는 단어들을 만나러 갈까?"]],
+  attempts: [["正解も間違いも、時間切れも数えているよ。","정답도 오답도 시간 초과도 세고 있어."]],
+  memoryHelp: [["この三段階は記憶の安定度の目安なんだ。","이 세 단계는 기억 안정성의 기준이야."],["ずっと覚えている保証ではないんだよ。","영원히 기억한다는 보장은 아니야."]],
+  memoryTotal: [["三つのグループを合わせた数だよ。","세 그룹을 모두 합친 숫자야."]],
+  weekTotal: [["この七日間に答えた回数と学習した日数だよ。","최근 7일 답변 횟수와 학습한 날짜 수야."]],
+  dayDetail: [["選んだ日の回答数がここに出るよ。","선택한 날의 답변 수가 여기 나와."]],
+  accuracy: [["正答数を全回答数で割った割合だよ。","전체 답변 중 정답의 비율이야."],["時間切れも回答数に含まれるよ。","시간 초과도 답변 수에 포함돼."]],
+  responseTime: [["正解したときの平均回答時間だよ。","정답을 맞혔을 때의 평균 응답 시간이야."],["速さは参考記録。記憶の段階には影響しないよ。","속도는 참고 기록이고 기억 단계에는 영향을 주지 않아."]],
+  activityNote: [["速さと記憶の安定度は別々に見ているよ。","응답 속도와 기억 안정성은 따로 보고 있어."]],
+  stageProgress: [["この段階で出会った数と全体の数だよ。","이 단계에서 학습한 수와 전체 수야."]],
+  stageUnlearned: [["まだ出会っていない項目がここにあるよ。","아직 만나지 않은 항목들이 여기 있어."]],
+  stage0: [["ここは覚え始めた言葉の数だよ。","여긴 처음 학습 중인 단어 수야."]],
+  stage1: [["少しずつなじんでいる言葉だね。","조금씩 익숙해지는 단어들이네."]],
+  stage2: [["長く覚えていられると推定された言葉だよ。","오래 기억할 것으로 추정되는 단어들이야."]],
+  stageNote: [["自分で追加した言葉は別に集計するよ。","직접 추가한 단어는 따로 집계해."]],
+};
+
 /** A full cycle is exhausted before repeating; extra lines match the current context. */
 export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0, hour?: number) {
   let specific: readonly CompanionLine[] = [];
@@ -61,6 +83,7 @@ export function companionMessage(summary: DashboardSummary, focus: CompanionFocu
   }
   if (focus.section === "stages" && focus.level === "P") specific = companionLines.personal;
   const timeKey = hour === undefined ? null : hour < 5 ? "night" : hour < 11 ? "morning" : hour < 17 ? "afternoon" : hour < 22 ? "evening" : "night";
+  if (focus.topic && topicLines[focus.topic]) specific = topicLines[focus.topic];
   const extra = [...specific, ...companionLines[focus.section], ...(focus.section === "overview" && timeKey ? companionLines[timeKey] : [])];
   const lines = [recordMessage(summary, focus, lang), ...extra.map(line => line[lang === "jp" ? 0 : 1])];
   return lines[((variant % lines.length) + lines.length) % lines.length];
