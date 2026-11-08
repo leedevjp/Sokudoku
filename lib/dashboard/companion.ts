@@ -85,7 +85,9 @@ export function companionMessage(summary: DashboardSummary, focus: CompanionFocu
   const timeKey = hour === undefined ? null : hour < 5 ? "night" : hour < 11 ? "morning" : hour < 17 ? "afternoon" : hour < 22 ? "evening" : "night";
   if (focus.topic && topicLines[focus.topic]) specific = topicLines[focus.topic];
   const extra = [...specific, ...companionLines[focus.section], ...(focus.section === "overview" && timeKey ? companionLines[timeKey] : [])];
-  const lines = [recordMessage(summary, focus, lang), ...extra.map(line => line[lang === "jp" ? 0 : 1])];
+  const lines = focus.topic && topicLines[focus.topic]
+    ? extra.map(line => line[lang === "jp" ? 0 : 1])
+    : [recordMessage(summary, focus, lang), ...extra.map(line => line[lang === "jp" ? 0 : 1])];
   return lines[((variant % lines.length) + lines.length) % lines.length];
 }
 
