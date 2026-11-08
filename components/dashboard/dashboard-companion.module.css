@@ -55,3 +55,9 @@
 @media (max-width: 350px) { .intro { grid-template-columns: minmax(0, 1fr) 60px; gap: 5px; } .spot { width: 60px; } .friend { margin-left: -6px; } }
 @media (prefers-reduced-motion: reduce) { .friend, .friend::before, .sprite, .spark { animation: none !important; } .spark { display: none; } }
 @media (prefers-reduced-motion: no-preference) { .friend:active .sprite { filter: brightness(1.08); } }
+
+.modeToggle { flex: none; display: inline-grid; place-items: center; width: 38px; height: 38px; border: 2px solid var(--line); border-bottom: 3px solid var(--shade); border-radius: 13px; background: var(--card); color: var(--accent-dark); cursor: pointer; font-size: 17px; line-height: 1; }
+.modeToggle[aria-pressed="true"] { background: var(--tint); }
+.modeToggle:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.bottomToggle { display: flex; justify-content: flex-end; padding: 8px 2px 12px; }
+.floating[data-companion-mode="fixed"] { transition: none; }
