@@ -210,3 +210,6 @@
   .filterTrigger { padding: 8px 10px; }
   .filterCurrent { font-size: 11px; }
 }
+
+/* The companion sits on the left in fixed mode, so face inward toward the dialogue. */
+.floating[data-companion-mode="fixed"] .sprite { transform: scaleX(-1); }
