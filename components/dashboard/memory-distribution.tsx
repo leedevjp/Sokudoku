@@ -23,7 +23,7 @@ export function MemoryDistribution({
     t("長く覚えている項目", "오래 기억하는 항목"),
   ];
   return (
-    <section className={styles.card} data-companion-section="memory">
+    <section className={styles.card}>
       <CompanionIntro section="memory" title={t("記憶の状態", "기억 상태")} tag={scope}
         caption={t("学習記録から推定した記憶の状態です。", "학습 기록을 바탕으로 추정한 기억 상태예요.")}>
         <button
