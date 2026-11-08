@@ -4,8 +4,10 @@ import type { Question } from "../types";
 export function drawQuestionCard(view: TrainingView, question: Question) {
   const { scale: s, width: cw, left, top, extra } = view.boardLayout;
   const x = view.w / 2;
+  const length = Array.from(question.word.term).length;
   const cardTop = top + 166 * s + extra,
     size = 250 * s,
+    cardWidth = Math.min(cw - 24 * s, (250 + Math.max(0, length - 4) * 38) * s),
     qy = cardTop + size / 2;
   view.wordView = view.add.container(x, qy);
   const halo = view.add.graphics();
@@ -13,9 +15,9 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     halo
       .fillStyle(view.c.blue, view.prefs.theme === "dark" ? 0.004 : 0.007)
       .fillRoundedRect(
-        -size / 2 - i * 2 * s,
+        -cardWidth / 2 - i * 2 * s,
         -size / 2 + i * s,
-        size + i * 4 * s,
+        cardWidth + i * 4 * s,
         size + 25 * s,
         40 * s,
       );
@@ -23,18 +25,19 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const frame = view.add
     .graphics()
     .lineStyle(Math.max(1.5, 4 * s), view.c.blue);
-  const edge = size / 2 + 22 * s,
+  const edgeX = cardWidth / 2 + 22 * s,
+    edgeY = size / 2 + 22 * s,
     arm = 46 * s;
   for (const dx of [-1, 1])
     for (const dy of [-1, 1])
       frame
         .beginPath()
-        .moveTo(dx * (edge - arm), dy * edge)
-        .lineTo(dx * edge, dy * edge)
-        .lineTo(dx * edge, dy * (edge - arm))
+        .moveTo(dx * (edgeX - arm), dy * edgeY)
+        .lineTo(dx * edgeX, dy * edgeY)
+        .lineTo(dx * edgeX, dy * (edgeY - arm))
         .strokePath();
   view.wordView.add(frame);
-  view.wordView.add(view.box(0, 0, size, size, view.c.panel, 40 * s));
+  view.wordView.add(view.box(0, 0, cardWidth, size, view.c.panel, 40 * s));
   const tint = view.add.graphics();
   tint
     .fillGradientStyle(
@@ -48,9 +51,9 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       1,
     )
     .fillRoundedRect(
+      -cardWidth / 2 + 2 * s,
       -size / 2 + 2 * s,
-      -size / 2 + 2 * s,
-      size - 4 * s,
+      cardWidth - 4 * s,
       size - 10 * s,
       38 * s,
     );
@@ -133,7 +136,6 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       true,
     ),
   );
-  const length = Array.from(question.word.term).length;
   const word = view.designText(
     0,
     14 * s,
@@ -141,15 +143,15 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     Math.min(150, 210 / Math.min(Math.max(length, 1), 5)) * s,
     view.c.ink,
   );
-  word.setWordWrapWidth(size - 38 * s, true);
+  word.setWordWrapWidth(cardWidth - 38 * s, true);
   while (
     word.height > size - 90 * s &&
     parseFloat(String(word.style.fontSize)) > 20 * s
   )
     word.setFontSize(parseFloat(String(word.style.fontSize)) - 1);
   view.wordView.add(word);
-  view.spark(x - size / 2 - 55 * s, cardTop + 12 * s, 15 * s, 0.7);
-  view.spark(x + size / 2 + 65 * s, cardTop + size + 44 * s, 10 * s, 0.45);
+  view.spark(x - cardWidth / 2 - 55 * s, cardTop + 12 * s, 15 * s, 0.7);
+  view.spark(x + cardWidth / 2 + 65 * s, cardTop + size + 44 * s, 10 * s, 0.45);
   view.promptCaption = view
     .designText(
       x,
