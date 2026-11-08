@@ -45,10 +45,10 @@ export function DashboardCompanion({ summary, lang, children, mode }: { summary:
       floating.current.getAnimations().forEach(animation => animation.cancel());
       floating.current.dataset.motion = "idle";
       floating.current.dataset.side = "right";
-      floating.current.style.left = "auto";
-      floating.current.style.right = "16px";
-      floating.current.style.top = "auto";
-      floating.current.style.bottom = "max(12px, env(safe-area-inset-bottom))";
+      floating.current.style.left = "0";
+      floating.current.style.right = "auto";
+      floating.current.style.top = "0";
+      floating.current.style.bottom = "auto";
       previousPlace.current = null;
       return;
     }
@@ -164,7 +164,7 @@ export function DashboardCompanion({ summary, lang, children, mode }: { summary:
         if (!event.target.matches(":focus-visible")) return;
         const section = sectionOf(event.target); if (section) { interactionTarget.current = event.target; activate({ section, ...detailOf(event.target) }, true); place(event.target); }
       }}>{children}</div>
-    {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true" data-companion-mode={mode} style={mode === "fixed" ? {left:"auto",right:16,top:"auto",bottom:12} : undefined}>
+    {mounted && createPortal(<div ref={floating} className={css.floating} data-companion-overlay="true" data-companion-mode={mode} style={mode === "fixed" ? {left:0,right:"auto",top:0,bottom:"auto"} : undefined}>
       {speaking && <div className={css.bubble}>
         <p id="companion-speech" data-companion-message={view.focus.section} aria-live="off">{companionMessage(summary, view.focus, lang, view.variant, new Date().getHours())}</p>
         <button className={css.dismiss} onClick={() => setSpeaking(false)} aria-label={lang === "jp" ? "吹き出しを閉じる" : "말풍선 접기"}>×</button>
@@ -174,6 +174,6 @@ export function DashboardCompanion({ summary, lang, children, mode }: { summary:
         aria-describedby={speaking ? "companion-speech" : undefined} onClick={cheer}>
         <span key={view.variant + companionFocusKey(view.focus)} className={css.sprite} aria-hidden="true" />
       </button>
-    </div>, document.body)}
+    </div>, mode === "fixed" ? (document.getElementById("dashboard-companion-home") ?? document.body) : document.body)}
   </>;
 }
