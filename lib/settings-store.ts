@@ -17,7 +17,7 @@ function getSnapshot(): Preferences {
         ? {
             lang: parsed.lang === "kr" ? "kr" : "jp",
             theme: parsed.theme === "dark" ? "dark" : "light",
-            pronunciation: parsed.pronunciation === "always" || parsed.pronunciation === "wrong" ? parsed.pronunciation : "always",
+            pronunciation: parsed.pronunciation === "always" || parsed.pronunciation === "wrong" || parsed.pronunciation === "off" ? parsed.pronunciation : "always",
             pronunciationSource: parsed.pronunciationSource === "kana" ? "kana" : "term",
           }
         : defaultPreferences;
