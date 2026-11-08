@@ -652,6 +652,7 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   private drawEnd() {
+    this.tweens.killAll();
     this.notifyReady();
     this.clear();
     this.game.canvas.setAttribute(
@@ -680,6 +681,29 @@ export class TrainingScene extends Phaser.Scene {
       },
     );
     const s = Math.min(1, (this.h - 32) / 680);
+    if (this.persistence.saving && !this.options.preview) {
+      // Indeterminate spinner: saving has no measurable percentage.
+      const spinner = this.add.container(this.w / 2 - 104 * s, this.h / 2 + 56 * s);
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        spinner.add(
+          this.add.circle(
+            Math.cos(angle) * 11 * s,
+            Math.sin(angle) * 11 * s,
+            2.8 * s,
+            this.view.c.blue,
+            0.25 + (i / 7) * 0.75,
+          ),
+        );
+      }
+      this.tweens.add({
+        targets: spinner,
+        angle: 360,
+        duration: 900,
+        repeat: -1,
+        ease: "Linear",
+      });
+    }
     const width = Math.min(this.w - 32, 500);
     this.pet = new RabbitCompanion(
       this,
