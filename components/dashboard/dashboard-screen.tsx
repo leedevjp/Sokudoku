@@ -135,9 +135,10 @@ export default function DashboardScreen() {
         onEntryChange={setEntry}
         onKindChange={setKind}
       />
-      {companionMode === "fixed" && (
-        <div id="dashboard-companion-home" className={companionCss.companionHome} aria-label={t("キャラクターの応援", "캐릭터 응원")} />
-      )}
+      <div id="dashboard-companion-home" className={companionCss.companionHome}
+        style={companionMode === "fixed" ? undefined : { display: "none" }}
+        aria-hidden={companionMode !== "fixed"}
+        aria-label={companionMode === "fixed" ? t("キャラクターの応援", "캐릭터 응원") : undefined} />
       <div aria-live="polite" aria-busy={!data && !error}>
         {error || !summary ? (
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
