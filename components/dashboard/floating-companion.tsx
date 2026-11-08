@@ -55,7 +55,7 @@ export function DashboardCompanion({ summary, lang, children }: { summary: Dashb
     const maxX = leftSide ? width - bubbleWidth - 13 : width - 80;
     const x = Math.max(minX, Math.min(maxX, leftSide ? sectionRect.left - 46 : sectionRect.right - 26));
     // Align the companion's feet with the hovered item, keeping speech above the data.
-    const y = Math.max(offset + 125, Math.min(offset + height - 100, rect.top - 88));
+    const y = Math.max(offset + 8, Math.min(offset + height - 96, rect.top + rect.height / 2 - 88));
     const old = previousPlace.current;
     // Ignore horizontal jitter only; always follow vertical changes.
     if (old && Math.abs(old.x - x) < 12 && Math.abs(old.y - y) < 2) return;
