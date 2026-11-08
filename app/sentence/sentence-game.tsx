@@ -21,8 +21,9 @@ function deck(sentences: ReadingSentence[]): Question[] {
     const socket = sentence.sockets[Math.floor(Math.random() * sentence.sockets.length)];
     const accepted = shuffle(socket.options.filter(o => o.accepted));
     const rejected = shuffle(socket.options.filter(o => !o.accepted));
-    const remainder = shuffle([...accepted.slice(1), ...rejected.slice(1)]).slice(0, 2);
-    return { sentence, socket: { ...socket, options: shuffle([accepted[0], rejected[0], ...remainder]) } };
+    // The full pool accepts synonyms; draw one accepted expression and three
+    // context-reviewed distractors, like the curated word-quiz candidate bank.
+    return { sentence, socket: { ...socket, options: shuffle([accepted[0], ...rejected.slice(0, 3)]) } };
   });
 }
 export default function SentenceGame({ sentences }: { sentences: ReadingSentence[] }) {

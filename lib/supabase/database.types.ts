@@ -298,6 +298,8 @@ export type Database = {
           id: string
           is_accepted: boolean
           reading: string | null
+          reason_ko: string | null
+          review_status: string
           socket_id: string
           word_id: string | null
         }
@@ -306,6 +308,8 @@ export type Database = {
           id?: string
           is_accepted: boolean
           reading?: string | null
+          reason_ko?: string | null
+          review_status?: string
           socket_id: string
           word_id?: string | null
         }
@@ -314,6 +318,8 @@ export type Database = {
           id?: string
           is_accepted?: boolean
           reading?: string | null
+          reason_ko?: string | null
+          review_status?: string
           socket_id?: string
           word_id?: string | null
         }
