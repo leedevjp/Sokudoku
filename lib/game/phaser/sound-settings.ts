@@ -27,13 +27,16 @@ export function createSoundControls(
   muteRow.append(heading, mute);
   section.append(muteRow);
 
-  const slider = (name: string, initial: number, change: (value: number) => void) => {
-    const group = document.createElement("label");
+  /** Slider row with an optional preview button beside the value. */
+  const slider = (name: string, initial: number, change: (value: number) => void, extra?: HTMLElement) => {
+    const group = document.createElement("div");
     group.className = "pause-sound-slider";
     const row = document.createElement("span");
     row.className = "pause-slider-caption";
     const nameSpan = document.createElement("span");
     nameSpan.textContent = name;
+    const side = document.createElement("span");
+    side.className = "pause-slider-side";
     const value = document.createElement("output");
     const input = document.createElement("input");
     input.type = "range";
@@ -44,32 +47,37 @@ export function createSoundControls(
     input.setAttribute("aria-label", name);
     const refresh = () => {
       value.textContent = input.value + "%";
-      input.style.setProperty("--fill", input.value + "%");
+      input.style.setProperty("--p", String(Number(input.value) / 100));
     };
     input.addEventListener("input", () => {
       change(Number(input.value) / 100);
       refresh();
     });
     refresh();
-    row.append(nameSpan, value);
+    side.append(value);
+    if (extra) side.append(extra);
+    row.append(nameSpan, side);
     group.append(row, input);
     section.append(group);
   };
-  slider(t("BGM", "배경음"), audio.musicVolume, value => audio.setVolumes(value, audio.effectsVolume));
-  slider(t("効果音", "효과음"), audio.effectsVolume, value => audio.setVolumes(audio.musicVolume, value));
-
   const preview = document.createElement("button");
   preview.type = "button";
   preview.className = "pause-preview";
-  preview.textContent = t("▶ 効果音を試す", "▶ 효과음 미리듣기");
+  preview.textContent = "▶";
+  preview.title = t("効果音を試す", "효과음 미리듣기");
+  preview.setAttribute("aria-label", preview.title);
   preview.onclick = () => audio.play("dash");
-  section.append(preview);
+  slider(t("BGM", "배경음"), audio.musicVolume, value => audio.setVolumes(value, audio.effectsVolume));
+  slider(t("効果音", "효과음"), audio.effectsVolume, value => audio.setVolumes(audio.musicVolume, value), preview);
 
   let current = preferences;
   const change = (patch: Partial<Preferences>) => {
     current = { ...current, ...patch };
     changePreferences(current);
   };
+  const selects = document.createElement("div");
+  selects.className = "pause-select-grid";
+  section.append(selects);
   const selectSetting = (
     title: string,
     options: { value: string; text: string }[],
@@ -91,7 +99,7 @@ export function createSoundControls(
     select.value = selected;
     select.onchange = () => onChange(select.value);
     row.append(caption, select);
-    section.append(row);
+    selects.append(row);
   };
   selectSetting(t("単語の発音", "단어 발음"), [
     { value: "off", text: t("オフ", "끄기") },
