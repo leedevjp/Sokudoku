@@ -23,7 +23,6 @@ import { resizeProgress } from "./resize-progress";
 import { Correction } from "../correction";
 import { BattleProgress, comboTier } from "../battle-progress";
 import { BattleAudio, preloadBattleAudio } from "./battle-audio";
-import { openSoundSettings } from "./sound-settings";
 import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
 export class TrainingScene extends Phaser.Scene {
@@ -45,7 +44,7 @@ export class TrainingScene extends Phaser.Scene {
   private session = new TrainingSession();
   private battleProgress = new BattleProgress();
   private battleAudio?: BattleAudio;
-  private closeSoundSettings?: () => void;
+  private soundExpanded = false;
   private speechActive = false;
   private speechToken = 0;
   private speechWatchdog?: ReturnType<typeof setTimeout>;
@@ -154,7 +153,7 @@ export class TrainingScene extends Phaser.Scene {
     this.trainingInput.attach();
     this.battleAudio = new BattleAudio(this);
     this.scale.on("resize", this.resize, this);
-    this.events.once("shutdown", () => { this.stopPronunciation(); this.closeSoundSettings?.(); this.nextGeneration++; this.trainingInput.detach(); });
+    this.events.once("shutdown", () => { this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach(); });
     this.startRun();
   }
   private clear() {
@@ -477,10 +476,10 @@ export class TrainingScene extends Phaser.Scene {
         this.finish();
       },
       preferences: this.prefs,
-      openSoundSettings: () => {
-        if (!this.battleAudio || this.closeSoundSettings) return;
-        this.closeSoundSettings = openSoundSettings(this.battleAudio, (jp, kr) => this.t(jp, kr), () => { this.closeSoundSettings = undefined; }, this.prefs, (preferences) => { this.prefs = preferences; this.options.onPreferences(preferences); });
-      },
+      audio: this.battleAudio,
+      toggleSound: () => this.toggleAllSound(),
+      soundExpanded: this.soundExpanded,
+      setSoundExpanded: (expanded) => { this.soundExpanded = expanded; },
       changePreferences: (preferences) => {
         this.prefs = preferences;
         this.options.onPreferences(preferences);
@@ -489,7 +488,6 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
   private resume() {
-    if (this.closeSoundSettings) { this.closeSoundSettings(); return; }
     if (this.phase !== "paused") return;
     this.overlay?.destroy();
     this.overlay = undefined;
