@@ -18,9 +18,10 @@ export class TrainingSession {
     rawElapsed: number,
     maxTime: number,
     stats: Stat[],
+    untimed = false,
   ) {
     const elapsed = Math.round(rawElapsed);
-    const timeout = index === null || rawElapsed >= maxTime;
+    const timeout = index === null || (!untimed && rawElapsed >= maxTime);
     const selected = timeout ? null : question.options[index!];
     const result = timeout
       ? "timeout"
