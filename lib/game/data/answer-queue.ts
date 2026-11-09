@@ -39,7 +39,7 @@ export async function flushAnswers(owner: string): Promise<void> {
             void owner;
             // Repair untimed answers queued by the first release, which used
             // an out-of-range sentinel that the server rejects.
-            if (answer.time_limit_ms > 10000 && answer.result !== "timeout") {
+            if (answer.time_limit_ms !== null && answer.time_limit_ms > 10000 && answer.result !== "timeout") {
               return {
                 ...answer,
                 time_limit_ms: null,
