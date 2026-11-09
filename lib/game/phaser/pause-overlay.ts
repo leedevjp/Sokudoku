@@ -50,10 +50,12 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-slider-caption output{font-variant-numeric:tabular-nums;color:var(--blue);font-weight:800}
 .pause-preview{width:30px;height:30px;padding:0;display:grid;place-items:center;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;color:var(--blue);font-size:11px;box-shadow:0 2px 0 var(--shade)}
 .pause-preview:active{transform:translateY(2px);box-shadow:none}
-.pause-sound-slider input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:18px;margin:0;padding:0;background:transparent;cursor:pointer;touch-action:pan-y;outline-offset:4px;--fillpos:calc(9px + (100% - 18px) * var(--p,0))}
-.pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:7px;border-radius:999px;background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%)}
-.pause-sound-slider input[type=range]::-moz-range-track{height:14px;border-radius:999px;background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%)}
-.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;box-sizing:border-box;width:18px;height:18px;margin-top:-5.5px;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
+/* Native input and thumb both use an 18px vertical box; the 7px track is painted
+   in its center, avoiding cross-browser thumb margin offsets. */
+.pause-sound-slider input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:18px;margin:0;padding:0;cursor:pointer;touch-action:pan-y;outline-offset:4px;--fillpos:calc(9px + (100% - 18px) * var(--p,0));background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%) center / 100% 7px no-repeat}
+.pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:18px;background:transparent;border:0;border-radius:0}
+.pause-sound-slider input[type=range]::-moz-range-track{height:18px;background:transparent;border:0;border-radius:0}
+.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;box-sizing:border-box;width:18px;height:18px;margin-top:0;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
 .pause-sound-slider input[type=range]::-moz-range-thumb{box-sizing:border-box;width:18px;height:18px;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
 .pause-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pause-select-row{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700;color:var(--ink)}
