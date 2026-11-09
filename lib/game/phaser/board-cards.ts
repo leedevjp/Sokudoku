@@ -9,7 +9,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   // Keep the original 250px card height for every word length.
   // Long words may expand horizontally, never shrink vertically.
   const size = 250 * s;
-  const cardWidth = Math.min(cw - 24 * s, (250 + Math.max(0, length - 4) * 62) * s);
+  const cardWidth = Math.min(cw - 16 * s, (250 + Math.max(0, length - 4) * 90) * s);
   const hudBottom = top + 128 * s;
   const battleTop = top + 466 * s + extra;
   const qy = (hudBottom + battleTop) / 2 + 15 * s;
@@ -145,14 +145,21 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       true,
     ),
   );
+  // Keep the original large type for short words. For 5+ characters,
+  // grow the card horizontally first and scale text only to fit its width.
+  // Japanese full-width glyphs are roughly one em each, so reserve a little
+  // breathing room without falling back to the old 42px cap.
+  const wordFontSize = length <= 4
+    ? Math.min(150, 210 / Math.max(length, 1)) * s
+    : Math.min(62, (cardWidth / s - 48) / length * 0.92) * s;
   const word = view.designText(
     0,
     0,
     question.word.term,
-    Math.min(150, 210 / Math.min(Math.max(length, 1), 5)) * s,
+    wordFontSize,
     view.c.ink,
   );
-  word.setWordWrapWidth(cardWidth - 38 * s, true);
+  word.setWordWrapWidth(cardWidth - 40 * s, true);
   while (
     word.height > size - 46 * s &&
     parseFloat(String(word.style.fontSize)) > 20 * s
