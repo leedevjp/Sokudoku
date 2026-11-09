@@ -25,12 +25,12 @@ export type Database = {
           personal_word_id: string | null
           question_type: string
           received_at: string
-          response_ms: number
+          response_ms: number | null
           result: string
           selected_extra_meaning_choice_id: string | null
           selected_personal_word_id: string | null
           selected_word_id: string | null
-          time_limit_ms: number
+          time_limit_ms: number | null
           user_id: string
           word_id: string | null
         }
@@ -44,12 +44,12 @@ export type Database = {
           personal_word_id?: string | null
           question_type: string
           received_at?: string
-          response_ms: number
+          response_ms: number | null
           result: string
           selected_extra_meaning_choice_id?: string | null
           selected_personal_word_id?: string | null
           selected_word_id?: string | null
-          time_limit_ms: number
+          time_limit_ms: number | null
           user_id?: string
           word_id?: string | null
         }
@@ -63,12 +63,12 @@ export type Database = {
           personal_word_id?: string | null
           question_type?: string
           received_at?: string
-          response_ms?: number
+          response_ms?: number | null
           result?: string
           selected_extra_meaning_choice_id?: string | null
           selected_personal_word_id?: string | null
           selected_word_id?: string | null
-          time_limit_ms?: number
+          time_limit_ms?: number | null
           user_id?: string
           word_id?: string | null
         }
