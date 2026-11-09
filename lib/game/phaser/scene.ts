@@ -683,7 +683,7 @@ export class TrainingScene extends Phaser.Scene {
         this.t("回答", "답변") + " " + this.logs.length,
       ].join(" / "),
     );
-    drawEnd(
+    const resultLayout = drawEnd(
       this.view,
       {
         reviewComplete: this.reviewComplete,
@@ -703,7 +703,11 @@ export class TrainingScene extends Phaser.Scene {
     const s = Math.min(1, (this.h - 32) / 680);
     if (this.persistence.saving && !this.options.preview) {
       // Indeterminate spinner: saving has no measurable percentage.
-      const spinner = this.add.container(this.w / 2 - 104 * s, this.h / 2 + 56 * s);
+      // The busy indicator belongs after the saving label, never on its left.
+      const spinner = this.add.container(
+        Math.min(this.w - 20 * s, resultLayout.statusRight + 18 * s),
+        resultLayout.statusY,
+      );
       for (let i = 0; i < 8; i++) {
         const angle = (Math.PI * 2 * i) / 8;
         spinner.add(
