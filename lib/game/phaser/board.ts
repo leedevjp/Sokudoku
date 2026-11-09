@@ -126,9 +126,10 @@ export class TrainingView extends TrainingSurface {
     hearts: number,
     correct: number,
     maxTime: number,
+    timeLimited = true,
   ) {
     this.hearts = hearts;
-    this.timeBar = drawHud(this, correct, maxTime, () => this.actions.pause(), this.actions.toggleSound, this.actions.soundEnabled);
+    this.timeBar = drawHud(this, correct, maxTime, () => this.actions.pause(), this.actions.toggleSound, this.actions.soundEnabled, timeLimited);
     this.drawHearts();
     drawQuestionCard(this, question);
     const choices = drawChoices(this, question, (source, index) =>

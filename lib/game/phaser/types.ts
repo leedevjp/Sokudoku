@@ -6,6 +6,7 @@ export type TrainingOptions = {
   words: Word[];
   stats: Stat[];
   kinds?: Kind[];
+  timeLimited?: boolean;
   planner: TrainingPlanner;
   preferences: Preferences;
   onPreferences: (p: Preferences) => void;

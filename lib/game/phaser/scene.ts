@@ -63,6 +63,7 @@ export class TrainingScene extends Phaser.Scene {
   private started = 0;
   private pauseAt = 0;
   private maxTime = 10000;
+  private get timeLimited() { return this.options.timeLimited !== false; }
   private overlay?: Phaser.GameObjects.Container;
   private trainingInput = new TrainingInput({
     phase: () => this.phase,
@@ -240,7 +241,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private drawBoard() {
     this.clear();
-    this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime);
+    this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime, this.timeLimited);
     this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
     this.notifyReady();
   }
@@ -287,11 +288,11 @@ export class TrainingScene extends Phaser.Scene {
     }
     if (this.phase !== "play") return;
     const elapsed = performance.now() - this.started;
-    this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
-    this.view.seconds?.setText(
-      (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
-    );
-    if (elapsed >= this.maxTime) this.resolve(null);
+    if (this.timeLimited) {
+      this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
+      this.view.seconds?.setText((Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1));
+      if (elapsed >= this.maxTime) this.resolve(null);
+    }
   }
   private press(source: string, i: number) {
     if (this.phase !== "play" || !this.gate.claim(source, i)) return;
@@ -314,14 +315,14 @@ export class TrainingScene extends Phaser.Scene {
   private resolve(index: number | null) {
     if (this.phase !== "play") return;
     const rawElapsed = Math.max(0, performance.now() - this.started);
-    const timeout = index === null || rawElapsed >= this.maxTime;
+    const timeout = index === null || (this.timeLimited && rawElapsed >= this.maxTime);
     this.gate.close();
     this.phase = timeout ? "feedback" : "flight";
     const { answer: a, stats } = this.session.record(
       this.question,
       index,
       rawElapsed,
-      this.maxTime,
+      this.timeLimited ? this.maxTime : 2147483647,
       this.options.stats,
     );
     this.options.stats = stats;
@@ -506,10 +507,10 @@ export class TrainingScene extends Phaser.Scene {
           : Math.max(0, this.pauseAt - this.started);
     if (target === "play") {
       this.drawBoard();
-      this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
-      this.view.seconds?.setText(
-        (Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1),
-      );
+      if (this.timeLimited) {
+        this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
+        this.view.seconds?.setText((Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1));
+      }
     } else if (target === "correction") {
       this.tweens.killAll();
       this.drawBoard();
@@ -573,7 +574,7 @@ export class TrainingScene extends Phaser.Scene {
         settleElapsed: this.settleElapsed,
       },
       performance.now(),
-      this.maxTime,
+      this.timeLimited ? this.maxTime : Number.MAX_SAFE_INTEGER,
     );
     this.gate.close();
     this.time.removeAllEvents();

@@ -7,6 +7,7 @@ export function drawHud(
   pauseAction: () => void,
   toggleSound: () => void,
   soundEnabled: () => boolean,
+  timeLimited = true,
 ) {
   const { scale: s, left, width: cw, top } = view.boardLayout;
   const x = view.w / 2,
@@ -64,7 +65,7 @@ export function drawHud(
     .designText(
       right - 82 * s,
       metaY,
-      (maxTime / 1000).toFixed(1),
+      timeLimited ? (maxTime / 1000).toFixed(1) : "∞",
       34 * s,
       view.c.blue,
       true,
@@ -74,7 +75,7 @@ export function drawHud(
     .designText(
       right,
       metaY + 5 * s,
-      "s / " + (maxTime / 1000).toFixed(1) + "s",
+      timeLimited ? "s / " + (maxTime / 1000).toFixed(1) + "s" : "",
       16 * s,
       view.c.muted,
     )
