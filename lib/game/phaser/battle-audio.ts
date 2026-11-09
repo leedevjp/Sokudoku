@@ -53,7 +53,7 @@ export class BattleAudio {
       void sound.context.resume().catch(() => {});
   };
   private startMusic() {
-    if (!this.music || !this.active || !this.enabled || !this.unlocked || this.playing || document.hidden) return;
+    if (!this.music || !this.active || !this.enabled || this.musicVolume <= 0 || !this.unlocked || this.playing || document.hidden) return;
     this.playing = true;
     const generation = this.generation;
     void this.music.play().catch(() => {
@@ -71,7 +71,7 @@ export class BattleAudio {
       this.music.volume = 0;
       this.playing = false;
     }
-    if (!active || !this.enabled || document.hidden) {
+    if (!active || !this.enabled || this.musicVolume <= 0 || document.hidden) {
       this.music?.pause(); this.playing = false; return;
     }
     this.startMusic();
@@ -95,7 +95,10 @@ export class BattleAudio {
     this.musicVolume = Math.max(0, Math.min(1, music));
     this.effectsVolume = Math.max(0, Math.min(1, effects));
     this.scene.sound.volume = this.effectsVolume * EFFECTS_GAIN;
-    if (this.music) this.music.volume = this.musicVolume * MUSIC_GAIN;
+    if (this.music) this.music.volume = this.enabled ? this.musicVolume * MUSIC_GAIN : 0;
+    // A user adjusting BGM during pause should hear the new level immediately.
+    // Pausing at 0% also stops the media element, not just its audible output.
+    this.update(this.active, 16);
     try { localStorage.setItem("sokudoku-audio-volumes", JSON.stringify({ music: this.musicVolume, effects: this.effectsVolume })); } catch {}
   }
   stop() { this.scene.sound.stopAll(); this.music?.pause(); this.playing = false; this.active = false; }
