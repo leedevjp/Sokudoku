@@ -42,8 +42,8 @@ export async function flushAnswers(owner: string): Promise<void> {
             if (answer.time_limit_ms > 10000 && answer.result !== "timeout") {
               return {
                 ...answer,
-                time_limit_ms: 10000,
-                response_ms: Math.min(9999, answer.response_ms),
+                time_limit_ms: null,
+                response_ms: null,
               };
             }
             return answer;
