@@ -36,12 +36,16 @@ export function drawHud(
     .on("pointerup", () => pauseAction());
   const sound = view.add.container(right - 22 * s - Math.max(50, 58 * s), headerY);
   sound.add(view.box(0, 0, 44 * s, 44 * s, view.c.panel, 14 * s));
-  const soundLabel = view.designText(0, 0, soundEnabled() ? "♪" : "♪̸", 25 * s, view.c.ink, true);
-  sound.add(soundLabel);
+  // Draw a real diagonal mute stroke instead of a font-dependent combining glyph.
+  sound.add(view.designText(0, 0, "♪", 25 * s, view.c.ink, true));
+  const muteStroke = view.add.graphics().lineStyle(3.5 * s, view.c.ink, 1);
+  muteStroke.lineBetween(-12 * s, 13 * s, 12 * s, -13 * s);
+  muteStroke.setVisible(!soundEnabled());
+  sound.add(muteStroke);
   sound.setSize(Math.max(44, 44 * s), Math.max(44, 44 * s))
     .setInteractive({ useHandCursor: true }).on("pointerup", () => {
       toggleSound();
-      soundLabel.setText(soundEnabled() ? "♪" : "♪̸");
+      muteStroke.setVisible(!soundEnabled());
     });
   const metaY = top + 89 * s;
   view
