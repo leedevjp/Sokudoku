@@ -6,9 +6,9 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const x = view.w / 2;
   const length = Array.from(question.word.term).length;
   // Center the word card in the space between the HUD timer and battle meadow.
-  // Longer terms use a wider, flatter card while keeping the same visual center.
-  const longness = Math.min(1, Math.max(0, length - 4) / 4);
-  const size = (250 - 35 * longness) * s;
+  // Keep the original 250px card height for every word length.
+  // Long words may expand horizontally, never shrink vertically.
+  const size = 250 * s;
   const cardWidth = Math.min(cw - 24 * s, (250 + Math.max(0, length - 4) * 62) * s);
   const hudBottom = top + 128 * s;
   const battleTop = top + 466 * s + extra;
@@ -68,9 +68,10 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const badgeWidth = 108 * s,
     badgeHeight = 34 * s,
     badgeFont = 22 * s,
-    badgeX = left + badgeWidth / 2,
-    // Place badges immediately over the upper brackets, with a small vertical gap.
-    badgeY = cardTop - 34 * s;
+    // Anchor labels to the word card, not to the screen's outer edges.
+    badgeX = x - cardWidth / 2 + badgeWidth / 2,
+    // Bottom of badge is 5px above upper decorative corner.
+    badgeY = cardTop - 36 * s;
   const badges = view.add.container(0, 0);
   badges.add(
     view.add
@@ -117,7 +118,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
         ? 0xc4b5fd
         : 0x6d28d9
       : view.c.blue;
-  const modeX = left + cw - badgeWidth / 2;
+  const modeX = x + cardWidth / 2 - badgeWidth / 2;
   badges.add(
     view.add
       .graphics()
