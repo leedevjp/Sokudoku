@@ -68,10 +68,10 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const badgeWidth = 108 * s,
     badgeHeight = 34 * s,
     badgeFont = 22 * s,
-    // Anchor labels to the word card, not to the screen's outer edges.
-    badgeX = x - cardWidth / 2 + badgeWidth / 2,
-    // Bottom of badge is 5px above upper decorative corner.
-    badgeY = cardTop - 36 * s;
+    // The badges belong immediately below the HUD time bar (not above the word card).
+    // Timer ends at hudBottom; badge top is 8px below it.
+    badgeX = left + badgeWidth / 2,
+    badgeY = hudBottom + (8 + 34 / 2) * s;
   const badges = view.add.container(0, 0);
   badges.add(
     view.add
@@ -118,7 +118,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
         ? 0xc4b5fd
         : 0x6d28d9
       : view.c.blue;
-  const modeX = x + cardWidth / 2 - badgeWidth / 2;
+  const modeX = left + cw - badgeWidth / 2;
   badges.add(
     view.add
       .graphics()
