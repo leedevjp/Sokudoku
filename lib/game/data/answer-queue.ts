@@ -37,6 +37,15 @@ export async function flushAnswers(owner: string): Promise<void> {
         body: JSON.stringify(
           batch.map(({ owner, ...answer }) => {
             void owner;
+            // Repair untimed answers queued by the first release, which used
+            // an out-of-range sentinel that the server rejects.
+            if (answer.time_limit_ms > 10000 && answer.result !== "timeout") {
+              return {
+                ...answer,
+                time_limit_ms: 10000,
+                response_ms: Math.min(9999, answer.response_ms),
+              };
+            }
             return answer;
           }),
         ),
