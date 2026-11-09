@@ -61,7 +61,7 @@ export class TrainingSession {
             ? Math.round(
                 ((previous?.average_correct_response_ms ?? 0) *
                   (previous?.correct_count ?? 0) +
-                  a.response_ms) /
+                  (a.response_ms ?? 0)) /
                   corrects,
               )
             : (previous?.average_correct_response_ms ?? null),
