@@ -17,6 +17,7 @@ export type DashboardActivity = Pick<
   attempts: number;
   correct: number;
   correct_ms: number;
+  timed_correct: number;
 };
 export type DashboardData = {
   today: string;
