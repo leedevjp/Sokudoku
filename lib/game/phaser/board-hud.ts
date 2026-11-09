@@ -63,7 +63,7 @@ export function drawHud(
     .setOrigin(0, 0.5);
   view.seconds = view
     .designText(
-      right - 82 * s,
+      timeLimited ? right - 82 * s : right,
       metaY,
       timeLimited ? (maxTime / 1000).toFixed(1) : "∞",
       34 * s,
