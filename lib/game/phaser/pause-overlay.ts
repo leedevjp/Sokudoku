@@ -50,13 +50,14 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-slider-caption output{font-variant-numeric:tabular-nums;color:var(--blue);font-weight:800}
 .pause-preview{width:30px;height:30px;padding:0;display:grid;place-items:center;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;color:var(--blue);font-size:11px;box-shadow:0 2px 0 var(--shade)}
 .pause-preview:active{transform:translateY(2px);box-shadow:none}
-/* Native input and thumb both use an 18px vertical box; the 7px track is painted
-   in its center, avoiding cross-browser thumb margin offsets. */
-.pause-sound-slider input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:18px;margin:0;padding:0;cursor:pointer;touch-action:pan-y;outline-offset:4px;--fillpos:calc(9px + (100% - 18px) * var(--p,0));background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%) center / 100% 7px no-repeat}
-.pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:18px;background:transparent;border:0;border-radius:0}
-.pause-sound-slider input[type=range]::-moz-range-track{height:18px;background:transparent;border:0;border-radius:0}
-.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;box-sizing:border-box;width:18px;height:18px;margin-top:0;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
-.pause-sound-slider input[type=range]::-moz-range-thumb{box-sizing:border-box;width:18px;height:18px;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
+/* Slim, single-line volume bar: no surrounding input border/padding or visible thumb.
+   Retain the native range input for mouse, touch and keyboard controls. */
+.pause-sound-slider input[type=range]{-webkit-appearance:none!important;appearance:none!important;display:block!important;box-sizing:border-box!important;width:100%!important;height:7px!important;min-height:0!important;max-height:7px!important;margin:0!important;padding:0!important;border:0!important;border-radius:999px!important;box-shadow:none!important;outline:0!important;cursor:pointer;touch-action:pan-y;--fillpos:calc(100% * var(--p,0));background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%)!important;background-color:var(--track)!important}
+.pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:7px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important}
+.pause-sound-slider input[type=range]::-moz-range-track{height:7px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important}
+.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none!important;appearance:none!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+.pause-sound-slider input[type=range]::-moz-range-thumb{width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+.pause-sound-slider input[type=range]:focus-visible{outline:2px solid var(--blue)!important;outline-offset:4px!important}
 .pause-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pause-select-row{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700;color:var(--ink)}
 .pause-select-row select{width:100%;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:12px;padding:0 8px;color:var(--ink);background:var(--panel);font-size:13px;font-weight:700}
