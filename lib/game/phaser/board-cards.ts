@@ -28,14 +28,15 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const edgeX = cardWidth / 2 + 22 * s,
     edgeY = size / 2 + 22 * s,
     arm = 46 * s;
+  // Upper corners overlap the question-type and mode badges on wide word cards.
+  // Keep the lower decorative corners only, safely below the badge row.
   for (const dx of [-1, 1])
-    for (const dy of [-1, 1])
-      frame
-        .beginPath()
-        .moveTo(dx * (edgeX - arm), dy * edgeY)
-        .lineTo(dx * edgeX, dy * edgeY)
-        .lineTo(dx * edgeX, dy * (edgeY - arm))
-        .strokePath();
+    frame
+      .beginPath()
+      .moveTo(dx * (edgeX - arm), edgeY)
+      .lineTo(dx * edgeX, edgeY)
+      .lineTo(dx * edgeX, edgeY - arm)
+      .strokePath();
   view.wordView.add(frame);
   view.wordView.add(view.box(0, 0, cardWidth, size, view.c.panel, 40 * s));
   const tint = view.add.graphics();
