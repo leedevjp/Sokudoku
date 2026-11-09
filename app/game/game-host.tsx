@@ -28,6 +28,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     let readyTimer: ReturnType<typeof setTimeout> | undefined;
     const query = new URLSearchParams(window.location.search);
     const kinds = parseKinds(query.get("kinds"));
+    const timeLimited = query.get("timeLimit") !== "off";
     const runtime = new TrainingRuntime({
       levels: query.get("levels"),
       kinds,
@@ -54,6 +55,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       game = createTraining(parent.current, {
         ...data,
         kinds,
+        timeLimited,
         preferences: preferences.current,
         preview: !!previewWords,
         onReady: () => {
