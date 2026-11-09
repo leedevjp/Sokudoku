@@ -8,11 +8,11 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   // Center the word card in the space between the HUD timer and battle meadow.
   // Longer terms use a wider, flatter card while keeping the same visual center.
   const longness = Math.min(1, Math.max(0, length - 4) / 4);
-  const size = (190 - 28 * longness) * s;
-  const cardWidth = Math.min(cw - 24 * s, (270 + Math.max(0, length - 4) * 62) * s);
+  const size = (250 - 35 * longness) * s;
+  const cardWidth = Math.min(cw - 24 * s, (250 + Math.max(0, length - 4) * 62) * s);
   const hudBottom = top + 128 * s;
   const battleTop = top + 466 * s + extra;
-  const qy = (hudBottom + battleTop) / 2;
+  const qy = (hudBottom + battleTop) / 2 + 15 * s;
   const cardTop = qy - size / 2;
   view.wordView = view.add.container(x, qy);
   const halo = view.add.graphics();
@@ -31,7 +31,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     .graphics()
     .lineStyle(Math.max(1.5, 4 * s), view.c.blue);
   const edgeX = cardWidth / 2 + 22 * s,
-    edgeY = size / 2 + 22 * s,
+    edgeY = size / 2 + 14 * s,
     arm = 46 * s;
   // Preserve all four decorative corners, above and below the question card.
   // Badges occupy a separate strip above the upper corners.
@@ -69,8 +69,8 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     badgeHeight = 34 * s,
     badgeFont = 22 * s,
     badgeX = left + badgeWidth / 2,
-    // Leave a real gap between the badge bottom and the upper decorative brackets.
-    badgeY = cardTop - 56 * s;
+    // Place badges immediately over the upper brackets, with a small vertical gap.
+    badgeY = cardTop - 34 * s;
   const badges = view.add.container(0, 0);
   badges.add(
     view.add
@@ -163,7 +163,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   view.promptCaption = view
     .designText(
       x,
-      cardTop + size + 22 * s,
+      cardTop + size + 16 * s,
       question.kind === "reading"
         ? view.t("読み方を選んでください", "읽기를 고르세요")
         : question.word.difficulty === -1
