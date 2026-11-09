@@ -97,7 +97,7 @@ export class TrainingScene extends Phaser.Scene {
       () => this.prefs,
       {
         pause: () => this.pause(),
-        toggleSound: () => this.battleAudio?.toggle(),
+        toggleSound: () => this.toggleAllSound(),
         soundEnabled: () => this.battleAudio?.enabled ?? false,
         press: (source, index) => this.press(source, index),
       },
@@ -392,6 +392,16 @@ export class TrainingScene extends Phaser.Scene {
     }
     this.advanceAfterFeedback();
   }
+  /** The HUD mute is a master switch for BGM, effects and speech synthesis. */
+  private toggleAllSound() {
+    if (!this.battleAudio) return;
+    this.battleAudio.toggle();
+    if (!this.battleAudio.enabled) {
+      // Cancel any ongoing reading and release the answer-advance gate.
+      this.stopPronunciation();
+      this.maybeAdvance();
+    }
+  }
   private stopPronunciation() {
     this.speechToken++;
     this.speechActive = false;
@@ -401,7 +411,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private speakWord(result: "correct" | "incorrect" | "timeout") {
     this.stopPronunciation();
-    if (this.prefs.pronunciation === "off" ||
+    if (!this.battleAudio?.enabled || this.prefs.pronunciation === "off" ||
         (this.prefs.pronunciation === "wrong" && result === "correct") ||
         !("speechSynthesis" in window)) return;
     const value = this.prefs.pronunciationSource === "kana" ? this.question.word.kana : this.question.word.term;
