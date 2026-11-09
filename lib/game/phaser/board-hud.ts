@@ -1,4 +1,5 @@
 import type { TrainingView } from "./board";
+import Phaser from "phaser";
 export type TimeBar = { x: number; y: number; width: number; height: number };
 export function drawHud(
   view: TrainingView,
@@ -61,11 +62,28 @@ export function drawHud(
   view.scoreView = view
     .designText(left + 37 * s, metaY, String(correct), 34 * s, view.c.ink, true)
     .setOrigin(0, 0.5);
+  // Draw infinity as a balanced vector instead of relying on a font glyph.
+  // A font's infinity character can be lopsided or visually off-center.
+  if (!timeLimited) {
+    const points: Phaser.Math.Vector2[] = [];
+    const centerX = right - 18 * s;
+    for (let i = 0; i < 96; i++) {
+      const t = i * Math.PI * 2 / 96;
+      const sine = Math.sin(t);
+      const denominator = 1 + sine * sine;
+      points.push(new Phaser.Math.Vector2(
+        centerX + 17 * s * Math.cos(t) / denominator,
+        metaY + 17 * s * sine * Math.cos(t) / denominator,
+      ));
+    }
+    view.add.graphics().lineStyle(Math.max(2.5, 4 * s), view.c.blue, 1)
+      .strokePoints(points, true);
+  }
   view.seconds = view
     .designText(
-      timeLimited ? right - 82 * s : right,
+      right - 82 * s,
       metaY,
-      timeLimited ? (maxTime / 1000).toFixed(1) : "∞",
+      timeLimited ? (maxTime / 1000).toFixed(1) : "",
       34 * s,
       view.c.blue,
       true,
