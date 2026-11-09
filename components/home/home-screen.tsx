@@ -39,6 +39,7 @@ export default function HomeScreen() {
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
+  const [timeLimited, setTimeLimited] = useState(true);
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -54,6 +55,8 @@ export default function HomeScreen() {
         setModal("auth");
       }
       try {
+        const savedTimeLimit = localStorage.getItem("sokudoku-time-limit-v1");
+        if (savedTimeLimit !== null) setTimeLimited(savedTimeLimit !== "off");
         const savedModes = localStorage.getItem("sokudoku-modes-v1");
         if (savedModes !== null) setModes(parseModes(savedModes));
         const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
@@ -141,7 +144,7 @@ export default function HomeScreen() {
       <HomeHero authenticated={!!user} />
       <div className="home-actions">
         <div className="home-setting-group">
-          <ModeSelector modes={modes} onToggle={toggleMode} />
+          <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
         </div>
         <div className="home-setting-group">
           <KindSelector kinds={kinds} onToggle={toggleKind} />
@@ -166,7 +169,7 @@ export default function HomeScreen() {
             <Link
               className="primary"
               aria-disabled={!canStart}
-              href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}`}
+              href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}&timeLimit=${timeLimited ? "on" : "off"}`}
               onClick={(event) => {
                 if (!canStart) event.preventDefault();
               }}
