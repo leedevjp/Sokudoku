@@ -4,18 +4,28 @@ import { trainingModes, type TrainingMode } from "@/lib/game/learning/types";
 export function ModeSelector({
   modes,
   onToggle,
+  timeLimited,
+  onTimeLimitChange,
 }: {
   modes: TrainingMode[];
   onToggle: (mode: TrainingMode) => void;
+  timeLimited: boolean;
+  onTimeLimitChange: (value: boolean) => void;
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   return (
     <>
-      <p className="selection-label">
-        {t("学習モード", "학습 모드")}
-        <span>{t("探索＋復習 / テストは単独", "탐색+복습 / 시험은 단독")}</span>
-      </p>
+      <div className="selection-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span>{t("学習モード", "학습 모드")}</span>
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}>
+          <span>{t("制限時間", "시간제한")}</span>
+          <input type="checkbox" role="switch" aria-label={t("制限時間", "시간제한")} checked={timeLimited} onChange={(event) => onTimeLimitChange(event.target.checked)} style={{ position: "absolute", opacity: 0, width: 1, height: 1 }} />
+          <span aria-hidden="true" style={{ width: 38, height: 22, borderRadius: 99, background: timeLimited ? "#2d7deb" : "#9ca3af", display: "inline-flex", alignItems: "center", padding: 3, boxSizing: "border-box", justifyContent: timeLimited ? "flex-end" : "flex-start", transition: "background .15s" }}>
+            <span style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px #0002" }} />
+          </span>
+        </label>
+      </div>
       <div
         className="training-levels training-kinds training-modes"
         role="group"
