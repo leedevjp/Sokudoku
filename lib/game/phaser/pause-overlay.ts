@@ -123,7 +123,7 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   }
   root.append(css, card);
   const align = () => {
-    const rect = view.add.game.canvas.getBoundingClientRect();
+    const rect = view.game.canvas.getBoundingClientRect();
     root.style.left = rect.left + "px";
     root.style.top = rect.top + "px";
     root.style.width = rect.width + "px";
