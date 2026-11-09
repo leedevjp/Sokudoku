@@ -31,8 +31,8 @@ export type Answer = {
   question_type: Kind;
   selected_word_id: string | null;
   result: Result;
-  response_ms: number;
-  time_limit_ms: number;
+  response_ms: number | null;
+  time_limit_ms: number | null;
   answered_at: string;
 };
 export type Question = {

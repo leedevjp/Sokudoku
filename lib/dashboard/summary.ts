@@ -47,6 +47,7 @@ export function dashboardSummary(
       attempts: rows.reduce((n, a) => n + a.attempts, 0),
       correct: rows.reduce((n, a) => n + a.correct, 0),
       correct_ms: rows.reduce((n, a) => n + a.correct_ms, 0),
+      timed_correct: rows.reduce((n, a) => n + (a.timed_correct ?? a.correct), 0),
     };
   });
   const week = days.reduce(
@@ -54,8 +55,9 @@ export function dashboardSummary(
       attempts: n.attempts + d.attempts,
       correct: n.correct + d.correct,
       correct_ms: n.correct_ms + d.correct_ms,
+      timed_correct: n.timed_correct + d.timed_correct,
     }),
-    { attempts: 0, correct: 0, correct_ms: 0 },
+    { attempts: 0, correct: 0, correct_ms: 0, timed_correct: 0 },
   );
   return {
     ...sum(groups),

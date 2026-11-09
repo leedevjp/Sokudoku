@@ -36,8 +36,8 @@ export class TrainingSession {
       selected_word_id: selected?.id ?? null,
       selected_source: selected?.source ?? "word",
       result,
-      response_ms: timeout ? maxTime : Math.min(maxTime - 1, elapsed),
-      time_limit_ms: maxTime,
+      response_ms: untimed ? null : timeout ? maxTime : Math.min(maxTime - 1, elapsed),
+      time_limit_ms: untimed ? null : maxTime,
       answered_at: new Date().toISOString(),
     };
     this.answers.push(a);
@@ -57,11 +57,11 @@ export class TrainingSession {
         correct_count: corrects,
         accuracy: corrects / attempts,
         average_correct_response_ms:
-          result === "correct"
+          result === "correct" && !untimed
             ? Math.round(
                 ((previous?.average_correct_response_ms ?? 0) *
                   (previous?.correct_count ?? 0) +
-                  a.response_ms) /
+                  (a.response_ms ?? 0)) /
                   corrects,
               )
             : (previous?.average_correct_response_ms ?? null),

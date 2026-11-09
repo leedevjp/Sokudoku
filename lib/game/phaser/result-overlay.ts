@@ -27,10 +27,9 @@ export function drawEnd(
       .setWordWrapWidth(width - 32, true);
   view.box(x, y, width, 680 * s, view.c.panel, 28);
   const correct = data.answers.filter((a) => a.result === "correct");
-  const average = correct.length
-    ? Math.round(
-        correct.reduce((sum, a) => sum + a.response_ms, 0) / correct.length,
-      )
+  const timedCorrect = correct.filter((a) => a.response_ms !== null);
+  const average = timedCorrect.length
+    ? Math.round(timedCorrect.reduce((sum, a) => sum + a.response_ms!, 0) / timedCorrect.length)
     : null;
   label(
     -290,

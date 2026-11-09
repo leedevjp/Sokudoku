@@ -118,13 +118,13 @@ export function ActivityChart({
             {t("平均正答時間", "평균 정답 응답 시간")}
           </p>
           <strong className={styles.metric}>
-            {week.correct
-              ? (week.correct_ms / week.correct / 1000).toFixed(1)
+            {week.timed_correct
+              ? (week.correct_ms / week.timed_correct / 1000).toFixed(1)
               : "—"}
-            <small>{week.correct ? t("秒", "초") : ""}</small>
+            <small>{week.timed_correct ? t("秒", "초") : ""}</small>
           </strong>
           <p className={styles.caption}>
-            {t("正答した回答だけを集計", "정답인 답변만 계산해요")}
+            {t("制限時間ありの正答のみ集計", "시간제한이 있는 정답만 계산해요")}
           </p>
         </div>
       </div>
