@@ -153,7 +153,7 @@ export class TrainingScene extends Phaser.Scene {
     this.trainingInput.attach();
     this.battleAudio = new BattleAudio(this);
     this.scale.on("resize", this.resize, this);
-    this.events.once("shutdown", () => { this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach(); });
+    this.events.once("shutdown", () => { this.overlay?.destroy(); this.overlay = undefined; this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach(); });
     this.startRun();
   }
   private clear() {
@@ -471,6 +471,10 @@ export class TrainingScene extends Phaser.Scene {
     this.overlay = drawPause(this.view, {
       resume: () => this.resume(),
       finish: () => {
+        // DOM controls live outside the Phaser display list. Dispose them first
+        // so a saving/result screen can never remain hidden behind the pause UI.
+        this.overlay?.destroy();
+        this.overlay = undefined;
         this.time.paused = false;
         this.tweens.resumeAll();
         this.finish();
@@ -630,6 +634,8 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
   private finish(reviewComplete = false) {
+    this.overlay?.destroy();
+    this.overlay = undefined;
     this.battleAudio?.stop();
     this.stopPronunciation();
     this.nextGeneration++;
@@ -662,6 +668,10 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   private drawEnd() {
+    // Result redraws can run repeatedly during async save completion.
+    // Ensure an old pause DOM overlay never intercepts the result controls.
+    this.overlay?.destroy();
+    this.overlay = undefined;
     this.tweens.killAll();
     this.notifyReady();
     this.clear();
