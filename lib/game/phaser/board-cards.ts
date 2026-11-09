@@ -5,10 +5,15 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const { scale: s, width: cw, left, top, extra } = view.boardLayout;
   const x = view.w / 2;
   const length = Array.from(question.word.term).length;
-  const cardTop = top + 166 * s + extra,
-    size = 250 * s,
-    cardWidth = Math.min(cw - 24 * s, (250 + Math.max(0, length - 4) * 38) * s),
-    qy = cardTop + size / 2;
+  // Center the word card in the space between the HUD timer and battle meadow.
+  // Longer terms use a wider, flatter card while keeping the same visual center.
+  const longness = Math.min(1, Math.max(0, length - 4) / 4);
+  const size = (190 - 28 * longness) * s;
+  const cardWidth = Math.min(cw - 24 * s, (270 + Math.max(0, length - 4) * 62) * s);
+  const hudBottom = top + 128 * s;
+  const battleTop = top + 466 * s + extra;
+  const qy = (hudBottom + battleTop) / 2;
+  const cardTop = qy - size / 2;
   view.wordView = view.add.container(x, qy);
   const halo = view.add.graphics();
   for (let i = 12; i >= 1; i--)
@@ -28,15 +33,16 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const edgeX = cardWidth / 2 + 22 * s,
     edgeY = size / 2 + 22 * s,
     arm = 46 * s;
-  // Upper corners overlap the question-type and mode badges on wide word cards.
-  // Keep the lower decorative corners only, safely below the badge row.
+  // Preserve all four decorative corners, above and below the question card.
+  // Badges occupy a separate strip above the upper corners.
   for (const dx of [-1, 1])
-    frame
-      .beginPath()
-      .moveTo(dx * (edgeX - arm), edgeY)
-      .lineTo(dx * edgeX, edgeY)
-      .lineTo(dx * edgeX, edgeY - arm)
-      .strokePath();
+    for (const dy of [-1, 1])
+      frame
+        .beginPath()
+        .moveTo(dx * (edgeX - arm), dy * edgeY)
+        .lineTo(dx * edgeX, dy * edgeY)
+        .lineTo(dx * edgeX, dy * (edgeY - arm))
+        .strokePath();
   view.wordView.add(frame);
   view.wordView.add(view.box(0, 0, cardWidth, size, view.c.panel, 40 * s));
   const tint = view.add.graphics();
@@ -59,11 +65,12 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       38 * s,
     );
   view.wordView.add(tint);
-  const badgeWidth = Math.max(94, 144 * s),
-    badgeHeight = Math.max(39, 62 * s),
-    badgeFont = Math.max(18, 31 * s),
+  const badgeWidth = 108 * s,
+    badgeHeight = 34 * s,
+    badgeFont = 22 * s,
     badgeX = left + badgeWidth / 2,
-    badgeY = top + 166 * s;
+    // Leave a real gap between the badge bottom and the upper decorative brackets.
+    badgeY = cardTop - 56 * s;
   const badges = view.add.container(0, 0);
   badges.add(
     view.add
@@ -81,7 +88,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     view.add.circle(
       badgeX - badgeWidth * 0.3,
       badgeY,
-      Math.max(4, 5 * s),
+      4 * s,
       view.c.blue,
     ),
   );
@@ -139,14 +146,14 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   );
   const word = view.designText(
     0,
-    14 * s,
+    0,
     question.word.term,
     Math.min(150, 210 / Math.min(Math.max(length, 1), 5)) * s,
     view.c.ink,
   );
   word.setWordWrapWidth(cardWidth - 38 * s, true);
   while (
-    word.height > size - 90 * s &&
+    word.height > size - 46 * s &&
     parseFloat(String(word.style.fontSize)) > 20 * s
   )
     word.setFontSize(parseFloat(String(word.style.fontSize)) - 1);
@@ -156,7 +163,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   view.promptCaption = view
     .designText(
       x,
-      cardTop + 280 * s,
+      cardTop + size + 22 * s,
       question.kind === "reading"
         ? view.t("読み方を選んでください", "읽기를 고르세요")
         : question.word.difficulty === -1
