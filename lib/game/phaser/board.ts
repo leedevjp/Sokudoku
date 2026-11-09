@@ -151,7 +151,7 @@ export class TrainingView extends TrainingSurface {
       ].join(" / "),
     );
     drawInputHint(this);
-    if (timeLimited) this.drawTime(1);
+    this.drawTime(1);
   }
   drawTime(ratio: number) {
     const { x, y, width, height } = this.timeBar;
