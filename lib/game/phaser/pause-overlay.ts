@@ -17,24 +17,18 @@ type PauseActions = {
   setSoundExpanded?: (expanded: boolean) => void;
 };
 
-const RABBIT_SIZE = 100;
-const RABBIT_PEEK = 0.4;
-
 export function drawPause(view: TrainingView, actions: PauseActions): Phaser.GameObjects.Container {
   const overlay = view.add.container(0, 0).setDepth(100);
   overlay.add(view.add.rectangle(view.w / 2, view.h / 2, view.w, view.h, view.c.bg, .96).setInteractive());
-
-  const rabbit = view.createRestingRabbit(view.w / 2, view.h / 2 - 220, RABBIT_SIZE);
-  overlay.add(rabbit.root);
 
   const root = document.createElement("div");
   root.className = "sokudoku-pause-root";
   root.setAttribute("role", "presentation");
   const css = document.createElement("style");
   css.textContent = `
-.sokudoku-pause-root{--perch:84px;position:fixed;z-index:1000;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto;padding:12px;font-family:system-ui,-apple-system,sans-serif;color:var(--ink)}
+.sokudoku-pause-root{position:fixed;z-index:1000;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto;padding:12px;font-family:system-ui,-apple-system,sans-serif;color:var(--ink)}
 .sokudoku-pause-root *{box-sizing:border-box}
-.sokudoku-pause-perch{flex:none;width:1px;height:var(--perch)}
+.sokudoku-pause-character{width:90px;height:90px;margin:0 auto 4px;flex:none;background-image:url("/battle/mage-v5.png");background-size:400% 500%;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
 .sokudoku-pause-card{position:relative;width:min(420px,100%);flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;border:1.5px solid var(--line);border-radius:28px;padding:22px 20px 20px;background:var(--panel);box-shadow:0 6px 0 var(--shade);text-align:center;scrollbar-width:none}
 .sokudoku-pause-card::-webkit-scrollbar{display:none}
 .sokudoku-pause-card h2{font-size:clamp(22px,5vw,28px);margin:0 0 4px;font-weight:800;line-height:1.3;letter-spacing:-.02em;color:var(--ink)}
@@ -56,16 +50,16 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-slider-caption output{font-variant-numeric:tabular-nums;color:var(--blue);font-weight:800}
 .pause-preview{width:30px;height:30px;padding:0;display:grid;place-items:center;border:1.5px solid var(--line);background:var(--panel);border-radius:10px;color:var(--blue);font-size:11px;box-shadow:0 2px 0 var(--shade)}
 .pause-preview:active{transform:translateY(2px);box-shadow:none}
-.pause-sound-slider input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:0;padding:0;background:transparent;cursor:pointer;touch-action:pan-y;outline-offset:4px;--fillpos:calc(11px + (100% - 22px) * var(--p,0))}
-.pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:14px;border-radius:999px;background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%)}
+.pause-sound-slider input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:18px;margin:0;padding:0;background:transparent;cursor:pointer;touch-action:pan-y;outline-offset:4px;--fillpos:calc(9px + (100% - 18px) * var(--p,0))}
+.pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:7px;border-radius:999px;background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%)}
 .pause-sound-slider input[type=range]::-moz-range-track{height:14px;border-radius:999px;background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%)}
-.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;box-sizing:border-box;width:22px;height:22px;margin-top:-4px;border-radius:50%;border:3px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
-.pause-sound-slider input[type=range]::-moz-range-thumb{box-sizing:border-box;width:22px;height:22px;border-radius:50%;border:3px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
+.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;box-sizing:border-box;width:18px;height:18px;margin-top:-5.5px;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
+.pause-sound-slider input[type=range]::-moz-range-thumb{box-sizing:border-box;width:18px;height:18px;border-radius:50%;border:2px solid var(--blue);background:var(--panel);box-shadow:0 2px 0 var(--blue-dark)}
 .pause-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pause-select-row{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700;color:var(--ink)}
 .pause-select-row select{width:100%;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:12px;padding:0 8px;color:var(--ink);background:var(--panel);font-size:13px;font-weight:700}
 @media(max-width:359px){.pause-select-grid{grid-template-columns:1fr}}
-@media(max-height:640px){.sokudoku-pause-root{--perch:56px}.sokudoku-pause-card{padding:14px 16px}.sokudoku-pause-subtitle{margin-bottom:12px}.sokudoku-pause-main{min-height:46px;margin-bottom:8px}.pause-sound-controls{gap:10px;margin-top:12px;padding-top:12px}}
+@media(max-height:640px){.sokudoku-pause-character{width:64px;height:64px}.sokudoku-pause-card{padding:14px 16px}.sokudoku-pause-subtitle{margin-bottom:12px}.sokudoku-pause-main{min-height:46px;margin-bottom:8px}.pause-sound-controls{gap:10px;margin-top:12px;padding-top:12px}}
 `;
   const hex = (value: number) => "#" + value.toString(16).padStart(6, "0");
   const theme = view.c;
@@ -78,14 +72,17 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   root.style.setProperty("--blue", hex(theme.blue));
   root.style.setProperty("--blue-dark", hex(theme.blueDark));
   root.style.setProperty("--on-blue", hex(theme.onBrand));
-  const perch = document.createElement("div");
-  perch.className = "sokudoku-pause-perch";
-  perch.setAttribute("aria-hidden", "true");
   const card = document.createElement("section");
   card.className = "sokudoku-pause-card";
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-modal", "true");
   card.setAttribute("aria-label", view.t("一時停止", "일시정지"));
+  // The pause card is DOM while the game character normally lives on the Phaser canvas.
+  // Reuse the same 4x5 sprite atlas directly in DOM to keep the resting character inside the card.
+  const character = document.createElement("div");
+  character.className = "sokudoku-pause-character";
+  character.setAttribute("role", "img");
+  character.setAttribute("aria-label", view.t("休んでいる仲間", "쉬고 있는 캐릭터"));
   const title = document.createElement("h2");
   title.textContent = view.t("ひと休み。", "잠시 쉬어가요.");
   const subtitle = document.createElement("p");
@@ -100,7 +97,7 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
     return el;
   };
   card.append(
-    title, subtitle,
+    character, title, subtitle,
     button(view.t("つづける →", "계속하기 →"), actions.resume, "sokudoku-pause-main primary"),
     button(view.t("終了して保存", "종료하고 저장"), actions.finish, "sokudoku-pause-main"),
   );
@@ -124,30 +121,42 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
       actions.toggleSound,
     ));
   }
-  root.append(css, perch, card);
+  root.append(css, card);
+  // PetMotion "rest" uses frames [19, 2] with a 1500ms step.
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const paintRest = (frame: number) => {
+    character.style.backgroundPosition = `${(frame % 4) * 100 / 3}% ${Math.floor(frame / 4) * 25}%`;
+  };
+  paintRest(19);
+  let restTimer: ReturnType<typeof setInterval> | undefined;
+  if (!reducedMotion.matches) {
+    let index = 0;
+    restTimer = setInterval(() => {
+      index = (index + 1) % 2;
+      paintRest(index === 0 ? 19 : 2);
+    }, 1500);
+  }
+  if (actions.audio) {
+    actions.audio.preview = true;
+    actions.audio.update(true, 16);
+  }
   const align = () => {
     const rect = view.game.canvas.getBoundingClientRect();
     root.style.left = rect.left + "px";
     root.style.top = rect.top + "px";
     root.style.width = rect.width + "px";
     root.style.height = rect.height + "px";
-    const ratio = rect.width > 0 ? view.w / rect.width : 1;
-    const cardRect = card.getBoundingClientRect();
-    const perchPx = perch.getBoundingClientRect().height || 84;
-    const k = Math.max(0.55, Math.min(1, perchPx / 84));
-    rabbit.root.setScale(k);
-    rabbit.root.setPosition(view.w / 2, (cardRect.top - rect.top) * ratio - RABBIT_SIZE * k * RABBIT_PEEK);
+
   };
   document.body.append(root);
   align();
   window.addEventListener("resize", align);
   window.addEventListener("scroll", align, true);
-  const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(align) : undefined;
-  observer?.observe(card);
   const cleanup = () => {
     window.removeEventListener("resize", align);
     window.removeEventListener("scroll", align, true);
-    observer?.disconnect();
+    if (restTimer) clearInterval(restTimer);
+    if (actions.audio) actions.audio.preview = false;
     root.remove();
   };
   overlay.once("destroy", cleanup);
