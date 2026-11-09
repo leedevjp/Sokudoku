@@ -322,8 +322,12 @@ export class TrainingScene extends Phaser.Scene {
       this.question,
       index,
       rawElapsed,
-      this.timeLimited ? this.maxTime : 2147483647,
+      // The answer API currently accepts time_limit_ms <= 10000.
+      // Untimed mode disables expiry in the scene, but keeps persisted
+      // timing values inside the existing answer-log schema.
+      this.maxTime,
       this.options.stats,
+      !this.timeLimited,
     );
     this.options.stats = stats;
     this.options.planner.record(a, this.question.word);
