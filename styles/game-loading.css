@@ -40,3 +40,29 @@
   padding-top: 14px;
   border-top: 1px dashed var(--line);
 }
+
+/* The startup spinner follows its status text instead of an ellipsis. */
+.game-loading .game-loading-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: min(100%, 460px);
+  flex-wrap: wrap;
+}
+.game-loading .game-inline-spinner {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: game-loading-spin .8s linear infinite;
+}
+@keyframes game-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-loading .game-inline-spinner { animation-duration: 1.8s; }
+}
