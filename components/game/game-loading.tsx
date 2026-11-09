@@ -8,8 +8,8 @@ export function GameLoading({ error, lang }: { error: string; lang: Lang }) {
   return (
     <div className="game-loading">
       <strong>速読 / Sokudoku</strong>
-      <p role="status">
-        {error
+      <p role="status" className="game-loading-status">
+        <span>{error
           ? error === "START"
             ? t(
                 "ゲームを開始できませんでした。ホームからもう一度お試しください。",
@@ -44,7 +44,8 @@ export function GameLoading({ error, lang }: { error: string; lang: Lang }) {
                           "接続を確認して、もう一度お試しください。",
                           "연결을 확인하고 다시 시도해주세요.",
                         )
-          : t("トレーニングを準備中…", "훈련 준비 중…")}
+          : t("トレーニングを準備中", "훈련 준비 중")}</span>
+        {!error && <span className="game-inline-spinner" aria-hidden="true" />}
       </p>
       {!error && <TrainingGuide lang={lang} />}
       {error && <Link href="/">{t("ホームへ", "홈으로")}</Link>}
