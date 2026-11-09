@@ -104,14 +104,14 @@ export function drawEnd(
   const state = data.preview
     ? view.t("プレビュー · 保存しません", "미리보기 · 저장하지 않습니다")
     : data.syncing
-      ? view.t("記録を保存中…", "기록 저장 중…")
+      ? view.t("記録を保存中", "기록 저장 중")
       : data.syncOK
         ? view.t("記録を保存しました ✓", "기록 저장 완료 ✓")
         : view.t(
             "保存できませんでした。同期を再試行してください",
             "저장하지 못했어요. 동기화를 다시 시도해주세요",
           );
-  label(56, state, 16, data.syncOK ? view.c.green : view.c.muted);
+  const statusLabel = label(56, state, 16, data.syncOK ? view.c.green : view.c.muted);
   if (data.reviewComplete) {
     label(
       93,
@@ -160,4 +160,5 @@ export function drawEnd(
       buttonWidth,
       actions.sync,
     );
+  return { statusRight: statusLabel.x + statusLabel.width / 2, statusY: statusLabel.y };
 }
