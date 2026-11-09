@@ -81,7 +81,7 @@ export function drawHud(
     )
     .setOrigin(1, 0.5);
   const timeBar = { x: left, y: top + 114 * s, width: cw, height: 14 * s };
-  if (timeLimited) view.add
+  view.add
     .graphics()
     .fillStyle(view.c.press)
     .fillRoundedRect(left, timeBar.y, cw, 14 * s, 7 * s);
