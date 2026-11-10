@@ -21,6 +21,8 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   const overlay = view.add.container(0, 0).setDepth(100);
   overlay.add(view.add.rectangle(view.w / 2, view.h / 2, view.w, view.h, view.c.bg, .96).setInteractive());
 
+  // Remove any orphaned DOM pause layer left by a suspended/recreated Phaser scene.
+  document.querySelectorAll(".sokudoku-pause-root").forEach((node) => node.remove());
   const root = document.createElement("div");
   root.className = "sokudoku-pause-root";
   root.setAttribute("role", "presentation");
@@ -96,7 +98,15 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
     el.type = "button";
     el.className = className;
     el.textContent = text;
-    el.onclick = action;
+    el.onclick = () => {
+      // Browser backgrounding can suspend Phaser while DOM remains interactive.
+      // Release the DOM blocker synchronously, independent of the game loop.
+      if (action === actions.resume || action === actions.finish) {
+        root.remove();
+        overlay.destroy();
+      }
+      action();
+    };
     return el;
   };
   card.append(
