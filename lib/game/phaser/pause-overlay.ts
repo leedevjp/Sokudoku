@@ -65,6 +65,10 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-reading-setting small{display:block;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
 .pause-reading-setting button{flex:none;min-width:64px;min-height:36px;border:1.5px solid var(--line);border-radius:999px;padding:0 14px;font-size:13px;font-weight:800;background:var(--panel);color:var(--muted)}
 .pause-reading-setting button[aria-pressed=true]{background:var(--blue);color:var(--on-blue);border-color:var(--blue-dark)}
+.pause-correct-review-setting{display:grid;gap:7px;margin-top:14px;padding-top:14px;border-top:1.5px dashed var(--line);text-align:left}
+.pause-correct-review-setting strong{font-size:14px;font-weight:800;color:var(--ink)}
+.pause-correct-review-setting small{font-size:12px;color:var(--muted);line-height:1.45}
+.pause-correct-review-setting select{width:100%;min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;color:var(--ink);background:var(--panel);font-size:14px;font-weight:700}
 .pause-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pause-select-row{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700;color:var(--ink)}
 .pause-select-row select{width:100%;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:12px;padding:0 8px;color:var(--ink);background:var(--panel);font-size:13px;font-weight:700}
@@ -163,6 +167,34 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   });
   readingSetting.append(readingCopy, readingToggle);
   card.append(readingSetting);
+  const correctReviewSetting = document.createElement("label");
+  correctReviewSetting.className = "pause-correct-review-setting";
+  const correctReviewTitle = document.createElement("strong");
+  correctReviewTitle.textContent = view.t("正解したとき", "정답 후 진행");
+  const correctReviewSelect = document.createElement("select");
+  const reviewOptions = [
+    { value: "instant", jp: "すぐ次の問題へ", kr: "바로 다음 문제" },
+    { value: "card", jp: "正解カードを確認", kr: "정답 카드 확인" },
+  ] as const;
+  for (const option of reviewOptions) {
+    const element = document.createElement("option");
+    element.value = option.value;
+    element.textContent = view.t(option.jp, option.kr);
+    correctReviewSelect.append(element);
+  }
+  correctReviewSelect.value = actions.preferences.correctAnswerReview;
+  correctReviewSelect.addEventListener("change", () => {
+    const correctAnswerReview = correctReviewSelect.value === "card" ? "card" : "instant";
+    actions.preferences = { ...actions.preferences, correctAnswerReview };
+    actions.changePreferences(actions.preferences);
+  });
+  const correctReviewDescription = document.createElement("small");
+  correctReviewDescription.textContent = view.t(
+    "「正解カードを確認」は、正解後にも意味と読み方を表示します。",
+    "정답 카드 확인을 선택하면 맞혔을 때도 뜻과 읽는 법을 보여줘요.",
+  );
+  correctReviewSetting.append(correctReviewTitle, correctReviewSelect, correctReviewDescription);
+  card.append(correctReviewSetting);
   root.append(css, card);
   // PetMotion "rest" uses frames [19, 2] with a 1500ms step.
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
