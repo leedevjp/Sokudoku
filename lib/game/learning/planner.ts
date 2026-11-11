@@ -139,7 +139,7 @@ export class TrainingPlanner {
   private *select(
     candidates: Candidate[],
     used: Set<string>,
-    mode: TrainingMode,
+    mode: Exclude<TrainingMode, "auto">,
   ): Generator<{ word: Word; kind: Kind }, PlannedQuestion[], void> {
     const questions: PlannedQuestion[] = [];
     let remaining = candidates
