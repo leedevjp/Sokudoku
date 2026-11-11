@@ -116,3 +116,22 @@
 .training-modes {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+/* Omakase uses a distinct teal accent, but all manual selectors remain editable. */
+.training-modes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-auto .training-levels button[aria-pressed="true"] {
+  background: #0e8991;
+  border-color: #0e8991;
+  box-shadow: 0 3px 0 #07646c;
+  color: #fff;
+}
+.home-auto .primary {
+  background: #0e8991;
+  border-bottom-color: #07646c;
+  box-shadow: 0 9px 20px -12px #0e8991;
+}
+.home-auto .selection-label { color: var(--muted); }
+@media (max-width: 370px) {
+  .training-modes { gap: 5px; }
+  .training-modes button { gap: 3px; font-size: 11px; }
+}

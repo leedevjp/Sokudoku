@@ -27,11 +27,11 @@ export function ModeSelector({
         </label>
       </div>
       <div
-        className="training-levels training-kinds training-modes"
+        className={`training-levels training-kinds training-modes${modes.includes("auto") ? " is-auto" : ""}`}
         role="group"
         aria-label={t(
-          "学習モード（探索と復習は併用可、テストは単独）",
-          "학습 모드 (탐색과 복습은 함께 선택 가능, 시험은 단독)",
+          "自動とテストは単独、探索と復習は併用可",
+          "자동과 시험은 단독, 탐색과 복습은 함께 선택 가능",
         )}
       >
         {trainingModes.map((mode) => (
@@ -41,7 +41,9 @@ export function ModeSelector({
             aria-pressed={modes.includes(mode)}
             onClick={() => onToggle(mode)}
             title={
-              mode === "exploration"
+              mode === "auto"
+                ? t("記憶と実力に合わせて出題。範囲と問題タイプは自由に変更できます。", "기억과 실력에 맞게 자동 출제해요. 범위와 문제 유형은 직접 제한할 수 있어요.")
+                : mode === "exploration"
                 ? t(
                     "まだ出会っていない単語を均等ランダムに出題",
                     "아직 만나지 않은 단어를 균등 랜덤으로 출제해요",
@@ -60,7 +62,9 @@ export function ModeSelector({
             <span className="kind-check" aria-hidden="true">
               {modes.includes(mode) ? "✓" : "+"}
             </span>
-            {mode === "exploration"
+            {mode === "auto"
+              ? t("おまかせ", "자동")
+              : mode === "exploration"
               ? t("探索", "탐색")
               : mode === "exam"
                 ? t("テスト", "시험")
