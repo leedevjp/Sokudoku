@@ -113,97 +113,92 @@
   color: var(--accent);
 }
 
+/* Mode groups: [Auto] | [Explore + Review] | [Exam].
+   The separators sit in the grid gutters without stealing tap space. */
 .training-modes {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  background:
+    linear-gradient(to bottom, transparent, #96b5c5 20%, #96b5c5 80%, transparent)
+      25% center / 2px 66% no-repeat,
+    linear-gradient(to bottom, transparent, #96b5c5 20%, #96b5c5 80%, transparent)
+      75% center / 2px 66% no-repeat;
 }
 
-/* Omakase: fresh lime-green controls, distinct from the regular blue mode.
-   Only active selections glow; disabled/unselected controls stay unchanged. */
+/* Bright apple-lime: soften the dark '3D lip' while retaining readable text.
+   The selected controls keep the same input and range behavior as before. */
 .home-auto {
-  --omakase-light: #a5f4a3;
-  --omakase-main: #70de8a;
-  --omakase-border: #50ba6b;
-  --omakase-shadow: #339b57;
-  --omakase-text: #13452b;
+  position: relative;
+  --omakase-light: #cdffb8;
+  --omakase-main: #98f1ab;
+  --omakase-border: #79d79b;
+  --omakase-shadow: #6cc58c;
+  --omakase-text: #24543a;
+  --omakase-stage-width: 0px;
 }
 .home-auto .training-levels button[aria-pressed="true"],
 .home-auto .primary {
   position: relative;
-  isolation: isolate;
   overflow: hidden;
-  background: linear-gradient(165deg, var(--omakase-light), var(--omakase-main));
+  background: linear-gradient(155deg, var(--omakase-light), var(--omakase-main) 82%);
   border-color: var(--omakase-border);
   color: var(--omakase-text);
 }
 .home-auto .training-levels button[aria-pressed="true"] {
-  box-shadow: 0 3px 0 var(--omakase-shadow);
+  box-shadow: 0 2px 0 var(--omakase-shadow), inset 0 1px 0 rgb(255 255 255 / 45%);
 }
 .home-auto .primary {
   border-bottom-color: var(--omakase-shadow);
-  box-shadow: 0 9px 20px -12px var(--omakase-shadow);
+  box-shadow: 0 7px 17px -12px var(--omakase-shadow);
 }
 
-/* A soft diagonal highlight travels across every active Omakase control.
-   The animation uses only transform and opacity for smooth mobile rendering. */
-.home-auto .training-levels button[aria-pressed="true"]::after,
-.home-auto .primary:not(:disabled):not([aria-disabled="true"])::after {
+/* One global light beam, clipped to the currently selected controls.
+   React measures the selected button rectangles when layout or selection changes.
+   The beam itself is a *single* compositor animation, not one per button. */
+.home-auto .omakase-sheen-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  clip-path: inset(100%);
+}
+.home-auto .omakase-sheen-stage::before {
   content: "";
   position: absolute;
-  top: -25%;
-  bottom: -25%;
-  left: 0;
-  width: 38%;
+  top: -40px;
+  bottom: -40px;
+  left: -320px;
+  width: 76px;
   background: linear-gradient(
     90deg,
-    transparent 0%,
-    rgb(255 255 255 / 7%) 18%,
-    rgb(255 255 255 / 38%) 50%,
-    rgb(255 255 255 / 7%) 82%,
-    transparent 100%
+    transparent,
+    rgb(255 255 255 / 6%) 14%,
+    rgb(255 255 255 / 48%) 50%,
+    rgb(255 255 255 / 6%) 86%,
+    transparent
   );
-  pointer-events: none;
-  z-index: 1;
   opacity: 0;
-  animation: omakase-sheen 4.8s linear infinite;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0) skewX(-20deg);
+  animation: omakase-unified-sheen 6.2s linear infinite;
 }
-
-/* Stagger the rows so the entire page does not flash simultaneously. */
-.home-auto .training-modes button[aria-pressed="true"]::after {
-  animation-delay: -0.2s;
-}
-.home-auto .training-kinds:not(.training-modes) button[aria-pressed="true"]::after {
-  animation-delay: -1.2s;
-}
-.home-auto .kana-levels button[aria-pressed="true"]::after {
-  animation-delay: -1.9s;
-}
-.home-auto .training-levels:not(.training-kinds):not(.kana-levels) button[aria-pressed="true"]::after {
-  animation-delay: -2.6s;
-}
-.home-auto .primary:not(:disabled):not([aria-disabled="true"])::after {
-  animation-delay: -3.4s;
-}
-@keyframes omakase-sheen {
-  0%, 8% {
-    transform: translate3d(-150%, 0, 0) skewX(-23deg);
+@keyframes omakase-unified-sheen {
+  0%, 12% {
+    transform: translate3d(0, 0, 0) skewX(-20deg);
     opacity: 0;
   }
-  13% { opacity: 0.75; }
-  35% {
-    transform: translate3d(400%, 0, 0) skewX(-23deg);
-    opacity: 0.75;
+  17% { opacity: 0.8; }
+  49% {
+    transform: translate3d(calc(var(--omakase-stage-width) + 640px), 0, 0) skewX(-20deg);
+    opacity: 0.8;
   }
-  41%, 100% {
-    transform: translate3d(400%, 0, 0) skewX(-23deg);
+  54%, 100% {
+    transform: translate3d(calc(var(--omakase-stage-width) + 640px), 0, 0) skewX(-20deg);
     opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-auto .training-levels button[aria-pressed="true"]::after,
-  .home-auto .primary::after {
-    animation: none;
-    opacity: 0;
-  }
+  .home-auto .omakase-sheen-stage { display: none; }
 }
 @media (max-width: 370px) {
   .training-modes { gap: 5px; }
