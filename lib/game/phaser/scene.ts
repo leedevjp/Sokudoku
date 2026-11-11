@@ -333,7 +333,9 @@ export class TrainingScene extends Phaser.Scene {
     const tier = comboTier(this.battleProgress.combo);
     this.battleAudio?.play(result === "timeout" ? "jelly" : "dash", result === "timeout" ? .10 : .12);
     this.correction =
-      result === "correct" ? undefined : new Correction(this.question);
+      result === "correct" && this.prefs.correctAnswerReview !== "card"
+        ? undefined
+        : new Correction(this.question);
     const hit = () => {
       if (result === "correct") this.battleAudio?.impact(tier);
       else if (result === "incorrect") this.battleAudio?.play("jelly", .12);
@@ -359,7 +361,8 @@ export class TrainingScene extends Phaser.Scene {
   private renderCorrection(animate = false) {
     const correction = this.correction;
     if (!correction) return;
-    this.petMotion.play("encourage");
+    const lastResult = this.logs.at(-1)?.result;
+    this.petMotion.play(lastResult === "correct" ? "happy" : "encourage");
     this.paintPet();
     this.correctionView = showCorrection(
       this,
