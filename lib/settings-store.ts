@@ -23,6 +23,7 @@ function getSnapshot(): Preferences {
             theme: saved.theme === "dark" ? "dark" : "light",
             pronunciation: saved.pronunciation === "always" || saved.pronunciation === "wrong" || saved.pronunciation === "off" ? saved.pronunciation : "always",
             pronunciationSource: saved.pronunciationSource === "kana" ? "kana" : "term",
+            showReadingHints: saved.showReadingHints === true,
           }
         : defaultPreferences;
       rawSnapshot = raw;

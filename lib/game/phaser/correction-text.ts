@@ -32,6 +32,14 @@ export function correctionText(
           .map((text) => ({ text, secondary: true })),
       );
     }
+    if (view.prefs.showReadingHints && correction.content.readingHint) {
+      const hint = correction.content.readingHint;
+      // Avoid rendering the exact same line twice in reading questions.
+      if (hint !== correction.content.secondary) {
+        measure.setFontSize(secondarySize).setFontStyle("normal");
+        rows.push(...measure.getWrappedText(hint).map((text) => ({ text, secondary: true })));
+      }
+    }
     return rows;
   };
   let rows = wrap();

@@ -7,6 +7,7 @@ export type Word = Pick<
   "id" | "term" | "kana" | "hanja_reading" | "meaning_ko" | "has_kanji" | "difficulty" | "deleted_at"
 > &
   Partial<Pick<Tables<"word">, "created_at" | "updated_at" | "note">> & {
+    pronunciation_ko?: string | null;
     source?: "personal";
     entry_type?: EntryType;
     meaning_choices?: Choice[];

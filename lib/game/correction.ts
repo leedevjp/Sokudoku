@@ -8,6 +8,9 @@ export function correctionContent(question: Question) {
       (option) => option.id === question.word.id,
     ),
     primary: choiceLabel(question.word, question.kind),
+    readingHint: question.word.kana?.trim()
+      ? `${question.word.kana.trim().replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60))}${question.word.pronunciation_ko?.trim() ? ` [${question.word.pronunciation_ko.trim()}]` : ""}`
+      : null,
     secondary:
       entryType(question.word) === "word"
         ? choiceLabel(

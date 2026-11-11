@@ -152,11 +152,15 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   const wordFontSize = length <= 4
     ? Math.min(150, 210 / Math.max(length, 1)) * s
     : Math.min(62, (cardWidth / s - 48) / length * 0.92) * s;
+  const hintVisible = view.prefs.showReadingHints && question.kind === "meaning";
+  const reading = question.word.kana?.trim().replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  const korean = question.word.pronunciation_ko?.trim();
+  const readingHint = hintVisible && reading ? `${reading}${korean ? ` [${korean}]` : ""}` : "";
   const word = view.designText(
     0,
-    0,
+    readingHint ? -31 * s : 0,
     question.word.term,
-    wordFontSize,
+    readingHint ? wordFontSize * 0.84 : wordFontSize,
     view.c.ink,
   );
   word.setWordWrapWidth(cardWidth - 40 * s, true);
@@ -166,6 +170,13 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
   )
     word.setFontSize(parseFloat(String(word.style.fontSize)) - 1);
   view.wordView.add(word);
+  if (readingHint) {
+    const hint = view.designText(0, 66 * s, readingHint, 23 * s, view.c.muted);
+    hint.setWordWrapWidth(cardWidth - 20 * s, true);
+    while (hint.width > cardWidth - 20 * s && parseFloat(String(hint.style.fontSize)) > 12 * s)
+      hint.setFontSize(parseFloat(String(hint.style.fontSize)) - 1);
+    view.wordView.add(hint);
+  }
   view.spark(x - cardWidth / 2 - 55 * s, cardTop + 12 * s, 15 * s, 0.7);
   view.spark(x + cardWidth / 2 + 65 * s, cardTop + size + 44 * s, 10 * s, 0.45);
   view.promptCaption = view
