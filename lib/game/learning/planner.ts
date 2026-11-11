@@ -13,7 +13,7 @@ export { explorationWeights } from "./exploration";
 type Candidate = { word: Word; kind?: Kind; weight: number };
 export type PlannedQuestion = Question & { mode: TrainingMode };
 
-function draw(candidates: Candidate[], rng: () => number) {
+function draw<T extends Candidate>(candidates: T[], rng: () => number): T {
   let n = rng() * candidates.reduce((sum, c) => sum + c.weight, 0);
   for (const candidate of candidates) {
     n -= candidate.weight;
