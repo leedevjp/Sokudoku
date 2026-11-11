@@ -153,7 +153,7 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
     ? Math.min(150, 210 / Math.max(length, 1)) * s
     : Math.min(62, (cardWidth / s - 48) / length * 0.92) * s;
   const hintVisible = view.prefs.showReadingHints && question.kind === "meaning";
-  const reading = question.word.kana?.trim();
+  const reading = question.word.kana?.trim().replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
   const korean = question.word.pronunciation_ko?.trim();
   const readingHint = hintVisible && reading ? `${reading}${korean ? ` [${korean}]` : ""}` : "";
   const word = view.designText(
