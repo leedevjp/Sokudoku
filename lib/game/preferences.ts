@@ -1,7 +1,7 @@
 export type Lang = "jp" | "kr";
 export type Theme = "light" | "dark";
-export type Preferences = { lang: Lang; theme: Theme; pronunciation: "always" | "wrong" | "off"; pronunciationSource: "term" | "kana" };
-export const defaultPreferences: Preferences = { lang: "jp", theme: "light", pronunciation: "always", pronunciationSource: "term" };
+export type Preferences = { lang: Lang; theme: Theme; pronunciation: "always" | "wrong" | "off"; pronunciationSource: "term" | "kana"; showReadingHints: boolean };
+export const defaultPreferences: Preferences = { lang: "jp", theme: "light", pronunciation: "always", pronunciationSource: "term", showReadingHints: false };
 export function translate(lang: Lang, jp: string, kr: string) {
   return lang === "jp" ? jp : kr;
 }
