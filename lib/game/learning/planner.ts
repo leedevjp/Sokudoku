@@ -195,6 +195,7 @@ export class TrainingPlanner {
       word: Word;
       kind: Kind;
       bucket: "review" | "exploration" | "maintenance";
+      tier: number;
       weight: number;
     };
     const now = Date.now();
@@ -252,8 +253,8 @@ export class TrainingPlanner {
         word.source === "personal" ? Math.max(2, focus) :
         2 + Math.max(0, Math.min(4, Math.floor(word.difficulty / 2)));
       const distance = tier - focus;
-      const match = distance === 0 ? 1 : distance === -1 ? 0.55 :
-        distance === 1 ? 0.24 : distance < 0 ? 0.15 : 0.05;
+      const match = distance === 0 ? 1 : distance === -1 ? 0.22 :
+        distance === 1 ? 0.15 : distance < 0 ? 0.025 : 0.005;
       const bucket = !state ? "exploration" :
         state.last_result !== "correct" || Date.parse(state.due_at) <= now
           ? "review" : "maintenance";
@@ -262,8 +263,19 @@ export class TrainingPlanner {
         ? 2 + (state?.last_result !== "correct" ? 1 : 0) + Math.min(2, Math.log1p(overdue))
         : 1;
       const prior = recent.has(wordKey(word.source, word.id)) ? 0.08 : 1;
-      return { word, kind, bucket, weight: Math.max(0.001, match * urgency * prior) };
+      return { word, kind, bucket, tier, weight: Math.max(0.00001, match * urgency * prior) };
     });
+
+    // Normalize by bucket and tier population: a 7,000-word catalog must not
+    // overwhelm the 46 kana simply because it contains more candidates.
+    const groupSizes = new Map<string, number>();
+    for (const ticket of tickets) {
+      const key = `${ticket.bucket}:${ticket.tier}`;
+      groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1);
+    }
+    for (const ticket of tickets) {
+      ticket.weight /= groupSizes.get(`${ticket.bucket}:${ticket.tier}`) ?? 1;
+    }
 
     const used = new Set<string>();
     // Mix reviews and fresh encounters when both exist. Fallback to familiar
