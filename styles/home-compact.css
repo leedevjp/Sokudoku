@@ -410,19 +410,19 @@
    on its matching pastel folder surface, not inside a thin outline. All four
    mode buttons keep the same four-column grid and exact tap dimensions. */
 .home-mode-folder {
-  --folder-surface: #f1f7ff;
+  --folder-surface: #e9f3ff;
   --folder-border: #98b9e9;
   --folder-shadow: rgb(41 106 179 / 12%);
   position: relative;
   min-width: 0;
 }
 .home-mode-folder.folder-auto {
-  --folder-surface: #efffed;
+  --folder-surface: #e7ffe6;
   --folder-border: #92dcb0;
   --folder-shadow: rgb(67 161 94 / 14%);
 }
 .home-mode-folder.folder-exam {
-  --folder-surface: #fff8df;
+  --folder-surface: #fff4d4;
   --folder-border: #e7cc76;
   --folder-shadow: rgb(165 129 39 / 14%);
 }
@@ -431,6 +431,8 @@
   z-index: 2;
 }
 .home-shell .home-actions .home-folder-tabs .training-modes {
+  position: relative;
+  z-index: 4;
   margin-bottom: 0;
 }
 .home-mode-folder .home-folder-body {
