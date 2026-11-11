@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 // This endpoint is served by the currently active Vercel deployment.
 // Never cache a response, or an old deployment can appear current.
 export function GET() {
