@@ -60,6 +60,11 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none!important;appearance:none!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
 .pause-sound-slider input[type=range]::-moz-range-thumb{width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
 .pause-sound-slider input[type=range]:focus-visible{outline:2px solid var(--blue)!important;outline-offset:4px!important}
+.pause-reading-setting{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding:14px 0 0;border-top:1.5px dashed var(--line);text-align:left}
+.pause-reading-setting strong{display:block;font-size:14px;font-weight:800;color:var(--ink)}
+.pause-reading-setting small{display:block;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.pause-reading-setting button{flex:none;min-width:64px;min-height:36px;border:1.5px solid var(--line);border-radius:999px;padding:0 14px;font-size:13px;font-weight:800;background:var(--panel);color:var(--muted)}
+.pause-reading-setting button[aria-pressed=true]{background:var(--blue);color:var(--on-blue);border-color:var(--blue-dark)}
 .pause-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pause-select-row{display:grid;gap:6px;min-width:0;font-size:13px;font-weight:700;color:var(--ink)}
 .pause-select-row select{width:100%;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:12px;padding:0 8px;color:var(--ink);background:var(--panel);font-size:13px;font-weight:700}
@@ -134,6 +139,30 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
       actions.toggleSound,
     ));
   }
+  const readingSetting = document.createElement("div");
+  readingSetting.className = "pause-reading-setting";
+  const readingCopy = document.createElement("div");
+  const readingTitle = document.createElement("strong");
+  readingTitle.textContent = view.t("読み方のヒント", "읽는 법 힌트");
+  const readingDescription = document.createElement("small");
+  readingDescription.textContent = view.t("問題・復習に かな [韓国語発音] を表示", "문제·오답 카드에 가나 [한글 발음] 표시");
+  readingCopy.append(readingTitle, readingDescription);
+  const readingToggle = document.createElement("button");
+  readingToggle.type = "button";
+  const syncReading = (value: boolean) => {
+    readingToggle.textContent = value ? view.t("オン", "켜짐") : view.t("オフ", "꺼짐");
+    readingToggle.setAttribute("aria-pressed", String(value));
+    readingToggle.setAttribute("aria-label", readingTitle.textContent + ": " + readingToggle.textContent);
+  };
+  syncReading(actions.preferences.showReadingHints);
+  readingToggle.addEventListener("click", () => {
+    const enabled = readingToggle.getAttribute("aria-pressed") !== "true";
+    actions.preferences = { ...actions.preferences, showReadingHints: enabled };
+    actions.changePreferences(actions.preferences);
+    syncReading(enabled);
+  });
+  readingSetting.append(readingCopy, readingToggle);
+  card.append(readingSetting);
   root.append(css, card);
   // PetMotion "rest" uses frames [19, 2] with a 1500ms step.
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
