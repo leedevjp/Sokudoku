@@ -21,9 +21,14 @@ export function showCorrection(
     choice.disableInteractive().setVisible(false);
   }
   view.keyHints?.setVisible(false);
-  const elapsed = answer?.response_ms ?? maxTime;
-  view.drawTime(Math.max(0, 1 - elapsed / maxTime));
-  view.seconds?.setText((Math.max(0, maxTime - elapsed) / 1000).toFixed(1));
+  if (answer?.time_limit_ms != null) {
+    const elapsed = answer.response_ms ?? maxTime;
+    view.drawTime(Math.max(0, 1 - elapsed / maxTime));
+    view.seconds?.setText((Math.max(0, maxTime - elapsed) / 1000).toFixed(1));
+  } else {
+    // Untimed training has no countdown; keep the infinity HUD without "0.0".
+    view.seconds?.setText("");
+  }
   view.promptCaption?.setText(
     answer?.result === "correct"
       ? view.t("正解！答えを確認しよう", "정답! 뜻과 읽기를 확인해요")
