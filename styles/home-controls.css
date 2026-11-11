@@ -113,16 +113,39 @@
   color: var(--accent);
 }
 
-/* Mode groups: [Auto] | [Explore + Review] | [Exam].
-   The separators sit in the grid gutters without stealing tap space. */
+/* Four *equal-sized* buttons. Exploration and review share a framed
+   backdrop in the second and third columns, without a padded wrapper that
+   would otherwise make these buttons narrower than auto/exam. */
 .training-modes {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  background:
-    linear-gradient(to bottom, transparent, #96b5c5 20%, #96b5c5 80%, transparent)
-      25% center / 2px 66% no-repeat,
-    linear-gradient(to bottom, transparent, #96b5c5 20%, #96b5c5 80%, transparent)
-      75% center / 2px 66% no-repeat;
+  isolation: isolate;
 }
+.training-modes .training-mode-pair-frame {
+  grid-column: 2 / 4;
+  grid-row: 1;
+  position: relative;
+  z-index: 0;
+  margin: -5px -4px;
+  border: 1.5px solid var(--line);
+  border-radius: 17px;
+  background: var(--press);
+  box-shadow: inset 0 1px 3px rgb(21 68 123 / 6%);
+  pointer-events: none;
+}
+.training-modes.has-manual .training-mode-pair-frame {
+  border-color: var(--accent);
+}
+.training-modes > button {
+  grid-row: 1;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  height: 100%;
+}
+.training-modes .training-mode-auto { grid-column: 1; }
+.training-modes .training-mode-exploration { grid-column: 2; }
+.training-modes .training-mode-review { grid-column: 3; }
+.training-modes .training-mode-exam { grid-column: 4; }
 
 /* Bright apple-lime: soften the dark '3D lip' while retaining readable text.
    The selected controls keep the same input and range behavior as before. */
