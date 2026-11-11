@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Outfit } from "next/font/google";
 import { SettingsProvider } from "@/components/settings/settings-provider";
 import { DeploymentWatcher } from "@/components/deployment/deployment-watcher";
@@ -27,7 +28,9 @@ export default function RootLayout({
     <html lang="ja" suppressHydrationWarning>
       <body className={outfit.variable}>
         <SettingsProvider>
-          <DeploymentWatcher />
+          <Suspense fallback={null}>
+            <DeploymentWatcher />
+          </Suspense>
           {children}
         </SettingsProvider>
       </body>
