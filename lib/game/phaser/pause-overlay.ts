@@ -69,7 +69,7 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-reading-setting button[aria-pressed=true]{background:var(--blue);color:var(--on-blue);border-color:var(--blue-dark)}
 @media(max-width:359px){.sokudoku-pause-card{padding:12px}.pause-sound-slider{grid-template-columns:54px minmax(0,1fr) auto;gap:5px}.pause-select-row,.pause-correct-review-setting{grid-template-columns:minmax(80px,1fr) minmax(0,1.5fr);gap:6px}}
 @media(max-height:700px){.sokudoku-pause-card{padding:11px 14px}.sokudoku-pause-header{margin-bottom:8px}.sokudoku-pause-character{height:42px;width:42px}.sokudoku-pause-main{height:42px;margin-bottom:8px}.sokudoku-pause-quick button{height:36px}.pause-sound-controls{gap:5px;margin-top:10px;padding-top:9px}.pause-sound-slider{min-height:32px}.pause-select-grid{gap:5px}.pause-select-row select,.pause-correct-review-setting select{height:36px}.pause-correct-review-setting{margin-top:8px;padding-top:8px}}
-`
+`;
   const hex = (value: number) => "#" + value.toString(16).padStart(6, "0");
   const theme = view.c;
   root.style.setProperty("--ink", hex(theme.ink));
