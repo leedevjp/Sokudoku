@@ -17,7 +17,7 @@ export function showCorrection(
   animate: boolean,
 ) {
   for (const choice of view.choices) {
-    if (animate && choice.visible) burst(scene, choice.x, choice.y, view.c.red);
+    if (animate && choice.visible) burst(scene, choice.x, choice.y, answer?.result === "correct" ? view.c.green : view.c.red);
     choice.disableInteractive().setVisible(false);
   }
   view.keyHints?.setVisible(false);
@@ -25,9 +25,11 @@ export function showCorrection(
   view.drawTime(Math.max(0, 1 - elapsed / maxTime));
   view.seconds?.setText((Math.max(0, maxTime - elapsed) / 1000).toFixed(1));
   view.promptCaption?.setText(
-    answer?.result === "timeout"
-      ? view.t("時間切れ · 正解を確認しよう", "시간 초과 · 정답을 확인하세요")
-      : view.t("もう一度、覚えよう", "다시 기억해봐요"),
+    answer?.result === "correct"
+      ? view.t("正解！答えを確認しよう", "정답! 뜻과 읽기를 확인해요")
+      : answer?.result === "timeout"
+        ? view.t("時間切れ · 正解を確認しよう", "시간 초과 · 정답을 확인하세요")
+        : view.t("もう一度、覚えよう", "다시 기억해봐요"),
   );
   view.status
     ?.setOrigin(0.5)
