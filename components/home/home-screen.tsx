@@ -40,7 +40,8 @@ export default function HomeScreen() {
   const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
-  const [timeLimited, setTimeLimited] = useState(true);
+  const [timeLimited, setTimeLimited] = useState(false);
+  const isAuto = modes.includes("auto");
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -94,6 +95,15 @@ export default function HomeScreen() {
   }
   function toggleMode(mode: TrainingMode) {
     const next = toggleTrainingMode(modes, mode);
+    if (mode === "auto" && next.includes("auto")) {
+      // Omakase starts unrestricted, then respects any manual deselection.
+      setLevels([...trainingLevels]);
+      setKinds([...trainingKinds]);
+      try {
+        localStorage.setItem("sokudoku-levels-v1", trainingLevels.join(","));
+        localStorage.setItem("sokudoku-kinds-v1", trainingKinds.join(","));
+      } catch { /* Optional preference. */ }
+    }
     setModes(next);
     try {
       localStorage.setItem("sokudoku-modes-v1", next.join(","));
@@ -143,7 +153,7 @@ export default function HomeScreen() {
         </div>
       </header>
       <HomeHero authenticated={!!user} />
-      <div className="home-actions">
+      <div className={`home-actions${isAuto ? " home-auto" : ""}`}>
         <div className="home-setting-group">
           <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
         </div>
