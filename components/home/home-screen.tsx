@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
 import {
-  defaultLevels,
   trainingKinds,
   parseKinds,
   trainingLevels,
@@ -27,6 +26,32 @@ import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
 
+type ModeFamily = "auto" | "manual" | "exam";
+type ModeScope = { levels: TrainingLevel[]; kinds: Kind[] };
+type ModeScopes = Record<ModeFamily, ModeScope>;
+const MODE_SCOPES_KEY = "sokudoku-mode-scopes-v1";
+const freshScope = (): ModeScope => ({ levels: [...trainingLevels], kinds: [...trainingKinds] });
+const freshScopes = (): ModeScopes => ({
+  auto: freshScope(),
+  manual: freshScope(),
+  exam: freshScope(),
+});
+const modeFamily = (modes: TrainingMode[]): ModeFamily =>
+  modes.includes("auto") ? "auto" : modes.includes("exam") ? "exam" : "manual";
+
+function restoreScope(value: unknown): ModeScope {
+  if (!value || typeof value !== "object") return freshScope();
+  const data = value as Partial<ModeScope>;
+  return {
+    levels: Array.isArray(data.levels)
+      ? parseLevels(data.levels.filter((level): level is TrainingLevel => typeof level === "string").join(","))
+      : [...trainingLevels],
+    kinds: Array.isArray(data.kinds)
+      ? parseKinds(data.kinds.filter((kind): kind is Kind => typeof kind === "string").join(","))
+      : [...trainingKinds],
+  };
+}
+
 export default function HomeScreen() {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -37,13 +62,15 @@ export default function HomeScreen() {
   );
   const account = useAccount(authenticated);
   const { user, loading, notice } = account;
-  const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
+  const [levels, setLevels] = useState<TrainingLevel[]>(trainingLevels);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
   const [timeLimited, setTimeLimited] = useState(false);
   const isAuto = modes.includes("auto");
   const homeActionsRef = useRef<HTMLDivElement>(null);
   const sheenRef = useRef<HTMLDivElement>(null);
+  const modeScopesRef = useRef<ModeScopes>(freshScopes());
+  const activeFolder = modeFamily(modes);
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -62,11 +89,32 @@ export default function HomeScreen() {
         const savedTimeLimit = localStorage.getItem("sokudoku-time-limit-v1");
         if (savedTimeLimit !== null) setTimeLimited(savedTimeLimit !== "off");
         const savedModes = localStorage.getItem("sokudoku-modes-v1");
-        if (savedModes !== null) setModes(parseModes(savedModes));
-        const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
-        if (savedKinds !== null) setKinds(parseKinds(savedKinds));
-        const saved = localStorage.getItem("sokudoku-levels-v1");
-        if (saved !== null) setLevels(parseLevels(saved));
+        const restoredModes = parseModes(savedModes);
+        const activeFamily = modeFamily(restoredModes);
+        const rawScopes = localStorage.getItem(MODE_SCOPES_KEY);
+        const scopes = freshScopes();
+        if (rawScopes !== null) {
+          const raw = JSON.parse(rawScopes) as Partial<Record<ModeFamily, unknown>>;
+          for (const family of ["auto", "manual", "exam"] as const) {
+            scopes[family] = restoreScope(raw?.[family]);
+          }
+        } else {
+          // One-time migration: honor the previous shared selection in the
+          // last active mode. Other modes start with everything selected.
+          const savedLevels = localStorage.getItem("sokudoku-levels-v1");
+          const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
+          if (savedLevels !== null || savedKinds !== null) {
+            scopes[activeFamily] = {
+              levels: savedLevels === null ? [...trainingLevels] : parseLevels(savedLevels),
+              kinds: savedKinds === null ? [...trainingKinds] : parseKinds(savedKinds),
+            };
+          }
+          localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(scopes));
+        }
+        modeScopesRef.current = scopes;
+        setModes(restoredModes);
+        setLevels([...scopes[activeFamily].levels]);
+        setKinds([...scopes[activeFamily].kinds]);
       } catch {
         /* Optional preference. */
       }
@@ -124,40 +172,40 @@ export default function HomeScreen() {
     };
   }, [isAuto, levels, kinds, loading, user]);
 
+  function persistScopes() {
+    try {
+      localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(modeScopesRef.current));
+    } catch { /* Optional preference. */ }
+  }
   function toggleLevel(level: TrainingLevel) {
     const next = trainingLevels.filter((item) =>
       item === level ? !levels.includes(item) : levels.includes(item),
     );
     setLevels(next);
-    try {
-      localStorage.setItem("sokudoku-levels-v1", next.join(","));
-    } catch {
-      /* Optional preference. */
-    }
+    modeScopesRef.current[activeFolder] = { levels: next, kinds: [...kinds] };
+    persistScopes();
   }
   function toggleKind(kind: Kind) {
     const next = trainingKinds.filter((item) =>
       item === kind ? !kinds.includes(item) : kinds.includes(item),
     );
     setKinds(next);
-    try {
-      localStorage.setItem("sokudoku-kinds-v1", next.join(","));
-    } catch {
-      /* Optional preference. */
-    }
+    modeScopesRef.current[activeFolder] = { levels: [...levels], kinds: next };
+    persistScopes();
   }
   function toggleMode(mode: TrainingMode) {
     const next = toggleTrainingMode(modes, mode);
-    if (mode === "auto" && next.includes("auto")) {
-      // Omakase starts unrestricted, then respects any manual deselection.
-      setLevels([...trainingLevels]);
-      setKinds([...trainingKinds]);
-      try {
-        localStorage.setItem("sokudoku-levels-v1", trainingLevels.join(","));
-        localStorage.setItem("sokudoku-kinds-v1", trainingKinds.join(","));
-      } catch { /* Optional preference. */ }
+    const nextFolder = modeFamily(next);
+    // Save the current selections before switching folders. Each folder gets
+    // full defaults only on its first visit, then remembers every adjustment.
+    modeScopesRef.current[activeFolder] = { levels: [...levels], kinds: [...kinds] };
+    if (nextFolder !== activeFolder) {
+      const restored = modeScopesRef.current[nextFolder];
+      setLevels([...restored.levels]);
+      setKinds([...restored.kinds]);
     }
     setModes(next);
+    persistScopes();
     try {
       localStorage.setItem("sokudoku-modes-v1", next.join(","));
     } catch {
@@ -208,24 +256,26 @@ export default function HomeScreen() {
       <HomeHero authenticated={!!user} />
       <div className={`home-actions${isAuto ? " home-auto" : ""}`} ref={homeActionsRef}>
         {isAuto && <div className="omakase-sheen-stage" ref={sheenRef} aria-hidden="true" />}
-        <div className="home-setting-group">
-          <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
-        </div>
-        <div className="home-setting-group">
-          <KindSelector kinds={kinds} onToggle={toggleKind} />
-        </div>
-        <div className="home-setting-group">
-          <LevelSelector levels={levels} onToggle={toggleLevel} />
-        </div>
-        {kanaOnly && !kinds.includes("meaning") && (
-          <p className="level-hint" role="status">
-            {t(
-              "かなの学習には「意味」を選んでください。",
-              "가나를 학습하려면 뜻 맞추기를 선택해주세요.",
+        <div className={`home-mode-folder folder-${activeFolder}`}>
+          <div className="home-setting-group home-folder-tabs">
+            <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
+          </div>
+          <div className="home-folder-body">
+            <div className="home-setting-group">
+              <KindSelector kinds={kinds} onToggle={toggleKind} />
+            </div>
+            <div className="home-setting-group">
+              <LevelSelector levels={levels} onToggle={toggleLevel} />
+            </div>
+            {kanaOnly && !kinds.includes("meaning") && (
+              <p className="level-hint" role="status">
+                {t(
+                  "かなの学習には「意味」を選んでください。",
+                  "가나를 학습하려면 뜻 맞추기를 선택해주세요.",
+                )}
+              </p>
             )}
-          </p>
-        )}
-        <div className="home-launch-group">
+            <div className="home-launch-group">
           {loading ? (
             <button className="primary" disabled>
               {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
@@ -252,7 +302,10 @@ export default function HomeScreen() {
               <span>→</span>
             </button>
           )}
-          <div className="home-secondary-actions">
+            </div>
+          </div>
+        </div>
+        <div className="home-secondary-actions">
             {/* Temporarily hidden while sentence quiz data is being edited.
             <Link className="notebook-link" href={`/sentence?levels=${levels.filter(level=>['1','2','3','4','5'].includes(level)).join(',')}`}>{t('文章を読む','문장 읽기')} ↗</Link>
             */}
@@ -283,7 +336,6 @@ export default function HomeScreen() {
               {t("まちがいノート", "오답노트")}
               <span aria-hidden="true">↗</span>
             </Link>
-          </div>
         </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">
