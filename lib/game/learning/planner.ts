@@ -263,7 +263,11 @@ export class TrainingPlanner {
         ? 2 + (state?.last_result !== "correct" ? 1 : 0) + Math.min(2, Math.log1p(overdue))
         : 1;
       const prior = recent.has(wordKey(word.source, word.id)) ? 0.08 : 1;
-      return { word, kind, bucket, tier, weight: Math.max(0.00001, match * urgency * prior) };
+      // Keep the first lessons genuinely beginner-friendly. Later groups remain
+      // selected in scope, but are introduced only after kana proficiency.
+      const gated = (focus === 0 && hasH && tier > 0) ||
+        (focus === 1 && hasK && tier > 1);
+      return { word, kind, bucket, tier, weight: gated ? 0 : Math.max(0.00001, match * urgency * prior) };
     });
 
     // Normalize by bucket and tier population: a 7,000-word catalog must not
@@ -292,7 +296,7 @@ export class TrainingPlanner {
       let chosen: PlannedQuestion | undefined;
       for (const bucket of priority) {
         const candidates = tickets.filter((ticket) =>
-          ticket.bucket === bucket &&
+          ticket.bucket === bucket && ticket.weight > 0 &&
           !used.has(wordKey(ticket.word.source, ticket.word.id)) &&
           !rejected.has(cardKey(ticket.word.source, ticket.word.id, ticket.kind)),
         );
