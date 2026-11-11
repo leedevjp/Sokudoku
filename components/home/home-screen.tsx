@@ -62,7 +62,7 @@ export default function HomeScreen() {
   );
   const account = useAccount(authenticated);
   const { user, loading, notice } = account;
-  const [levels, setLevels] = useState<TrainingLevel[]>(trainingLevels);
+  const [levels, setLevels] = useState<TrainingLevel[]>([...trainingLevels]);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
   const [timeLimited, setTimeLimited] = useState(false);
