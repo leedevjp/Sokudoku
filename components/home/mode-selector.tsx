@@ -72,11 +72,6 @@ export function ModeSelector({
           </button>
         ))}
       </div>
-      {modes.includes("auto") && (
-        <p className="level-hint auto-hint" role="status">
-          {t("学習範囲と問題タイプを自由に絞り込めます。復習がなくても続きます。", "아래에서 문제 유형과 범위를 자유롭게 제한할 수 있어요. 복습할 것이 없어도 계속 출제해요.")}
-        </p>
-      )}
       {modes.includes("exam") && (
         <p className="level-hint" role="status">
           {t(
