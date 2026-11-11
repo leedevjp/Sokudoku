@@ -256,11 +256,26 @@ export default function HomeScreen() {
       <HomeHero authenticated={!!user} />
       <div className={`home-actions${isAuto ? " home-auto" : ""}`} ref={homeActionsRef}>
         {isAuto && <div className="omakase-sheen-stage" ref={sheenRef} aria-hidden="true" />}
-        <div className={`home-mode-folder folder-${activeFolder}`}>
-          <div className="home-setting-group home-folder-tabs">
-            <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
+        <section className={`home-mode-folder folder-${activeFolder}`} aria-label={t("学習設定", "학습 설정")}>
+          <div className="home-folder-tabs">
+            <ModeSelector
+              modes={modes}
+              onToggle={toggleMode}
+              timeLimited={timeLimited}
+              onTimeLimitChange={(value) => {
+                setTimeLimited(value);
+                try {
+                  localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off");
+                } catch { /* Optional preference. */ }
+              }}
+            />
           </div>
           <div className="home-folder-body">
+            {!modes.length && (
+              <p className="level-hint" role="status">
+                {t("学習モードを選んでください。", "학습 모드를 선택해주세요.")}
+              </p>
+            )}
             <div className="home-setting-group">
               <KindSelector kinds={kinds} onToggle={toggleKind} />
             </div>
@@ -276,66 +291,66 @@ export default function HomeScreen() {
               </p>
             )}
             <div className="home-launch-group">
-          {loading ? (
-            <button className="primary" disabled>
-              {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
-            </button>
-          ) : user ? (
-            <Link
-              className="primary"
-              aria-disabled={!canStart}
-              href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}&timeLimit=${timeLimited ? "on" : "off"}`}
-              onClick={(event) => {
-                if (!canStart) event.preventDefault();
-              }}
-            >
-              {t("トレーニングを始める", "훈련 시작하기")}
-              <span>→</span>
-            </Link>
-          ) : (
-            <button
-              className="primary"
-              disabled={!canStart}
-              onClick={() => setModal("auth")}
-            >
-              {t("ログインして始める", "로그인하고 시작하기")}
-              <span>→</span>
-            </button>
-          )}
+              {loading ? (
+                <button className="primary" disabled>
+                  {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
+                </button>
+              ) : user ? (
+                <Link
+                  className="primary"
+                  aria-disabled={!canStart}
+                  href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}&timeLimit=${timeLimited ? "on" : "off"}`}
+                  onClick={(event) => {
+                    if (!canStart) event.preventDefault();
+                  }}
+                >
+                  {t("トレーニングを始める", "훈련 시작하기")}
+                  <span>→</span>
+                </Link>
+              ) : (
+                <button
+                  className="primary"
+                  disabled={!canStart}
+                  onClick={() => setModal("auth")}
+                >
+                  {t("ログインして始める", "로그인하고 시작하기")}
+                  <span>→</span>
+                </button>
+              )}
             </div>
           </div>
-        </div>
+        </section>
         <div className="home-secondary-actions">
-            {/* Temporarily hidden while sentence quiz data is being edited.
-            <Link className="notebook-link" href={`/sentence?levels=${levels.filter(level=>['1','2','3','4','5'].includes(level)).join(',')}`}>{t('文章を読む','문장 읽기')} ↗</Link>
-            */}
-            <Link
-              className="notebook-link"
-              href="/dashboard"
-              onClick={(event) => {
-                if (!user) {
-                  event.preventDefault();
-                  setModal("auth");
-                }
-              }}
-            >
-              <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
-              <span aria-hidden="true">↗</span>
-            </Link>
-            <Link
-              className="notebook-link"
-              href="/notebook"
-              onClick={(event) => {
-                if (!user) {
-                  event.preventDefault();
-                  setModal("auth");
-                }
-              }}
-            >
-              <span aria-hidden="true">▤</span>{" "}
-              {t("まちがいノート", "오답노트")}
-              <span aria-hidden="true">↗</span>
-            </Link>
+          {/* Temporarily hidden while sentence quiz data is being edited.
+          <Link className="notebook-link" href={`/sentence?levels=${levels.filter(level=>['1','2','3','4','5'].includes(level)).join(',')}`}>{t('文章を読む','문장 읽기')} ↗</Link>
+          */}
+          <Link
+            className="notebook-link"
+            href="/dashboard"
+            onClick={(event) => {
+              if (!user) {
+                event.preventDefault();
+                setModal("auth");
+              }
+            }}
+          >
+            <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link
+            className="notebook-link"
+            href="/notebook"
+            onClick={(event) => {
+              if (!user) {
+                event.preventDefault();
+                setModal("auth");
+              }
+            }}
+          >
+            <span aria-hidden="true">▤</span>{" "}
+            {t("まちがいノート", "오답노트")}
+            <span aria-hidden="true">↗</span>
+          </Link>
         </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">

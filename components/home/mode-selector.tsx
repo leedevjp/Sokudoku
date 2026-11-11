@@ -16,25 +16,30 @@ export function ModeSelector({
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   return (
     <>
-      <div className="selection-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span>{t("学習モード", "학습 모드")}</span>
-        <label style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}>
+      <div className="home-mode-heading">
+        <span className="home-mode-caption">{t("学習モード", "학습 모드")}</span>
+        <label className="home-time-toggle">
           <span>{t("制限時間", "시간제한")}</span>
-          <input type="checkbox" role="switch" aria-label={t("制限時間", "시간제한")} checked={timeLimited} onChange={(event) => onTimeLimitChange(event.target.checked)} style={{ position: "absolute", opacity: 0, width: 1, height: 1 }} />
-          <span aria-hidden="true" style={{ width: 38, height: 22, borderRadius: 99, background: timeLimited ? "#2d7deb" : "#9ca3af", display: "inline-flex", alignItems: "center", padding: 3, boxSizing: "border-box", justifyContent: timeLimited ? "flex-end" : "flex-start", transition: "background .15s" }}>
-            <span style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px #0002" }} />
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label={t("制限時間", "시간제한")}
+            checked={timeLimited}
+            onChange={(event) => onTimeLimitChange(event.target.checked)}
+          />
+          <span className="home-time-track" aria-hidden="true">
+            <span className="home-time-thumb" />
           </span>
         </label>
       </div>
       <div
-        className={`training-levels training-kinds training-modes${modes.includes("auto") ? " is-auto" : ""}${modes.includes("exploration") || modes.includes("review") ? " has-manual" : ""}`}
+        className="training-levels training-modes"
         role="group"
         aria-label={t(
           "自動とテストは単独、探索と復習は併用可",
           "자동과 시험은 단독, 탐색과 복습은 함께 선택 가능",
         )}
       >
-        <div className="training-mode-pair-frame" aria-hidden="true" />
         {trainingModes.map((mode) => (
           <button
             key={mode}
@@ -74,19 +79,6 @@ export function ModeSelector({
           </button>
         ))}
       </div>
-      {modes.includes("exam") && (
-        <p className="level-hint" role="status">
-          {t(
-            "学習済みも含む全範囲からランダム出題。結果は学習・復習に反映します。",
-            "이미 학습한 단어도 포함해 전체 범위에서 랜덤 출제합니다. 결과는 학습·복습에 반영됩니다.",
-          )}
-        </p>
-      )}
-      {!modes.length && (
-        <p className="level-hint" role="status">
-          {t("学習モードを選んでください。", "학습 모드를 선택해주세요.")}
-        </p>
-      )}
     </>
   );
 }

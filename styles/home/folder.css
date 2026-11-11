@@ -1,0 +1,302 @@
+/* Home training folder
+ *
+ * One component owns its paper, tab seam, controls and mode palette.
+ * Home-wide viewport rules stay in home-compact.css and generic selectors
+ * stay in home-controls.css. Avoid positioning mode tabs independently.
+ */
+.home-mode-folder {
+  --folder-paper: #eaf3ff;
+  --folder-edge: #98bcea;
+  --folder-ink: #21528c;
+  --folder-accent: #327fe8;
+  --folder-button: #2b7bf0;
+  --folder-button-text: #fff;
+  --folder-button-shadow: #1b5fc4;
+  --folder-cta: #2b7bf0;
+  --folder-cta-text: #fff;
+  --folder-shadow: rgb(46 106 174 / 13%);
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.home-mode-folder.folder-auto {
+  --folder-paper: #e9fdee;
+  --folder-edge: #96dcb0;
+  --folder-ink: #24603d;
+  --folder-accent: #35b566;
+  --folder-button: linear-gradient(145deg, #c8ffbf, #91edab);
+  --folder-button-text: #214d36;
+  --folder-button-shadow: #6cc58c;
+  --folder-cta: linear-gradient(145deg, #c8ffbf, #91edab);
+  --folder-cta-text: #214d36;
+  --folder-shadow: rgb(67 161 94 / 12%);
+}
+.home-mode-folder.folder-exam {
+  --folder-paper: #fff7df;
+  --folder-edge: #e3cd8a;
+  --folder-ink: #73561d;
+  --folder-accent: #c99d36;
+  --folder-button: linear-gradient(145deg, #ffebaa, #f4d47c);
+  --folder-button-text: #604817;
+  --folder-button-shadow: #d2b457;
+  --folder-cta: linear-gradient(145deg, #ffebaa, #f4d47c);
+  --folder-cta-text: #604817;
+  --folder-shadow: rgb(165 129 39 / 12%);
+}
+
+/* The caption and independent timer sit *above* the four equal-sized tabs.
+   Neither can expand the tab row or break the folder's top seam. */
+.home-mode-folder .home-mode-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 29px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.home-mode-folder .home-time-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.home-mode-folder .home-time-toggle input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.home-mode-folder .home-time-track {
+  display: flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  padding: 3px;
+  flex: 0 0 38px;
+  border-radius: 99px;
+  background: #9ca3af;
+  transition: background .18s;
+}
+.home-mode-folder .home-time-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0002;
+  transition: transform .18s;
+}
+.home-mode-folder .home-time-toggle input:checked + .home-time-track {
+  background: var(--folder-accent);
+}
+.home-mode-folder .home-time-toggle input:checked + .home-time-track .home-time-thumb {
+  transform: translateX(16px);
+}
+.home-mode-folder .home-time-toggle input:focus-visible + .home-time-track {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* One four-column tab strip. The selected tab is an extension of the sheet,
+   not a floating pill or a frame behind the buttons. */
+.home-mode-folder .home-folder-tabs {
+  position: relative;
+  z-index: 2;
+}
+.home-mode-folder .home-folder-tabs .training-modes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.home-mode-folder .training-modes > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--muted);
+  box-shadow: 0 3px 0 var(--shade);
+  font-size: clamp(11px, 2.8vw, 14px);
+  font-weight: 800;
+  white-space: nowrap;
+  position: relative;
+}
+.home-mode-folder .training-modes > button[aria-pressed="true"] {
+  z-index: 3;
+  transform: translateY(2px);
+  background: var(--folder-paper);
+  color: var(--folder-ink);
+  border: 1.5px solid var(--folder-edge);
+  border-bottom-color: var(--folder-paper);
+  border-radius: 14px 14px 0 0;
+  box-shadow: none;
+}
+.home-mode-folder .training-modes > button[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 23%;
+  right: 23%;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--folder-accent);
+  opacity: .6;
+}
+.home-mode-folder .training-modes > button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(--folder-paper);
+  pointer-events: none;
+}
+.home-mode-folder .training-modes .kind-check {
+  font-size: 15px;
+}
+.home-mode-folder .training-modes > button[aria-pressed="true"] .kind-check {
+  color: var(--folder-accent);
+}
+
+/* The folder body starts immediately underneath the tab seam and shares its
+   exact background and border. Other modes simply switch the paper palette. */
+.home-mode-folder .home-folder-body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  margin-top: -1px;
+  padding: 18px clamp(12px, 2.8vw, 18px) 17px;
+  border: 1.5px solid var(--folder-edge);
+  border-radius: 18px;
+  background: var(--folder-paper);
+  box-shadow: 0 4px 0 var(--folder-shadow), 0 13px 24px -22px var(--folder-shadow);
+}
+.home-mode-folder.folder-auto .home-folder-body {
+  border-top-left-radius: 0;
+}
+.home-mode-folder.folder-exam .home-folder-body {
+  border-top-right-radius: 0;
+}
+.home-mode-folder .home-folder-body .home-setting-group + .home-setting-group {
+  margin-top: 14px;
+}
+.home-mode-folder .home-folder-body .selection-label,
+.home-mode-folder .home-folder-body .level-heading a {
+  color: var(--folder-ink);
+}
+.home-mode-folder .home-folder-body .selection-label {
+  margin: 0 0 8px;
+}
+.home-mode-folder .home-folder-body .training-levels {
+  margin: 0;
+}
+.home-mode-folder .home-folder-body .kana-levels {
+  margin-bottom: 8px;
+}
+.home-mode-folder .home-folder-body .level-hint {
+  margin: 10px 0 0;
+  color: var(--folder-ink);
+  opacity: .8;
+}
+.home-mode-folder .home-folder-body .training-levels button {
+  border-color: var(--folder-edge);
+  background: var(--card);
+  color: var(--muted);
+  box-shadow: 0 2px 0 var(--folder-shadow);
+}
+.home-mode-folder .home-folder-body .training-levels button[aria-pressed="true"] {
+  background: var(--folder-button);
+  border-color: var(--folder-edge);
+  color: var(--folder-button-text);
+  box-shadow: 0 3px 0 var(--folder-button-shadow);
+}
+.home-mode-folder .home-folder-body .home-launch-group {
+  margin-top: 21px;
+  gap: 0;
+}
+.home-mode-folder .home-folder-body .primary {
+  margin: 0;
+  min-height: 60px;
+  background: var(--folder-cta);
+  color: var(--folder-cta-text);
+  border-bottom: 5px solid var(--folder-button-shadow);
+  box-shadow: 0 9px 18px -13px var(--folder-button-shadow);
+}
+.home-mode-folder .home-folder-body .primary[aria-disabled="true"] {
+  opacity: .5;
+}
+
+/* The external dashboard/notebook actions are not part of the colored sheet. */
+.home-actions > .home-secondary-actions {
+  margin-top: 19px;
+  flex-shrink: 0;
+}
+@media (min-height: 921px) {
+  .home-shell .home-actions > .home-secondary-actions {
+    margin-top: 22px;
+  }
+}
+@media (max-width: 599px) {
+  /* A folder expands vertically. Scroll the page instead of crushing the
+     preview into the header when a hint or accessibility font grows. */
+  .home-shell {
+    height: auto;
+    min-height: 100svh;
+    max-height: none;
+    overflow: visible;
+  }
+  .home-shell .home-content {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 370px) {
+  .home-mode-folder .home-folder-tabs .training-modes { gap: 5px; }
+  .home-mode-folder .training-modes > button { gap: 3px; font-size: 11px; }
+  .home-mode-folder .home-folder-body {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mode-folder .home-time-track,
+  .home-mode-folder .home-time-thumb { transition: none; }
+}
+
+/* Dark theme keeps the folder as a single sheet without forcing light colors. */
+[data-theme="dark"] .home-mode-folder {
+  --folder-paper: #152c53;
+  --folder-edge: #42679e;
+  --folder-ink: #c9dfff;
+  --folder-shadow: rgb(0 0 0 / 22%);
+}
+[data-theme="dark"] .home-mode-folder.folder-auto {
+  --folder-paper: #173f33;
+  --folder-edge: #348a66;
+  --folder-ink: #d5ffe3;
+}
+[data-theme="dark"] .home-mode-folder.folder-exam {
+  --folder-paper: #40361d;
+  --folder-edge: #9b7c3f;
+  --folder-ink: #ffedc8;
+}
