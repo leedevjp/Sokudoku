@@ -25,6 +25,7 @@ import {
 } from "@/lib/game/learning/types";
 import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
+import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
 
 export default function HomeScreen() {
   const { prefs } = useSettings();
@@ -229,6 +230,7 @@ export default function HomeScreen() {
       <footer>
         {t("毎日の「わかった」を、もっと速く。", "매일의 이해를, 더 빠르게.")}
       </footer>
+      <DeploymentLabel lang={prefs.lang} />
       <Modal
         open={modal !== null}
         onClose={() => setModal(null)}
