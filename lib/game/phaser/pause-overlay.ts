@@ -56,14 +56,14 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-sound-slider input[type=range]{-webkit-appearance:none!important;appearance:none!important;display:block!important;box-sizing:border-box!important;width:100%!important;height:28px!important;min-height:28px!important;max-height:28px!important;margin:0!important;padding:0!important;border:0!important;border-radius:999px!important;box-shadow:none!important;outline:0!important;cursor:pointer;touch-action:pan-y;--fillpos:calc(100% * var(--p,0));background:linear-gradient(to right,var(--blue) 0,var(--blue) var(--fillpos),var(--track) var(--fillpos),var(--track) 100%) center/100% 7px no-repeat!important}
 .pause-sound-slider input[type=range]::-webkit-slider-runnable-track{height:28px!important;border:0!important;background:transparent!important}
 .pause-sound-slider input[type=range]::-moz-range-track{height:28px!important;border:0!important;background:transparent!important}
-.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none!important;appearance:none!important;width:14px!important;height:24px!important;border-radius:7px!important;border:2px solid var(--blue)!important;background:var(--panel)!important;box-shadow:0 1px 2px var(--shade)!important}
-.pause-sound-slider input[type=range]::-moz-range-thumb{width:14px!important;height:24px!important;border-radius:7px!important;border:2px solid var(--blue)!important;background:var(--panel)!important}
+.pause-sound-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none!important;appearance:none!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+.pause-sound-slider input[type=range]::-moz-range-thumb{width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
 .pause-sound-slider input[type=range]:focus-visible{outline:2px solid var(--blue)!important;outline-offset:2px!important}
-.pause-select-grid{display:grid;grid-template-rows:repeat(2,44px);gap:8px;margin-top:5px;padding-top:12px;border-top:1.5px dashed var(--line)}
+.pause-select-grid{display:grid;grid-template-rows:repeat(2,minmax(44px,auto));gap:8px;margin-top:5px;padding-top:12px;border-top:1.5px dashed var(--line)}
 .pause-select-row,.pause-correct-review-setting{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,1.5fr);align-items:center;gap:10px;min-width:0;text-align:left;font-size:13px;font-weight:700;color:var(--ink)}
-.pause-select-row{min-height:44px;height:44px}
+.sokudoku-pause-card .pause-select-row{min-height:44px;height:44px;margin:0;padding:0}
 .pause-select-row select,.pause-correct-review-setting select{width:100%;min-width:0;height:40px;border:1.5px solid var(--line);border-radius:11px;padding:0 9px;color:var(--ink);background:var(--panel);font-size:12px;font-weight:700}
-.pause-correct-review-setting{min-height:57px;margin-top:8px;padding-top:12px;border-top:1.5px dashed var(--line)}
+.sokudoku-pause-card .pause-correct-review-setting{min-height:57px;margin:8px 0 0;padding:12px 0 0;border-top:1.5px dashed var(--line)}
 .pause-correct-review-setting strong,.pause-reading-setting strong{font-size:13px;font-weight:800;color:var(--ink)}
 .pause-reading-setting{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;height:44px;margin-top:8px;text-align:left}
 .pause-reading-setting button{flex:none;min-width:62px;height:36px;border:1.5px solid var(--line);border-radius:999px;padding:0 12px;font-size:12px;font-weight:800;background:var(--panel);color:var(--muted)}
