@@ -27,16 +27,18 @@ export function ModeSelector({
         </label>
       </div>
       <div
-        className={`training-levels training-kinds training-modes${modes.includes("auto") ? " is-auto" : ""}`}
+        className={`training-levels training-kinds training-modes${modes.includes("auto") ? " is-auto" : ""}${modes.includes("exploration") || modes.includes("review") ? " has-manual" : ""}`}
         role="group"
         aria-label={t(
           "自動とテストは単独、探索と復習は併用可",
           "자동과 시험은 단독, 탐색과 복습은 함께 선택 가능",
         )}
       >
+        <div className="training-mode-pair-frame" aria-hidden="true" />
         {trainingModes.map((mode) => (
           <button
             key={mode}
+            className={`training-mode-${mode}`}
             type="button"
             aria-pressed={modes.includes(mode)}
             onClick={() => onToggle(mode)}
