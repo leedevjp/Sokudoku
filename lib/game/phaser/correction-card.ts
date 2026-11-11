@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { Correction } from "../correction";
+import type { Result } from "../types";
 import type { TrainingView } from "./board";
 
 import { correctionText } from "./correction-text";
@@ -19,13 +20,18 @@ export class CorrectionCard {
   private iconX: number;
   private iconY: number;
   private lastPaused?: boolean;
+  private readonly resultColor: number;
+  private readonly correctAnswer: boolean;
   constructor(
     scene: Phaser.Scene,
     private view: TrainingView,
     correction: Correction,
     actions: CorrectionActions,
+    result: Result,
   ) {
     const { scale: s, width, top, extra } = view.boardLayout;
+    this.correctAnswer = result === "correct";
+    this.resultColor = this.correctAnswer ? view.c.green : view.c.red;
     const height = 272 * s,
       padding = Math.max(12, 22 * s),
       controls = Math.max(48, 86 * s);
@@ -33,13 +39,19 @@ export class CorrectionCard {
       y = top + 644 * s + extra + height / 2;
     this.root = view.add.container(x, y).setSize(width, height).setDepth(5);
     this.root.add(view.box(0, 0, width, height, view.c.panel, 22 * s));
+    // Preserve the panel background while making the outcome recognizable by its border.
+    this.root.add(
+      view.add.graphics()
+        .lineStyle(Math.max(2.5, 4 * s), this.resultColor)
+        .strokeRoundedRect(-width / 2, -height / 2, width, height, 22 * s),
+    );
     const badge = Math.max(21, 32 * s),
       badgeX = -width / 2 + padding + badge / 2;
     const headerY = -height / 2 + Math.max(16, 24 * s);
     this.root.add(
       view.add
         .graphics()
-        .fillStyle(view.c.press)
+        .fillStyle(this.resultColor, 0.14)
         .fillRoundedRect(
           badgeX - badge / 2,
           headerY - badge / 2,
@@ -54,7 +66,7 @@ export class CorrectionCard {
         headerY,
         String(correction.content.index + 1),
         Math.max(12, 18 * s),
-        view.c.blue,
+        this.resultColor,
         true,
       ),
     );
@@ -63,9 +75,13 @@ export class CorrectionCard {
         .designText(
           badgeX + badge / 2 + 8,
           headerY,
-          view.t("正解", "정답"),
+          this.correctAnswer
+            ? view.t("✓ 正解！", "✓ 정답!")
+            : result === "timeout"
+              ? view.t("✕ 時間切れ · 正解", "✕ 시간 초과 · 정답")
+              : view.t("✕ 不正解 · 正解", "✕ 오답 · 정답"),
           Math.max(11, 16 * s),
-          view.c.blue,
+          this.resultColor,
           true,
         )
         .setOrigin(0, 0.5),
@@ -82,7 +98,7 @@ export class CorrectionCard {
         this.ringY,
         "→",
         Math.max(14, 22 * s),
-        view.c.blue,
+        this.resultColor,
         true,
       ),
     );
@@ -164,7 +180,7 @@ export class CorrectionCard {
     const { ringX: x, ringY: y, radius: r } = this;
     this.ring.clear().lineStyle(3, this.view.c.line).strokeCircle(x, y, r);
     this.ring
-      .lineStyle(3, this.view.c.blue)
+      .lineStyle(3, this.resultColor)
       .beginPath()
       .arc(
         x,
@@ -182,7 +198,7 @@ export class CorrectionCard {
       "aria-label",
       [
         correction.term,
-        this.view.t("正解", "정답") + " " + (index + 1),
+        (this.correctAnswer ? this.view.t("正解", "정답") : this.view.t("不正解", "오답")) + " / " + this.view.t("正解番号", "정답 번호") + " " + (index + 1),
         primary,
         secondary,
         correction.paused
@@ -196,7 +212,7 @@ export class CorrectionCard {
         .filter(Boolean)
         .join(" / "),
     );
-    const icon = this.pauseIcon.clear().fillStyle(this.view.c.blue);
+    const icon = this.pauseIcon.clear().fillStyle(this.resultColor);
     if (correction.paused) icon.fillTriangle(-5, -8, -5, 8, 8, 0);
     else
       icon.fillRoundedRect(-7, -8, 5, 16, 1).fillRoundedRect(2, -8, 5, 16, 1);
