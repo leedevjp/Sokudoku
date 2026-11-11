@@ -35,7 +35,7 @@ export function showCorrection(
     ?.setOrigin(0.5)
     .setX(view.w / 2)
     .setText(view.t("Space：停止 / 再開", "Space: 정지 / 재개"));
-  const card = new CorrectionCard(scene, view, correction, actions);
+  const card = new CorrectionCard(scene, view, correction, actions, answer?.result ?? "incorrect");
   if (animate) {
     card.root.setAlpha(0);
     scene.tweens.add({
