@@ -79,11 +79,6 @@ export function ModeSelector({
           </button>
         ))}
       </div>
-      {!modes.length && (
-        <p className="level-hint" role="status">
-          {t("学習モードを選んでください。", "학습 모드를 선택해주세요.")}
-        </p>
-      )}
     </>
   );
 }
