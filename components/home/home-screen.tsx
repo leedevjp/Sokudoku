@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
 import {
@@ -42,6 +42,8 @@ export default function HomeScreen() {
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
   const [timeLimited, setTimeLimited] = useState(false);
   const isAuto = modes.includes("auto");
+  const homeActionsRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -71,6 +73,57 @@ export default function HomeScreen() {
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    if (!isAuto) return;
+    const home = homeActionsRef.current;
+    const sheen = sheenRef.current;
+    if (!home || !sheen) return;
+
+    // All selected buttons reveal the same animated light beam. Their rounded
+    // rectangles form one clip-path in home-relative coordinates, so the beam
+    // moves across the whole UI at precisely the same speed and phase.
+    const round = (value: number) => Math.round(value * 10) / 10;
+    const updateSheenMask = () => {
+      const area = home.getBoundingClientRect();
+      home.style.setProperty("--omakase-stage-width", `${round(area.width)}px`);
+      const selected = home.querySelectorAll<HTMLElement>(
+        '.training-levels button[aria-pressed="true"], .home-launch-group .primary:not(:disabled):not([aria-disabled="true"])',
+      );
+      const paths = Array.from(selected, (button) => {
+        const rect = button.getBoundingClientRect();
+        const x = round(rect.left - area.left);
+        const y = round(rect.top - area.top);
+        const w = round(rect.width);
+        const h = round(rect.height);
+        const r = round(Math.min(13, w / 2, h / 2));
+        return [
+          `M ${round(x + r)} ${y}`,
+          `H ${round(x + w - r)}`,
+          `Q ${round(x + w)} ${y} ${round(x + w)} ${round(y + r)}`,
+          `V ${round(y + h - r)}`,
+          `Q ${round(x + w)} ${round(y + h)} ${round(x + w - r)} ${round(y + h)}`,
+          `H ${round(x + r)}`,
+          `Q ${x} ${round(y + h)} ${x} ${round(y + h - r)}`,
+          `V ${round(y + r)}`,
+          `Q ${x} ${y} ${round(x + r)} ${y} Z`,
+        ].join(" ");
+      });
+      sheen.style.clipPath = paths.length ? `path("${paths.join(" ")}")` : "inset(100%)";
+    };
+
+    const observer = new ResizeObserver(updateSheenMask);
+    observer.observe(home);
+    for (const button of home.querySelectorAll<HTMLElement>(
+      ".training-levels button, .home-launch-group .primary",
+    )) observer.observe(button);
+    window.addEventListener("resize", updateSheenMask);
+    updateSheenMask();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSheenMask);
+    };
+  }, [isAuto, levels, kinds, loading, user]);
+
   function toggleLevel(level: TrainingLevel) {
     const next = trainingLevels.filter((item) =>
       item === level ? !levels.includes(item) : levels.includes(item),
@@ -153,7 +206,8 @@ export default function HomeScreen() {
         </div>
       </header>
       <HomeHero authenticated={!!user} />
-      <div className={`home-actions${isAuto ? " home-auto" : ""}`}>
+      <div className={`home-actions${isAuto ? " home-auto" : ""}`} ref={homeActionsRef}>
+        {isAuto && <div className="omakase-sheen-stage" ref={sheenRef} aria-hidden="true" />}
         <div className="home-setting-group">
           <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
         </div>
