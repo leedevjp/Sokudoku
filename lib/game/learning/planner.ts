@@ -246,11 +246,11 @@ export class TrainingPlanner {
       reading: estimateSkill(this.engine.learner.ability, this.engine.learner.ability_count, samples.reading),
     };
 
-    const scheduled = new Map(
+    const scheduled = new Map<string, number>(
       reviewCandidates(this.engine, this.byKey, this.kinds, now).map((item) => [
         cardKey(item.word.source, item.word.id, item.kind),
         item.weight,
-      ]),
+      ] as const),
     );
     const recent = new Set([this.lastWord, ...this.recentWords]);
     const tickets: AutoTicket[] = available.map(({ word, kind, state }) => {
