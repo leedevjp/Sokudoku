@@ -20,25 +20,31 @@ export function correctionText(
     .setWordWrapWidth(width, true)
     .setVisible(false);
   const wrap = () => {
+    const { primary, secondary, readingHint } = correction.content;
+    const hint = view.prefs.showReadingHints ? readingHint : null;
+    // If the normal primary/secondary line is already the reading, replace
+    // that line with the augmented reading rather than adding a duplicate.
+    const plainReading = hint?.split(" [", 1)[0] ?? null;
+    const normalize = (value: string) =>
+      value.trim().replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+    const isReading = (value: string) =>
+      !!plainReading && normalize(value) === plainReading;
+    const primaryText = hint && isReading(primary) ? hint : primary;
+    const secondaryText = secondary && hint && isReading(secondary) ? hint : secondary;
     measure.setFontSize(primarySize).setFontStyle("bold");
     const rows: CorrectionRow[] = measure
-      .getWrappedText(correction.content.primary)
+      .getWrappedText(primaryText)
       .map((text) => ({ text, secondary: false }));
-    if (correction.content.secondary) {
+    if (secondaryText) {
       measure.setFontSize(secondarySize).setFontStyle("normal");
       rows.push(
-        ...measure
-          .getWrappedText(correction.content.secondary)
+        ...measure.getWrappedText(secondaryText)
           .map((text) => ({ text, secondary: true })),
       );
     }
-    if (view.prefs.showReadingHints && correction.content.readingHint) {
-      const hint = correction.content.readingHint;
-      // Avoid rendering the exact same line twice in reading questions.
-      if (hint !== correction.content.secondary) {
-        measure.setFontSize(secondarySize).setFontStyle("normal");
-        rows.push(...measure.getWrappedText(hint).map((text) => ({ text, secondary: true })));
-      }
+    if (hint && !isReading(primary) && !(secondary && isReading(secondary))) {
+      measure.setFontSize(secondarySize).setFontStyle("normal");
+      rows.push(...measure.getWrappedText(hint).map((text) => ({ text, secondary: true })));
     }
     return rows;
   };
