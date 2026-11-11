@@ -58,6 +58,15 @@ export function createSoundControls(
     if (extra) side.append(extra);
     row.append(nameSpan, side);
     group.append(row, input);
+    // Grid placement keeps a full-size touch target while saving vertical space.
+    input.style.gridColumn = "2";
+    input.style.gridRow = "1";
+    row.style.gridColumn = "1 / -1";
+    row.style.gridRow = "1";
+    nameSpan.style.gridColumn = "1";
+    nameSpan.style.gridRow = "1";
+    side.style.gridColumn = "3";
+    side.style.gridRow = "1";
     section.append(group);
   };
   const preview = document.createElement("button");
