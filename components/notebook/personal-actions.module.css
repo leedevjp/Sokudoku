@@ -1,1 +1,17 @@
-.actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}.actions label,.select{display:flex;align-items:center;gap:8px;min-height:44px}.actions button{min-height:44px;padding:8px 16px}.select{padding:4px 12px;font-size:12px;color:var(--muted)}.actions input,.select input{width:20px;height:20px;accent-color:var(--blue)}
+.toolbar,.selectionTools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px;min-height:44px}
+.caption,.selectionTools>span{color:var(--muted);font-size:12px}
+.textButton{display:inline-flex;align-items:center;justify-content:center;flex:none;min-height:44px;margin:0;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--accent);font:inherit;font-size:13px;font-weight:700;box-shadow:none}
+.textButton:hover{background:var(--input)}
+.selectionTools{margin-bottom:12px;justify-content:flex-start;border-top:1px solid var(--line)}
+.selectableRow{display:flex;align-items:center;gap:10px;margin:0;padding:14px;min-height:64px;font:inherit;color:var(--text);cursor:pointer}
+.checkbox{appearance:auto;display:block;flex:0 0 20px;width:20px;height:20px;min-height:20px;max-height:20px;min-width:20px;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;accent-color:var(--accent);background:transparent}
+.rowContent{display:grid;flex:1;min-width:0;grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:baseline;text-align:left;font-size:13px;line-height:1.7;font-weight:400}
+.rowContent>span{min-width:0;overflow-wrap:anywhere}
+.checked{background:var(--input)}
+.unavailable{opacity:.55;cursor:default}
+.selectingColumns{padding-left:44px}
+.bottomBar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:0 4px 16px #0002;font-size:13px;font-weight:700}
+.addButton{display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:44px;margin:0;padding:10px 24px;border:0;border-radius:11px;background:var(--accent);color:#fff;font:inherit;font-size:14px;font-weight:700;box-shadow:none}
+.addButton:disabled,.textButton:disabled{cursor:default;opacity:.45}
+.feedback{margin:8px 0 12px;color:var(--accent);font-size:13px;line-height:1.6}
+@media(max-width:370px){.selectableRow{padding:12px 10px;gap:8px}.rowContent{gap:7px}.selectingColumns{padding-left:38px}}
