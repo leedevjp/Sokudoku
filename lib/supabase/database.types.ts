@@ -226,6 +226,7 @@ export type Database = {
           kana: string
           meaning_ko: string
           note: string | null
+          pronunciation_ko: string | null
           term: string
           updated_at: string
           user_id: string
@@ -241,6 +242,7 @@ export type Database = {
           kana: string
           meaning_ko: string
           note?: string | null
+          pronunciation_ko?: string | null
           term: string
           updated_at?: string
           user_id?: string
@@ -256,6 +258,7 @@ export type Database = {
           kana?: string
           meaning_ko?: string
           note?: string | null
+          pronunciation_ko?: string | null
           term?: string
           updated_at?: string
           user_id?: string

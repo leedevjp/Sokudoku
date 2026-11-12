@@ -11,6 +11,7 @@ export function useWordEditor(
   const [form, setForm] = useState(() => ({
     term: word?.term ?? "",
     kana: word?.kana ?? "",
+    pronunciation_ko: word?.pronunciation_ko ?? "",
     meaning_ko: word?.meaning_ko ?? "",
     hanja_reading: word?.hanja_reading ?? "",
     difficulty: word?.difficulty ?? 6,
