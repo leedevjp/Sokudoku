@@ -14,6 +14,17 @@ export function ModeSelector({
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
+  const tabShape = modes.includes("auto")
+    ? "tab-auto"
+    : modes.includes("exam")
+      ? "tab-exam"
+      : modes.includes("exploration") && modes.includes("review")
+        ? "tab-manual-both"
+        : modes.includes("exploration")
+          ? "tab-exploration"
+          : modes.includes("review")
+            ? "tab-review"
+            : "tab-none";
   return (
     <>
       <div className="home-mode-heading">
@@ -33,7 +44,7 @@ export function ModeSelector({
         </label>
       </div>
       <div
-        className="training-levels training-modes"
+        className={`training-levels training-modes ${tabShape}`}
         role="group"
         aria-label={t(
           "自動とテストは単独、探索と復習は併用可",
