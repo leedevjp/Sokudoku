@@ -134,7 +134,7 @@ export default function NotebookScreen() {
           <Link href="/" className={styles.back} aria-label={t("ホームへ戻る", "메인으로 돌아가기")}>←</Link>
           <h1 id="notebook-title">{t("まちがいノート", "오답노트")}</h1>
           {!!words?.length && !error && <button className={styles.modeButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); setMessage(""); }}>
-            {selecting ? t("キャンセル", "취소") : t("選択", "선택")}
+            {selecting ? t("キャンセル", "취소") : t("Pに追加", "P에 추가")}
           </button>}
         </div>
         {words !== null && !error && <NotebookControls query={query} onChange={changeQuery} count={filtered.length} total={words.length} disabled={busy} t={t} />}
@@ -193,7 +193,7 @@ export default function NotebookScreen() {
               <button className={styles.textButton} disabled={busy || !eligible.length} title={t(`絞り込み結果の${eligible.length}語を選択`, `검색·필터 결과 전체에서 추가 가능한 ${eligible.length}개 선택`)} onClick={() => setChecked(activeChecked.length === eligible.length ? [] : eligible.map(w => w.id))}>
                 {activeChecked.length === eligible.length ? t("すべて解除", "전체 해제") : t("すべて選択", "전체 선택")}
               </button>
-              <button className={styles.addButton} disabled={busy || !activeChecked.length} onClick={() => void addPersonal(activeChecked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
+              <button className={styles.addButton} disabled={busy || !activeChecked.length} onClick={() => void addPersonal(activeChecked)}>{busy ? t("追加中…", "추가 중…") : t(`選択した${activeChecked.length}語を追加`, `선택한 ${activeChecked.length}개 추가`)}</button>
             </div>}
             {message && !selected && <div className={styles.feedback} role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label={t("通知を閉じる", "알림 닫기")}>×</button></div>}
             {!filtered.length && <div className={styles.noResults} role="status">
