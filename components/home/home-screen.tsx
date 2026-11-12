@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
 import {
@@ -25,6 +25,7 @@ import {
 import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
+import { makeFolderOutline } from "./folder-outline-path";
 
 type ModeFamily = "auto" | "manual" | "exam";
 type ModeScope = { levels: TrainingLevel[]; kinds: Kind[] };
@@ -68,6 +69,8 @@ export default function HomeScreen() {
   const [timeLimited, setTimeLimited] = useState(false);
   const homeActionsRef = useRef<HTMLDivElement>(null);
   const sheenRef = useRef<HTMLDivElement>(null);
+  const folderRef = useRef<HTMLElement>(null);
+  const [folderOutline, setFolderOutline] = useState<{ width: number; height: number; d: string } | null>(null);
   const modeScopesRef = useRef<ModeScopes>(freshScopes());
   const activeFolder = modeFamily(modes);
   const kanaOnly =
@@ -187,6 +190,73 @@ export default function HomeScreen() {
     };
   }, [modes, levels, kinds, loading, user]);
 
+  useLayoutEffect(() => {
+    const folder = folderRef.current;
+    const tabs = folder?.querySelector<HTMLElement>(".training-modes");
+    const body = folder?.querySelector<HTMLElement>(".home-folder-body");
+    if (!folder || !tabs || !body) return;
+
+    let animationFrame = 0;
+    const updateOutline = () => {
+      const origin = folder.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
+      const gridRect = tabs.getBoundingClientRect();
+      if (origin.width <= 4 || bodyRect.height <= 4) return;
+
+      // Read the *real* four-column button geometry, including their inset
+      // margins. There is one tab silhouette even for Explore + Review.
+      const activeButtons = Array.from(
+        tabs.querySelectorAll<HTMLButtonElement>('button[aria-pressed="true"]'),
+      );
+      const first = activeButtons[0];
+      const last = activeButtons[activeButtons.length - 1];
+      const firstRect = first?.getBoundingClientRect();
+      const lastRect = last?.getBoundingClientRect();
+      const firstMargin = first ? Number.parseFloat(getComputedStyle(first).marginLeft) || 0 : 0;
+      const lastMargin = last ? Number.parseFloat(getComputedStyle(last).marginRight) || 0 : 0;
+      const width = origin.width;
+      const height = origin.height;
+      const d = makeFolderOutline({
+        width,
+        height,
+        bodyTop: bodyRect.top - origin.top,
+        tab: firstRect && lastRect
+          ? {
+              left: firstRect.left - origin.left - firstMargin,
+              right: lastRect.right - origin.left + lastMargin,
+              top: gridRect.top - origin.top,
+            }
+          : undefined,
+      });
+      if (!d) return;
+      const next = { width, height, d };
+      setFolderOutline((previous) =>
+        previous?.width === width && previous?.height === height && previous?.d === d
+          ? previous
+          : next,
+      );
+    };
+    const scheduleOutline = () => {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = 0;
+        updateOutline();
+      });
+    };
+    const resizeObserver = new ResizeObserver(scheduleOutline);
+    for (const element of [folder, body, tabs, ...tabs.querySelectorAll("button")]) {
+      resizeObserver.observe(element);
+    }
+    window.addEventListener("resize", scheduleOutline);
+    // Calculate before paint, not after the user notices a misaligned seam.
+    updateOutline();
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", scheduleOutline);
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+    };
+  }, [modes, prefs.lang]);
+
   function persistScopes() {
     try {
       localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(modeScopesRef.current));
@@ -271,7 +341,22 @@ export default function HomeScreen() {
       <HomeHero authenticated={!!user} />
       <div className="home-actions" ref={homeActionsRef}>
         <div className="home-sheen-stage" ref={sheenRef} aria-hidden="true" />
-        <section className={`home-mode-folder folder-${activeFolder}`} aria-label={t("学習設定", "학습 설정")}>
+        <section
+          ref={folderRef}
+          className={`home-mode-folder folder-${activeFolder}${folderOutline ? " outline-ready" : ""}`}
+          aria-label={t("学習設定", "학습 설정")}
+        >
+          {folderOutline && (
+            <svg
+              className="home-folder-outline"
+              viewBox={`0 0 ${folderOutline.width} ${folderOutline.height}`}
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d={folderOutline.d} />
+            </svg>
+          )}
           <div className="home-folder-tabs">
             <ModeSelector
               modes={modes}
