@@ -14,7 +14,8 @@
   --folder-button-shadow: #1b5fc4;
   --folder-cta: #2b7bf0;
   --folder-cta-text: #fff;
-  --folder-shadow: rgb(46 106 174 / 13%);
+  --folder-shadow: rgb(46 106 174 / 10%);
+  --folder-tab: #d6e7ff;
   position: relative;
   flex-shrink: 0;
   min-width: 0;
@@ -29,7 +30,8 @@
   --folder-button-shadow: #6cc58c;
   --folder-cta: linear-gradient(145deg, #c8ffbf, #91edab);
   --folder-cta-text: #214d36;
-  --folder-shadow: rgb(67 161 94 / 12%);
+  --folder-shadow: rgb(67 161 94 / 10%);
+  --folder-tab: #c4facb;
 }
 .home-mode-folder.folder-exam {
   --folder-paper: #fff7df;
@@ -41,7 +43,8 @@
   --folder-button-shadow: #d2b457;
   --folder-cta: linear-gradient(145deg, #ffebaa, #f4d47c);
   --folder-cta-text: #604817;
-  --folder-shadow: rgb(165 129 39 / 12%);
+  --folder-shadow: rgb(165 129 39 / 10%);
+  --folder-tab: #ffebae;
 }
 
 /* The caption and independent timer sit *above* the four equal-sized tabs.
@@ -109,68 +112,122 @@
   outline-offset: 3px;
 }
 
-/* The mode picker is a row of four real, equal-sized buttons. No active
-   tab merges into the panel and no shadows touch the folder's top edge. */
+/* A single folder sheet with four small, equal tap targets. One continuous
+   background shape rises behind the active tab(s). The *same* shared tab
+   covers both Explore and Review when both are selected, including the gap
+   between their hit targets, so there are no artificial seams or overlaps. */
 .home-mode-folder .home-folder-tabs {
   position: relative;
   z-index: 2;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 .home-mode-folder .home-folder-tabs .training-modes {
+  --mode-gap: 8px;
+  --mode-col: calc((100% - 3 * var(--mode-gap)) / 4);
+  --tab-left: 0px;
+  --tab-width: var(--mode-col);
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--mode-gap);
   margin: 0;
 }
+.home-mode-folder .training-modes.tab-exploration,
+.home-mode-folder .training-modes.tab-manual-both {
+  --tab-left: calc(var(--mode-col) + var(--mode-gap));
+}
+.home-mode-folder .training-modes.tab-review {
+  --tab-left: calc(2 * (var(--mode-col) + var(--mode-gap)));
+}
+.home-mode-folder .training-modes.tab-exam {
+  --tab-left: calc(3 * (var(--mode-col) + var(--mode-gap)));
+}
+.home-mode-folder .training-modes.tab-manual-both {
+  --tab-width: calc(2 * var(--mode-col) + var(--mode-gap));
+}
+.home-mode-folder .training-modes:not(.tab-none)::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: -3px;
+  left: var(--tab-left);
+  width: var(--tab-width);
+  box-sizing: border-box;
+  border: 1.5px solid var(--folder-edge);
+  border-bottom: 0;
+  border-radius: 13px 13px 0 0;
+  background: linear-gradient(180deg, var(--folder-tab), var(--folder-paper) 94%);
+  pointer-events: none;
+}
 .home-mode-folder .training-modes > button {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-width: 0;
   width: 100%;
-  height: 48px;
-  min-height: 48px;
-  padding: 0 4px;
+  min-width: 0;
+  height: 41px;
+  min-height: 41px;
+  padding: 0 3px;
+  box-sizing: border-box;
   border: 1.5px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--card);
   color: var(--muted);
   box-shadow: none;
-  font-size: clamp(11px, 2.8vw, 14px);
+  font-size: clamp(11px, 2.7vw, 13px);
   font-weight: 800;
   white-space: nowrap;
-  position: relative;
+  cursor: pointer;
   transform: none;
-  transition: background-color .16s, border-color .16s, color .16s;
+  transition: border-color .16s, color .16s, background-color .16s;
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] {
-  background: var(--folder-button);
-  color: var(--folder-button-text);
-  border-color: var(--folder-edge);
-  border-radius: 14px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--folder-ink);
   box-shadow: none;
-  transform: none;
+}
+.home-mode-folder .training-modes.tab-manual-both .training-mode-review[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--mode-gap) / 2);
+  top: 11px;
+  bottom: 9px;
+  width: 1px;
+  background: var(--folder-edge);
+  opacity: .48;
+  pointer-events: none;
 }
 .home-mode-folder .training-modes .kind-check {
   font-size: 15px;
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] .kind-check {
-  color: inherit;
+  color: var(--folder-accent);
 }
 
-/* The pastel sheet is a separate, softly outlined card beneath the row.
-   This leaves every mode button intact while keeping the selected palette. */
+/* The paper sits directly under the active shared tab, completing the
+   folder silhouette without a second floating outline or beveled buttons. */
 .home-mode-folder .home-folder-body {
   position: relative;
   z-index: 1;
   min-width: 0;
-  margin-top: 0;
+  margin-top: -1px;
   padding: 18px clamp(12px, 2.8vw, 18px) 17px;
   border: 1.5px solid var(--folder-edge);
   border-radius: 18px;
   background: var(--folder-paper);
-  box-shadow: 0 4px 0 var(--folder-shadow), 0 13px 24px -22px var(--folder-shadow);
+  box-shadow: 0 6px 15px -14px var(--folder-shadow);
+}
+/* The top corners follow the tab on the outermost modes. */
+.home-mode-folder.folder-auto .home-folder-body {
+  border-top-left-radius: 0;
+}
+.home-mode-folder.folder-exam .home-folder-body {
+  border-top-right-radius: 0;
 }
 .home-mode-folder .home-folder-body .home-setting-group + .home-setting-group {
   margin-top: 14px;
@@ -197,13 +254,13 @@
   border-color: var(--folder-edge);
   background: var(--card);
   color: var(--muted);
-  box-shadow: 0 2px 0 var(--folder-shadow);
+  box-shadow: none;
 }
 .home-mode-folder .home-folder-body .training-levels button[aria-pressed="true"] {
   background: var(--folder-button);
   border-color: var(--folder-edge);
   color: var(--folder-button-text);
-  box-shadow: 0 3px 0 var(--folder-button-shadow);
+  box-shadow: none;
 }
 .home-mode-folder .home-folder-body .home-launch-group {
   margin-top: 21px;
@@ -214,11 +271,35 @@
   min-height: 60px;
   background: var(--folder-cta);
   color: var(--folder-cta-text);
-  border-bottom: 5px solid var(--folder-button-shadow);
-  box-shadow: 0 9px 18px -13px var(--folder-button-shadow);
+  border: 1.5px solid var(--folder-edge);
+  box-shadow: none;
 }
 .home-mode-folder .home-folder-body .primary[aria-disabled="true"] {
   opacity: .5;
+}
+
+/* Home only: remove cast shadows and thick 3D lips from every interactive
+   control, including header settings, preview answer mockups and footer links.
+   The folder *paper* may keep its very subtle ambient separation. */
+.home-shell button,
+.home-shell .primary,
+.home-shell .notebook-link,
+.home-shell .preview-answer,
+.home-shell .preview-word,
+.home-shell .brand-mark {
+  box-shadow: none;
+}
+.home-shell .settings-bar button,
+.home-shell .logout-button,
+.home-shell .preview-answer,
+.home-shell .preview-word {
+  border-bottom-width: 2px;
+}
+.home-shell .brand-mark {
+  border-bottom-width: 0;
+}
+.home-shell .home-folder-body .primary {
+  border: 1.5px solid var(--folder-edge);
 }
 
 /* The external dashboard/notebook actions are not part of the colored sheet. */
@@ -245,7 +326,7 @@
   }
 }
 @media (max-width: 370px) {
-  .home-mode-folder .home-folder-tabs .training-modes { gap: 5px; }
+  .home-mode-folder .home-folder-tabs .training-modes { --mode-gap: 5px; }
   .home-mode-folder .training-modes > button { gap: 3px; font-size: 11px; }
   .home-mode-folder .home-folder-body {
     padding-left: 10px;
