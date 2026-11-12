@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SettingsBar } from "@/components/settings/settings-bar";
 import { useState } from "react";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { PersonalWord } from "@/lib/personal/types";
@@ -15,7 +16,7 @@ type Dialog =
   | { mode: "edit" | "detail" | "delete"; word: PersonalWord }
   | null;
 export default function PersonalScreen() {
-  const { prefs, change } = useSettings();
+  const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   const words = usePersonalWords();
   const { data, loading, error, query } = words;
@@ -34,70 +35,19 @@ export default function PersonalScreen() {
     words.refresh();
   }
   return (
-    <main className={styles.screen}>
-      <header className={styles.header}>
-        <Link
-          className={styles.iconButton}
-          href="/"
-          aria-label={t("ホーム", "메인으로")}
-        >
-          <svg
-            aria-hidden="true"
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <path
-              d="m14 5-7 7 7 7"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-        <h1>{t("マイ単語帳", "내 단어장")}</h1>
-        <button
-          className={styles.language}
-          onClick={() => change({ lang: prefs.lang === "jp" ? "kr" : "jp" })}
-          aria-label="KR / JP"
-        >
-          {prefs.lang === "jp" ? "JP ⇄ KR" : "KR ⇄ JP"}
-        </button>
-        <button
-          className={styles.iconButton}
-          onClick={() =>
-            change({ theme: prefs.theme === "light" ? "dark" : "light" })
-          }
-          aria-label={t("テーマを切り替える", "테마 전환")}
-        >
-          {prefs.theme === "light" ? "☾" : "☀"}
-        </button>
+    <main className={`site-shell ${styles.screen}`}>
+      <header className="site-header">
+        <Link className="brand" href="/"><span className="brand-mark">速</span>Sokudoku<span className="brand-dot">.</span></Link>
+        <SettingsBar />
       </header>
-      <section className={styles.intro}>
-        <div className={styles.introTitle}>
-          <span className={styles.pBadge}>P</span>
-          <div>
-            <b>{t("自分だけの言葉を", "나에게 필요한 단어만")}</b>
-            <p>
-              {t(
-                "この単語帳は自分にだけ見えます。",
-                "이 단어장은 나에게만 보여요.",
-              )}
-            </p>
-          </div>
-        </div>
-        <button
-          className={styles.primary}
-          onClick={() => {
-            setNotice(null);
-            setDialog({ mode: "create" });
-          }}
-        >
+      <div className={styles.content}>
+      <div className={styles.heading}>
+        <Link href="/" className={styles.back} aria-label={t("ホームへ戻る", "메인으로 돌아가기")}>←</Link>
+        <h1>{t("マイ単語帳", "내 단어장")}</h1>
+        <button className={styles.createButton} onClick={() => { setNotice(null); setDialog({ mode: "create" }); }}>
           {t("＋ 単語を追加", "＋ 단어 추가")}
         </button>
-      </section>
+      </div>
       <WordSearch
         data={data}
         query={query}
@@ -134,12 +84,7 @@ export default function PersonalScreen() {
         onRetry={() => words.refresh()}
         onPage={words.setPage}
       />
-      <p className={styles.footer}>
-        {t(
-          "編集しても記録はそのまま。削除すると単語と関連する回答・復習記録を完全に削除します。",
-          "수정해도 기록은 그대로. 삭제하면 단어와 연결된 답변·복습 기록을 영구 삭제해요.",
-        )}
-      </p>
+      </div>
       {(dialog?.mode === "create" || dialog?.mode === "edit") && (
         <WordEditor
           key={dialog.mode === "edit" ? dialog.word.id : "new"}

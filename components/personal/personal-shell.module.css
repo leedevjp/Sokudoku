@@ -1,89 +1,10 @@
-.screen {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 16px 16px 36px;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.screen h1,
-.screen h2,
-.screen p {
-  margin: 0;
-}
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-}
-.header h1 {
-  flex: 1;
-  min-width: 0;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-.iconButton,
-.language {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  flex-shrink: 0;
-  background: var(--card);
-  color: var(--text);
-  border: 2px solid var(--line);
-  border-bottom: 4px solid var(--shade);
-  border-radius: 14px;
-}
-.iconButton {
-  width: 44px;
-  font-size: 24px;
-}
-.language {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 0 10px;
-}
-.intro {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 22px;
-  background: var(--card);
-  border: 2px solid var(--line);
-  border-bottom: 5px solid var(--shade);
-  border-radius: 24px;
-}
-.introTitle {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-.introTitle b {
-  font-size: 18px;
-}
-.introTitle p {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: 5px;
-  line-height: 1.5;
-}
-.pBadge {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  border-radius: 16px;
-  background: var(--press);
-  color: var(--accent);
-  font-size: 28px;
-  font-weight: 700;
-}
+.screen { min-height: 100dvh; }
+.screen :global(.site-header) { height: 64px; min-height: 64px; }
+.content { width: 100%; max-width: 640px; margin: 0 auto; padding: 12px 0 36px; }
+.heading { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
+.heading h1 { flex: 1; min-width: 0; margin: 0; font-size: 24px; letter-spacing: -.04em; }
+.back { display: grid; place-items: center; width: 30px; min-height: 44px; color: var(--muted); font-size: 24px; text-decoration: none; }
+.createButton { min-height: 44px; flex: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--accent); font: inherit; font-size: 12px; font-weight: 700; }
 .primary,
 .secondary,
 .danger {
@@ -186,30 +107,7 @@
   white-space: nowrap;
 }
 @media (max-width: 350px) {
-  .screen {
-    padding: 12px 12px 30px;
-    gap: 14px;
-  }
-  .header {
-    gap: 6px;
-  }
-  .header h1 {
-    font-size: 17px;
-  }
-  .language {
-    font-size: 11px;
-    padding: 0 7px;
-  }
-  .iconButton {
-    width: 40px;
-  }
-  .intro {
-    padding: 18px;
-  }
-  .introTitle b {
-    font-size: 16px;
-  }
-  .introTitle p {
-    font-size: 12px;
-  }
+  .heading { gap: 6px; }
+  .heading h1 { font-size: 21px; }
+  .createButton { padding: 8px 10px; }
 }

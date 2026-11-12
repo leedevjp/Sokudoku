@@ -24,8 +24,8 @@ export function WordSearch({
       className={styles.searchPanel}
       aria-label={t("単語を検索", "단어 검색")}
     >
-      <label className={styles.search}>
-        <span aria-hidden="true">⌕</span>
+      <div className={styles.search}>
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
         <span className={styles.srOnly}>
           {t(
             "表記・読み・意味・韓国漢字音で検索",
@@ -33,6 +33,7 @@ export function WordSearch({
           )}
         </span>
         <input
+          aria-label={t("表記・読み・意味・韓国漢字音で検索", "표기·읽기·뜻·한자음으로 검색")}
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
@@ -47,28 +48,11 @@ export function WordSearch({
             ×
           </button>
         )}
-      </label>
-      <div className={styles.meta}>
-        <p role="status">
-          {data
-            ? query.trim()
-              ? t("検索結果 ", "검색 결과 ") +
-                data.total.toLocaleString() +
-                t("件 / 全", "개 / 전체 ") +
-                data.all_total.toLocaleString() +
-                t("語", "개")
-              : t("登録した単語 ", "등록한 단어 ") +
-                data.all_total.toLocaleString() +
-                t("語", "개")
-            : error
-              ? t("マイ単語帳", "내 단어장")
-              : t("単語帳を読み込み中…", "단어장을 불러오는 중…")}
-          {loading && data ? " · " + t("更新中…", "갱신 중…") : ""}
-        </p>
-        <button onClick={() => onRefresh()} disabled={loading}>
-          {t("更新", "새로고침")} ↻
-        </button>
       </div>
+      <output className={styles.resultCount} aria-live="polite" aria-label={t("検索結果", "검색 결과")}>
+        {data ? <>{data.total.toLocaleString()}<span>/{data.all_total.toLocaleString()}</span></> : error ? "—" : "…"}
+      </output>
+      <button className={styles.refreshButton} onClick={onRefresh} disabled={loading} aria-label={t("更新", "새로고침")} title={t("更新", "새로고침")}>↻</button>
     </section>
   );
 }
