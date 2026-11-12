@@ -350,6 +350,9 @@
 @media (max-width: 370px) {
   .home-mode-folder .home-folder-tabs .training-modes { --mode-gap: 5px; }
   .home-mode-folder .training-modes > button { gap: 3px; font-size: 11px; }
+  /* The five-character Japanese おまかせ label otherwise spills beyond its tab. */
+  .home-mode-folder .training-modes.is-japanese .training-mode-auto { font-size: 10px; letter-spacing: -.3px; }
+  .home-mode-folder .training-modes.is-japanese .training-mode-auto .kind-check { display: none; }
   .home-mode-folder .home-folder-body {
     padding-left: 10px;
     padding-right: 10px;
