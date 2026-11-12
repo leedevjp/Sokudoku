@@ -67,7 +67,13 @@ export default function NotebookScreen() {
       setChecked(previous => previous.filter(id => !saved.has(id)));
       try { await refreshMembership(); } catch { /* Keep the successful add result; reload restores removal details. */ }
       const added = results.filter(r => r.status === "added").length;
-      setMessage(t(`追加 ${added}・登録済み ${saved.size-added}・未追加 ${results.length-saved.size}`, `추가 ${added}개 · 기존 ${saved.size-added}개 · 미추가 ${results.length-saved.size}개`));
+      const existing = saved.size - added;
+      const failed = results.length - saved.size;
+      setMessage([
+        added ? t(`${added}語をPに追加しました。`, `${added}개를 P에 추가했어요.`) : "",
+        existing ? t(`登録済み ${existing}語`, `이미 등록된 ${existing}개`) : "",
+        failed ? t(`未追加 ${failed}語。再試行できます。`, `미추가 ${failed}개. 다시 시도할 수 있어요.`) : "",
+      ].filter(Boolean).join(" "));
     } catch { setMessage(t("追加できませんでした。再試行してください。", "추가하지 못했어요. 다시 시도해주세요.")); }
     finally { setBusy(false); }
   }
@@ -107,7 +113,7 @@ export default function NotebookScreen() {
     words?.slice((page - 1) * NOTEBOOK_PAGE_SIZE, page * NOTEBOOK_PAGE_SIZE) ??
     [];
   return (
-    <main className="site-shell notebook-shell">
+    <main className={`site-shell notebook-shell ${styles.shell}`}>
       <header className="site-header">
         <Link className="brand" href="/">
           <span className="brand-mark">速</span>Sokudoku
@@ -115,11 +121,11 @@ export default function NotebookScreen() {
         </Link>
         <SettingsBar />
       </header>
-      <section className="notebook-content" aria-labelledby="notebook-title">
+      <section className={styles.content} aria-labelledby="notebook-title">
         <Link href="/" className="notebook-back">
           ← {t("ホーム", "메인으로")}
         </Link>
-        <div className="notebook-heading">
+        <div className={styles.heading}>
           <h1 id="notebook-title">{t("まちがいノート", "오답노트")}</h1>
           {words && (
             <span>
@@ -128,10 +134,10 @@ export default function NotebookScreen() {
             </span>
           )}
         </div>
-        <p className="notebook-description">
+        <p className={styles.description}>
           {t(
-            "誤答・時間切れの単語を、最近の100語まで。タップで詳しく。",
-            "틀렸거나 시간 초과된 최근 단어 최대 100개. 누르면 자세히 볼 수 있어요.",
+            "もう一度覚えたい単語を、ここから。",
+            "다시 익힐 단어를 한곳에 모았어요.",
           )}
         </p>
         {error ? (
@@ -185,8 +191,8 @@ export default function NotebookScreen() {
         ) : (
           <>
             <div className={styles.toolbar}>
-              <span className={styles.caption}>{selecting ? t(`${checked.length}語を選択`, `${checked.length}개 선택됨`) : t("単語をタップして詳細へ", "단어를 누르면 상세 보기")}</span>
-              <button className={styles.textButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); }}>
+              <span className={styles.caption}>{selecting ? t(`${checked.length}語を選択`, `${checked.length}개 선택됨`) : t("最近のまちがい · 最大100語", "최근 오답 · 최대 100개")}</span>
+              <button className={styles.textButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); setMessage(""); }}>
                 {selecting ? t("キャンセル", "취소") : t("選択", "선택")}
               </button>
             </div>
@@ -196,23 +202,22 @@ export default function NotebookScreen() {
               </button>
               <span>{t(`全ページの追加可能な${eligible.length}語`, `전체 페이지 · 추가 가능한 ${eligible.length}개`)}</span>
             </div>}
-            {message && <p className={styles.feedback} role="status">{message}</p>}
-            <div className={`notebook-columns ${selecting ? styles.selectingColumns : ""}`} aria-hidden="true">
-              <span>{t("単語", "단어")}</span><span>{t("読み方", "읽기")}</span><span>{t("意味", "뜻")}</span>
-            </div>
-            <ul className="notebook-list">
+            {message && !selected && <div className={styles.feedback} role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label={t("通知を閉じる", "알림 닫기")}>×</button></div>}
+            <ul className={styles.list}>
               {visible.map(word => {
                 const available = !!word.can_add_personal && !word.in_personal;
                 const content = <>
-                  <span className="notebook-term" lang="ja">{word.term}{word.in_personal && <small aria-label={t("Pに登録済み", "P에 있음")}>P</small>}</span>
-                  <span className="notebook-kana" lang="ja">{word.kana}</span>
-                  <span className="notebook-meaning" lang="ko">{choiceLabel(word, "meaning")}</span>
+                  <span className={styles.identity}>
+                    <span className={styles.term} lang="ja">{word.term}{word.in_personal && <small className={styles.badge} aria-label={t("Pに登録済み", "P에 있음")}>P</small>}</span>
+                    {word.kana !== word.term && <span className={styles.kana} lang="ja">{word.kana}</span>}
+                  </span>
+                  <span className={styles.meaning} lang="ko">{choiceLabel(word, "meaning")}</span>
                 </>;
                 return <li key={`${word.source}:${word.id}`}>
                   {selecting ? <label className={`${styles.selectableRow} ${checked.includes(word.id) ? styles.checked : ""} ${!available ? styles.unavailable : ""}`}>
                     <input type="checkbox" className={styles.checkbox} checked={checked.includes(word.id)} disabled={busy || !available} aria-label={t(`${word.term}を選択`, `${word.term} 선택`)} onChange={e => setChecked(previous => e.target.checked ? [...previous, word.id] : previous.filter(id => id !== word.id))} />
                     <span className={styles.rowContent}>{content}</span>
-                  </label> : <button className="notebook-row" onClick={() => { setMessage(""); setSelected(word); }} aria-haspopup="dialog">{content}</button>}
+                  </label> : <button className={styles.wordRow} onClick={() => { setMessage(""); setSelected(word); }} aria-haspopup="dialog"><span className={styles.rowContent}>{content}</span><span className={styles.chevron} aria-hidden="true">›</span></button>}
                 </li>;
               })}
             </ul>
@@ -221,12 +226,12 @@ export default function NotebookScreen() {
               <button className={styles.addButton} disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
             </div>}
             <nav
-              className="notebook-pagination"
+              className={styles.pagination}
               aria-label={t("ノートのページ", "오답노트 페이지")}
             >
               <button
                 disabled={page === 1}
-                onClick={() => setPage((value) => value - 1)}
+                onClick={() => { setPage((value) => value - 1); setMessage(""); document.getElementById("notebook-title")?.scrollIntoView({ block: "start" }); }}
               >
                 ← {t("前へ", "이전")}
               </button>
@@ -235,7 +240,7 @@ export default function NotebookScreen() {
               </span>
               <button
                 disabled={page === pages}
-                onClick={() => setPage((value) => value + 1)}
+                onClick={() => { setPage((value) => value + 1); setMessage(""); document.getElementById("notebook-title")?.scrollIntoView({ block: "start" }); }}
               >
                 {t("次へ", "다음")} →
               </button>
