@@ -25,6 +25,7 @@ import {
 import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
+import { useFolderOutline } from "./use-folder-outline";
 
 type ModeFamily = "auto" | "manual" | "exam";
 type ModeScope = { levels: TrainingLevel[]; kinds: Kind[] };
@@ -68,6 +69,7 @@ export default function HomeScreen() {
   const [timeLimited, setTimeLimited] = useState(false);
   const homeActionsRef = useRef<HTMLDivElement>(null);
   const sheenRef = useRef<HTMLDivElement>(null);
+  const { folderRef, folderOutline } = useFolderOutline(modes, prefs.lang);
   const modeScopesRef = useRef<ModeScopes>(freshScopes());
   const activeFolder = modeFamily(modes);
   const kanaOnly =
@@ -271,7 +273,22 @@ export default function HomeScreen() {
       <HomeHero authenticated={!!user} />
       <div className="home-actions" ref={homeActionsRef}>
         <div className="home-sheen-stage" ref={sheenRef} aria-hidden="true" />
-        <section className={`home-mode-folder folder-${activeFolder}`} aria-label={t("学習設定", "학습 설정")}>
+        <section
+          ref={folderRef}
+          className={`home-mode-folder folder-${activeFolder}${folderOutline ? " outline-ready" : ""}`}
+          aria-label={t("学習設定", "학습 설정")}
+        >
+          {folderOutline && (
+            <svg
+              className="home-folder-outline"
+              viewBox={`0 0 ${folderOutline.width} ${folderOutline.height}`}
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d={folderOutline.d} />
+            </svg>
+          )}
           <div className="home-folder-tabs">
             <ModeSelector
               modes={modes}

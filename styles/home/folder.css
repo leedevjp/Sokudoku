@@ -112,10 +112,27 @@
   outline-offset: 3px;
 }
 
-/* A folder-tab BACKING surrounds real, rounded, pressed-state buttons.
-   One shared backing spans Explore+Review when both are selected. The backing
-   ends exactly at the body edge; the paper bridge erases just the top stroke
-   beneath it, so no vertical border hangs below the horizontal seam. */
+/* The raised folder edge is one responsive SVG path covering both the
+   selected tab(s) and the body. Do not recreate any part of its perimeter
+   using ::before, ::after, negative margins, or separate CSS borders. */
+.home-mode-folder .home-folder-outline {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.home-mode-folder .home-folder-outline path {
+  fill: var(--folder-paper);
+  stroke: var(--folder-edge);
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 .home-mode-folder .home-folder-tabs {
   position: relative;
   z-index: 2;
@@ -128,49 +145,12 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--mode-gap);
   margin: 0;
-  overflow: visible;
 }
-/* Shared tab backing and top-border bridge occupy the same grid columns. */
-.home-mode-folder .training-modes:not(.tab-none)::before,
-.home-mode-folder .training-modes:not(.tab-none)::after {
-  content: "";
-  display: block;
-  grid-row: 1;
-  grid-column: 1;
-  position: relative;
-  pointer-events: none;
-}
-.home-mode-folder .training-modes:not(.tab-none)::before {
-  z-index: 1;
-  align-self: stretch;
-  box-sizing: border-box;
-  border: 1.5px solid var(--folder-edge);
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  background: linear-gradient(180deg, var(--folder-tab), var(--folder-paper) 100%);
-}
-.home-mode-folder .training-modes:not(.tab-none)::after {
-  z-index: 3;
-  align-self: end;
-  height: 4px;
-  margin: 0 2px -2px;
-  background: var(--folder-paper);
-}
-.home-mode-folder .training-modes.tab-exploration::before,
-.home-mode-folder .training-modes.tab-exploration::after {
-  grid-column: 2;
-}
-.home-mode-folder .training-modes.tab-review::before,
-.home-mode-folder .training-modes.tab-review::after {
-  grid-column: 3;
-}
-.home-mode-folder .training-modes.tab-manual-both::before,
-.home-mode-folder .training-modes.tab-manual-both::after {
-  grid-column: 2 / 4;
-}
-.home-mode-folder .training-modes.tab-exam::before,
-.home-mode-folder .training-modes.tab-exam::after {
-  grid-column: 4;
+/* Before hydration, render a plain rounded panel. The measured SVG replaces
+   its border and fill, without shifting layout or changing the button sizes. */
+.home-mode-folder.outline-ready .home-folder-body {
+  background: transparent;
+  border-color: transparent;
 }
 .home-mode-folder .training-mode-auto { grid-column: 1; }
 .home-mode-folder .training-mode-exploration { grid-column: 2; }
@@ -230,14 +210,7 @@
   border: 1.5px solid var(--folder-edge);
   border-radius: 18px;
   background: var(--folder-paper);
-  box-shadow: 0 6px 15px -14px var(--folder-shadow);
-}
-/* The top corners follow the tab on the outermost modes. */
-.home-mode-folder.folder-auto .home-folder-body {
-  border-top-left-radius: 0;
-}
-.home-mode-folder.folder-exam .home-folder-body {
-  border-top-right-radius: 0;
+  box-shadow: none;
 }
 .home-mode-folder .home-folder-body .home-setting-group + .home-setting-group {
   margin-top: 11px;
