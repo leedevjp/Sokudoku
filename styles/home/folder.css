@@ -196,17 +196,6 @@
   color: var(--folder-ink);
   box-shadow: none;
 }
-.home-mode-folder .training-modes.tab-manual-both .training-mode-review[aria-pressed="true"]::after {
-  content: "";
-  position: absolute;
-  left: calc(-1 * var(--mode-gap) / 2);
-  top: 11px;
-  bottom: 9px;
-  width: 1px;
-  background: var(--folder-edge);
-  opacity: .48;
-  pointer-events: none;
-}
 .home-mode-folder .training-modes .kind-check {
   font-size: 15px;
 }
@@ -348,15 +337,18 @@
   --folder-paper: #152c53;
   --folder-edge: #42679e;
   --folder-ink: #c9dfff;
+  --folder-tab: #214678;
   --folder-shadow: rgb(0 0 0 / 22%);
 }
 [data-theme="dark"] .home-mode-folder.folder-auto {
   --folder-paper: #173f33;
   --folder-edge: #348a66;
   --folder-ink: #d5ffe3;
+  --folder-tab: #235642;
 }
 [data-theme="dark"] .home-mode-folder.folder-exam {
   --folder-paper: #40361d;
   --folder-edge: #9b7c3f;
   --folder-ink: #ffedc8;
+  --folder-tab: #584823;
 }
