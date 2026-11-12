@@ -1,3 +1,4 @@
+import { vocabularyLevels } from "@/lib/game/selection";
 import type { NotebookQuery } from "@/lib/notebook/query";
 import styles from "./personal-actions.module.css";
 export function NotebookControls({ query, onChange, count, total, disabled, t }: {
@@ -11,12 +12,13 @@ export function NotebookControls({ query, onChange, count, total, disabled, t }:
       <output aria-label={t("検索結果", "검색 결과")} aria-live="polite">{count}<span>/{total}</span></output>
     </div>
     <div className={styles.filters}>
-      <select disabled={disabled} aria-label={t("P登録で絞り込む", "P 등록 필터")} value={query.membership} onChange={e => onChange({ membership: e.target.value as NotebookQuery["membership"] })}>
-        <option value="all">{t("P登録: すべて", "P 등록 전체")}</option><option value="registered">{t("P登録済み", "P에 있음")}</option><option value="unregistered">{t("P未登録", "P에 없음")}</option>
+      <select disabled={disabled} aria-label={t("Pへの追加状況", "P 추가 여부")} value={query.membership} onChange={e => onChange({ membership: e.target.value as NotebookQuery["membership"] })}>
+        <option value="all">{t("すべての単語", "모든 단어")}</option><option value="registered">{t("Pに追加済み", "P에 추가함")}</option><option value="unregistered">{t("Pに未追加", "P에 미추가")}</option>
       </select>
-      <select disabled={disabled} aria-label={t("難易度で絞り込む", "난이도 필터")} value={query.difficulty} onChange={e => onChange({ difficulty: e.target.value })}>
-        <option value="all">{t("全難易度", "난이도 전체")}</option><option value="-1">{t("かな", "가나 글자")}</option>
-        {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{t("難易度", "난이도")} {i}</option>)}
+      <select disabled={disabled} aria-label={t("ステージ", "단계 필터")} value={query.stage} onChange={e => onChange({ stage: e.target.value as NotebookQuery["stage"] })}>
+        <option value="all">{t("全ステージ", "전체 단계")}</option>
+        <option value="H">{t("ひらがな", "히라가나")}</option><option value="K">{t("カタカナ", "가타카나")}</option>
+        {vocabularyLevels.map(level => <option key={level} value={level}>{level === "P" ? t("P・個人単語", "P · 개인 단어") : t(`ステージ${level}`, `${level}단계`)}</option>)}
       </select>
       <select disabled={disabled} aria-label={t("並び順", "정렬 순서")} value={query.sort} onChange={e => onChange({ sort: e.target.value as NotebookQuery["sort"] })}>
         <option value="recent">{t("新しい順", "최근 오답순")}</option><option value="oldest">{t("古い順", "오래된순")}</option><option value="reading">{t("五十音順", "읽기순")}</option><option value="easy">{t("易しい順", "쉬운순")}</option><option value="hard">{t("難しい順", "어려운순")}</option>

@@ -1,11 +1,12 @@
+import { levelDifficulty, type TrainingLevel } from "../game/selection";
 import type { NotebookWord } from "./types";
 export type NotebookQuery = {
   search: string;
   membership: "all" | "registered" | "unregistered";
-  difficulty: string;
+  stage: "all" | TrainingLevel;
   sort: "recent" | "oldest" | "reading" | "easy" | "hard";
 };
-export const defaultNotebookQuery: NotebookQuery = { search: "", membership: "all", difficulty: "all", sort: "recent" };
+export const defaultNotebookQuery: NotebookQuery = { search: "", membership: "all", stage: "all", sort: "recent" };
 const normalize = (text: string) => text.normalize("NFKC").toLowerCase().replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 export function queryNotebook(words: NotebookWord[], query: NotebookQuery): NotebookWord[] {
   const tokens = normalize(query.search).trim().split(/\s+/u).filter(Boolean);
@@ -13,7 +14,17 @@ export function queryNotebook(words: NotebookWord[], query: NotebookQuery): Note
     const registered = word.source === "personal" || !!word.in_personal;
     if (query.membership === "registered" && !registered) return false;
     if (query.membership === "unregistered" && registered) return false;
-    if (query.difficulty !== "all" && word.difficulty !== Number(query.difficulty)) return false;
+    if (query.stage !== "all") {
+      if (query.stage === "P") {
+        if (word.source !== "personal") return false;
+      } else {
+        if (word.source === "personal") return false;
+        const type = word.entry_type ?? "word";
+        if (query.stage === "H" || query.stage === "K") {
+          if (type !== (query.stage === "H" ? "hiragana" : "katakana")) return false;
+        } else if (type !== "word" || !levelDifficulty[query.stage].includes(word.difficulty)) return false;
+      }
+    }
     const haystack = normalize([word.term, word.kana, word.meaning_ko, word.hanja_reading, word.note].filter(Boolean).join(" "));
     return tokens.every(token => haystack.includes(token));
   });
