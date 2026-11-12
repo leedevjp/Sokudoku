@@ -109,19 +109,18 @@
   outline-offset: 3px;
 }
 
-/* Four equal-sized mode tabs sit just above the folder's top border.
-   Only the selected tab meets the sheet. Inactive tabs are lifted slightly
-   so their shadows don't collide with the paper's top rule. */
+/* The mode picker is a row of four real, equal-sized buttons. No active
+   tab merges into the panel and no shadows touch the folder's top edge. */
 .home-mode-folder .home-folder-tabs {
   position: relative;
   z-index: 2;
+  margin-bottom: 12px;
 }
 .home-mode-folder .home-folder-tabs .training-modes {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
-  position: relative;
 }
 .home-mode-folder .training-modes > button {
   display: flex;
@@ -137,73 +136,41 @@
   border-radius: 14px;
   background: var(--card);
   color: var(--muted);
-  box-shadow: 0 2px 0 var(--shade);
+  box-shadow: none;
   font-size: clamp(11px, 2.8vw, 14px);
   font-weight: 800;
   white-space: nowrap;
   position: relative;
-  transform: translateY(-5px);
+  transform: none;
+  transition: background-color .16s, border-color .16s, color .16s;
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] {
-  z-index: 3;
-  transform: translateY(1px);
-  background: var(--folder-paper);
-  color: var(--folder-ink);
-  border: 1.5px solid var(--folder-edge);
-  border-bottom-color: var(--folder-paper);
-  border-radius: 14px 14px 0 0;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
-}
-/* Hide only the panel's top border *under* the active tab. Keeping the
-   bridge inside the tab's border avoids white nicks at its lower corners. */
-.home-mode-folder .training-modes > button[aria-pressed="true"]::after {
-  content: "";
-  position: absolute;
-  bottom: -7px;
-  left: 1.5px;
-  right: 1.5px;
-  height: 8px;
-  background: var(--folder-paper);
-  pointer-events: none;
-}
-/* When Explore and Review are both on, their bottom edges should merge into
-   the same sheet instead of exposing an 8px strip of paper's top border. */
-.home-mode-folder .training-modes.is-dual-manual::after {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  left: calc(50% - 4px);
-  bottom: -5px;
-  width: 8px;
-  height: 7px;
-  background: var(--folder-paper);
-  pointer-events: none;
+  background: var(--folder-button);
+  color: var(--folder-button-text);
+  border-color: var(--folder-edge);
+  border-radius: 14px;
+  box-shadow: none;
+  transform: none;
 }
 .home-mode-folder .training-modes .kind-check {
   font-size: 15px;
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] .kind-check {
-  color: var(--folder-accent);
+  color: inherit;
 }
 
-/* The folder body starts immediately underneath the tab seam and shares its
-   exact background and border. Other modes simply switch the paper palette. */
+/* The pastel sheet is a separate, softly outlined card beneath the row.
+   This leaves every mode button intact while keeping the selected palette. */
 .home-mode-folder .home-folder-body {
   position: relative;
   z-index: 1;
   min-width: 0;
-  margin-top: -1px;
+  margin-top: 0;
   padding: 18px clamp(12px, 2.8vw, 18px) 17px;
   border: 1.5px solid var(--folder-edge);
   border-radius: 18px;
   background: var(--folder-paper);
   box-shadow: 0 4px 0 var(--folder-shadow), 0 13px 24px -22px var(--folder-shadow);
-}
-.home-mode-folder.folder-auto .home-folder-body {
-  border-top-left-radius: 0;
-}
-.home-mode-folder.folder-exam .home-folder-body {
-  border-top-right-radius: 0;
 }
 .home-mode-folder .home-folder-body .home-setting-group + .home-setting-group {
   margin-top: 14px;

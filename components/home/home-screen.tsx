@@ -66,7 +66,6 @@ export default function HomeScreen() {
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
   const [timeLimited, setTimeLimited] = useState(false);
-  const isAuto = modes.includes("auto");
   const homeActionsRef = useRef<HTMLDivElement>(null);
   const sheenRef = useRef<HTMLDivElement>(null);
   const modeScopesRef = useRef<ModeScopes>(freshScopes());
@@ -122,7 +121,6 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, []);
   useEffect(() => {
-    if (!isAuto) return;
     const home = homeActionsRef.current;
     const sheen = sheenRef.current;
     if (!home || !sheen) return;
@@ -133,7 +131,7 @@ export default function HomeScreen() {
     const round = (value: number) => Math.round(value * 10) / 10;
     const updateSheenMask = () => {
       const area = home.getBoundingClientRect();
-      home.style.setProperty("--omakase-stage-width", `${round(area.width)}px`);
+      home.style.setProperty("--home-sheen-stage-width", `${round(area.width)}px`);
       const selected = home.querySelectorAll<HTMLElement>(
         '.training-levels button[aria-pressed="true"], .home-launch-group .primary:not(:disabled):not([aria-disabled="true"])',
       );
@@ -170,7 +168,7 @@ export default function HomeScreen() {
       observer.disconnect();
       window.removeEventListener("resize", updateSheenMask);
     };
-  }, [isAuto, levels, kinds, loading, user]);
+  }, [modes, levels, kinds, loading, user]);
 
   function persistScopes() {
     try {
@@ -254,8 +252,8 @@ export default function HomeScreen() {
         </div>
       </header>
       <HomeHero authenticated={!!user} />
-      <div className={`home-actions${isAuto ? " home-auto" : ""}`} ref={homeActionsRef}>
-        {isAuto && <div className="omakase-sheen-stage" ref={sheenRef} aria-hidden="true" />}
+      <div className="home-actions" ref={homeActionsRef}>
+        <div className="home-sheen-stage" ref={sheenRef} aria-hidden="true" />
         <section className={`home-mode-folder folder-${activeFolder}`} aria-label={t("学習設定", "학습 설정")}>
           <div className="home-folder-tabs">
             <ModeSelector
