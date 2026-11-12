@@ -6,6 +6,8 @@ import { useSettings } from "@/components/settings/settings-provider";
 import { choiceLabel } from "@/lib/game/rules";
 import { NOTEBOOK_PAGE_SIZE, type NotebookWord } from "@/lib/notebook/types";
 import styles from "./personal-actions.module.css";
+import { queryNotebook, defaultNotebookQuery, type NotebookQuery } from "@/lib/notebook/query";
+import { NotebookControls } from "./notebook-controls";
 import { WordDetail } from "./word-detail";
 
 export default function NotebookScreen() {
@@ -19,6 +21,7 @@ export default function NotebookScreen() {
   const [selecting, setSelecting] = useState(false);
   const [checked, setChecked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState<NotebookQuery>(defaultNotebookQuery);
   const [message, setMessage] = useState("");
   async function refreshMembership() {
     const response = await fetch("/api/notebook", { cache: "no-store", signal: AbortSignal.timeout(15000) });
@@ -77,7 +80,13 @@ export default function NotebookScreen() {
     } catch { setMessage(t("追加できませんでした。再試行してください。", "추가하지 못했어요. 다시 시도해주세요.")); }
     finally { setBusy(false); }
   }
-  const eligible = words?.filter(w => w.can_add_personal && !w.in_personal) ?? [];
+  const filtered = queryNotebook(words ?? [], query);
+  const eligible = filtered.filter(w => w.can_add_personal && !w.in_personal);
+  const activeChecked = checked.filter(id => eligible.some(w => w.id === id));
+  function changeQuery(patch: Partial<NotebookQuery>) {
+    setQuery(previous => ({ ...previous, ...patch }));
+    setPage(1); setChecked([]); setMessage("");
+  }
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
@@ -108,10 +117,9 @@ export default function NotebookScreen() {
       controller.abort();
     };
   }, [reload]);
-  const pages = Math.ceil((words?.length ?? 0) / NOTEBOOK_PAGE_SIZE);
-  const visible =
-    words?.slice((page - 1) * NOTEBOOK_PAGE_SIZE, page * NOTEBOOK_PAGE_SIZE) ??
-    [];
+  const pages = Math.max(1, Math.ceil(filtered.length / NOTEBOOK_PAGE_SIZE));
+  const currentPage = Math.min(page, pages);
+  const visible = filtered.slice((currentPage - 1) * NOTEBOOK_PAGE_SIZE, currentPage * NOTEBOOK_PAGE_SIZE);
   return (
     <main className={`site-shell notebook-shell ${styles.shell}`}>
       <header className="site-header">
@@ -129,7 +137,7 @@ export default function NotebookScreen() {
             {selecting ? t("キャンセル", "취소") : t("選択", "선택")}
           </button>}
         </div>
-        {!selecting && <p className={styles.description}>{words ? t(`最近のまちがい ${words.length}語 · タップで詳細`, `최근 오답 ${words.length}개 · 누르면 상세 보기`) : t("最近のまちがい", "최근 오답")}</p>}
+        {words !== null && !error && <NotebookControls query={query} onChange={changeQuery} count={filtered.length} total={words.length} disabled={busy} t={t} />}
         {error ? (
           <div className="notebook-state" role="status">
             <p>
@@ -181,14 +189,18 @@ export default function NotebookScreen() {
         ) : (
           <>
             {selecting && <div className={styles.selectionTools} role="group" aria-label={t("単語の選択", "단어 선택 도구")}>
-              <span className={styles.selectionCount} aria-live="polite">{t(`${checked.length}語`, `${checked.length}개`)}<small>{t("選択", "선택")}</small></span>
-              <button className={styles.textButton} disabled={busy || !eligible.length} title={t(`全ページの${eligible.length}語を選択`, `전체 페이지에서 추가 가능한 ${eligible.length}개 선택`)} onClick={() => setChecked(checked.length === eligible.length ? [] : eligible.map(w => w.id))}>
-                {checked.length === eligible.length ? t("すべて解除", "전체 해제") : t("すべて選択", "전체 선택")}
+              <span className={styles.selectionCount} aria-live="polite">{t(`${activeChecked.length}語`, `${activeChecked.length}개`)}<small>{t("選択", "선택")}</small></span>
+              <button className={styles.textButton} disabled={busy || !eligible.length} title={t(`絞り込み結果の${eligible.length}語を選択`, `검색·필터 결과 전체에서 추가 가능한 ${eligible.length}개 선택`)} onClick={() => setChecked(activeChecked.length === eligible.length ? [] : eligible.map(w => w.id))}>
+                {activeChecked.length === eligible.length ? t("すべて解除", "전체 해제") : t("すべて選択", "전체 선택")}
               </button>
-              <button className={styles.addButton} disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
+              <button className={styles.addButton} disabled={busy || !activeChecked.length} onClick={() => void addPersonal(activeChecked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
             </div>}
             {message && !selected && <div className={styles.feedback} role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label={t("通知を閉じる", "알림 닫기")}>×</button></div>}
-            <ul className={styles.list}>
+            {!filtered.length && <div className={styles.noResults} role="status">
+              <strong>{t("見つかりませんでした", "검색 결과가 없어요")}</strong>
+              <button className={styles.textButton} onClick={() => changeQuery(defaultNotebookQuery)}>{t("検索・絞り込みを解除", "검색·필터 초기화")}</button>
+            </div>}
+            {!!filtered.length && <ul className={styles.list}>
               {visible.map(word => {
                 const available = !!word.can_add_personal && !word.in_personal;
                 const content = <>
@@ -199,33 +211,33 @@ export default function NotebookScreen() {
                   <span className={styles.meaning} lang="ko">{choiceLabel(word, "meaning")}</span>
                 </>;
                 return <li key={`${word.source}:${word.id}`}>
-                  {selecting ? <label className={`${styles.selectableRow} ${checked.includes(word.id) ? styles.checked : ""} ${!available ? styles.unavailable : ""}`}>
-                    <input type="checkbox" className={styles.checkbox} checked={checked.includes(word.id)} disabled={busy || !available} aria-label={t(`${word.term}を選択`, `${word.term} 선택`)} onChange={e => setChecked(previous => e.target.checked ? [...previous, word.id] : previous.filter(id => id !== word.id))} />
+                  {selecting ? <label className={`${styles.selectableRow} ${activeChecked.includes(word.id) ? styles.checked : ""} ${!available ? styles.unavailable : ""}`}>
+                    <input type="checkbox" className={styles.checkbox} checked={activeChecked.includes(word.id)} disabled={busy || !available} aria-label={t(`${word.term}を選択`, `${word.term} 선택`)} onChange={e => setChecked(previous => e.target.checked ? [...previous, word.id] : previous.filter(id => id !== word.id))} />
                     <span className={styles.rowContent}>{content}</span>
                   </label> : <button className={styles.wordRow} onClick={() => { setMessage(""); setSelected(word); }} aria-haspopup="dialog"><span className={styles.rowContent}>{content}</span><span className={styles.chevron} aria-hidden="true">›</span></button>}
                 </li>;
               })}
-            </ul>
-            <nav
+            </ul>}
+            {pages > 1 && <nav
               className={styles.pagination}
               aria-label={t("ノートのページ", "오답노트 페이지")}
             >
               <button
-                disabled={page === 1}
-                onClick={() => { setPage((value) => value - 1); setMessage(""); document.getElementById("notebook-title")?.scrollIntoView({ block: "start" }); }}
+                disabled={currentPage === 1}
+                onClick={() => { setPage(currentPage - 1); setMessage(""); document.getElementById("notebook-title")?.scrollIntoView({ block: "start" }); }}
               >
                 ← {t("前へ", "이전")}
               </button>
               <span role="status" aria-live="polite">
-                {page} / {pages}
+                {currentPage} / {pages}
               </span>
               <button
-                disabled={page === pages}
-                onClick={() => { setPage((value) => value + 1); setMessage(""); document.getElementById("notebook-title")?.scrollIntoView({ block: "start" }); }}
+                disabled={currentPage === pages}
+                onClick={() => { setPage(currentPage + 1); setMessage(""); document.getElementById("notebook-title")?.scrollIntoView({ block: "start" }); }}
               >
                 {t("次へ", "다음")} →
               </button>
-            </nav>
+            </nav>}
           </>
         )}
       </section>
