@@ -5,10 +5,11 @@ import type { NotebookWord } from "@/lib/notebook/types";
 
 export function WordDetail({
   word,
-  onClose,
+  onClose, busy, message, onAdd,
 }: {
   word: NotebookWord | null;
   onClose: () => void;
+  busy: boolean; message: string; onAdd: (id: string) => void;
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -45,6 +46,8 @@ export function WordDetail({
               </div>
             )}
           </dl>
+          {word.source === "word" && word.can_add_personal && <button className="primary" disabled={busy || word.in_personal} onClick={() => onAdd(word.id)}>{word.in_personal ? t("Pに登録済み", "이미 P에 있음") : busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>}
+          <p role="status" aria-live="polite">{message}</p>
           <p className="footnote">
             {t("最後のまちがい", "마지막 오답")} ·{" "}
             {new Date(word.last_incorrect_at).toLocaleString(

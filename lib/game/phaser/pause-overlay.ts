@@ -70,6 +70,8 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .pause-reading-setting button[aria-pressed=true]{background:var(--blue);color:var(--on-blue);border-color:var(--blue-dark)}
 @media(max-width:359px){.sokudoku-pause-card{padding:12px}.pause-sound-slider{grid-template-columns:54px minmax(0,1fr) 88px;gap:5px}.pause-select-row,.pause-correct-review-setting{grid-template-columns:minmax(80px,1fr) minmax(0,1.5fr);gap:6px}}
 @media(max-height:700px){.sokudoku-pause-card{padding:11px 14px}.sokudoku-pause-header{margin-bottom:8px}.sokudoku-pause-character{height:50px;width:50px}.sokudoku-pause-main{height:42px;margin-bottom:8px}.sokudoku-pause-quick button{height:36px}.pause-sound-controls{gap:5px;margin-top:10px;padding-top:9px}.pause-sound-slider{min-height:32px}.pause-select-grid{gap:8px}.pause-select-row select,.pause-correct-review-setting select{height:36px}.pause-correct-review-setting{margin-top:8px;padding-top:8px}}
+
+.pause-reading-setting small{display:block;font-size:12px;color:var(--muted)}
 `;
   const hex = (value: number) => "#" + value.toString(16).padStart(6, "0");
   const theme = view.c;
@@ -149,7 +151,9 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   const readingCopy = document.createElement("div");
   const readingTitle = document.createElement("strong");
   readingTitle.textContent = view.t("読み方のヒント", "읽는 법 힌트");
-  readingCopy.append(readingTitle);
+  const readingDescription = document.createElement("small");
+  readingDescription.textContent = view.t("問題・復習に かな [韓国語発音] を表示", "문제·오답 카드에 가나 [한글 발음] 표시");
+  readingCopy.append(readingTitle, readingDescription);
   const readingToggle = document.createElement("button");
   readingToggle.type = "button";
   const syncReading = (value: boolean) => {

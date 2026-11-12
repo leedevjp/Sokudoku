@@ -108,8 +108,11 @@ export function WordList({
                   aria-label={word.term + " · " + t("詳細を表示", "상세 보기")}
                 >
                   <strong lang="ja">{word.term}</strong>
-                  <span className={styles.reading} lang="ja">
-                    {word.kana}
+                  <span className={styles.reading}>
+                    <span lang="ja">{word.kana}</span>
+                    {word.pronunciation_ko && (
+                      <span lang="ko"> · {word.pronunciation_ko}</span>
+                    )}
                   </span>
                   <span className={styles.meaning} lang="ko">
                     {choiceLabel(word, "meaning")}

@@ -5,6 +5,7 @@ import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
 import { choiceLabel } from "@/lib/game/rules";
 import { NOTEBOOK_PAGE_SIZE, type NotebookWord } from "@/lib/notebook/types";
+import styles from "./personal-actions.module.css";
 import { WordDetail } from "./word-detail";
 
 export default function NotebookScreen() {
@@ -15,6 +16,27 @@ export default function NotebookScreen() {
   const [reload, setReload] = useState(0);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NotebookWord | null>(null);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function addPersonal(ids: string[]) {
+    if (busy || !ids.length) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/notebook/personal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }), signal: AbortSignal.timeout(60000) });
+      if (!response.ok) throw Error("SAVE");
+      const { results } = await response.json() as { results: { id: string; status: string }[] };
+      const saved = new Set(results.filter(r => r.status === "added" || r.status === "exists").map(r => r.id));
+      const update = (w: NotebookWord): NotebookWord => saved.has(w.id) ? { ...w, in_personal: true } : w;
+      setWords(previous => previous?.map(update) ?? null);
+      setSelected(previous => previous ? update(previous) : null);
+      setChecked(previous => previous.filter(id => !saved.has(id)));
+      const added = results.filter(r => r.status === "added").length;
+      setMessage(t(`追加 ${added}・登録済み ${saved.size-added}・未追加 ${results.length-saved.size}`, `추가 ${added}개 · 기존 ${saved.size-added}개 · 미추가 ${results.length-saved.size}개`));
+    } catch { setMessage(t("追加できませんでした。再試行してください。", "추가하지 못했어요. 다시 시도해주세요.")); }
+    finally { setBusy(false); }
+  }
+  const eligible = words?.filter(w => w.can_add_personal && !w.in_personal) ?? [];
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
@@ -127,6 +149,11 @@ export default function NotebookScreen() {
           </div>
         ) : (
           <>
+            <div className={styles.actions}>
+              <label><input type="checkbox" disabled={busy || !eligible.length} checked={eligible.length > 0 && checked.length === eligible.length} onChange={e => setChecked(e.target.checked ? eligible.map(w => w.id) : [])} />{t("全ページから選択", "전체 페이지에서 선택")} ({eligible.length})</label>
+              <button className="primary" disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t(`選択した ${checked.length} 語をPに追加`, `선택한 ${checked.length}개 P에 추가`)}</button>
+            </div>
+            <p role="status" aria-live="polite">{message}</p>
             <div className="notebook-columns" aria-hidden="true">
               <span>{t("単語", "단어")}</span>
               <span>{t("読み方", "읽기")}</span>
@@ -135,6 +162,8 @@ export default function NotebookScreen() {
             <ul className="notebook-list">
               {visible.map((word) => (
                 <li key={`${word.source}:${word.id}`}>
+                  {word.can_add_personal && !word.in_personal && <label className={styles.select}><input type="checkbox" disabled={busy} checked={checked.includes(word.id)} onChange={e => setChecked(previous => e.target.checked ? [...previous, word.id] : previous.filter(id => id !== word.id))} />{word.term} {t("選択", "선택")}</label>}
+                  {word.in_personal && word.source !== "personal" && <small>{t("Pに登録済み", "P에 있음")}</small>}
                   <button
                     className="notebook-row"
                     onClick={() => setSelected(word)}
@@ -179,7 +208,7 @@ export default function NotebookScreen() {
           </>
         )}
       </section>
-      <WordDetail word={selected} onClose={() => setSelected(null)} />
+      <WordDetail word={selected} onClose={() => setSelected(null)} busy={busy} message={message} onAdd={id => void addPersonal([id])} />
     </main>
   );
 }

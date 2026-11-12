@@ -9,6 +9,6 @@ export type NotebookWord = Pick<
   | "meaning_ko"
   | "note"
   | "difficulty"
-> & { source: "word" | "personal"; last_incorrect_at: string };
+> & { source: "word" | "personal"; last_incorrect_at: string; in_personal?: boolean; can_add_personal?: boolean };
 
 export const NOTEBOOK_PAGE_SIZE = 10;
