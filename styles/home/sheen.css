@@ -1,11 +1,11 @@
-/* A single continuous sheen on the Omakase folder.
- * Button shapes are measured once by HomeScreen and projected into this
+/* One continuous beam across every selected training control, in every mode.
+ * Button shapes are remeasured by HomeScreen and projected into this
  * layer. The animation is never restarted on filter/tap changes. */
-.home-auto {
+.home-actions {
   position: relative;
-  --omakase-stage-width: 0px;
+  --home-sheen-stage-width: 0px;
 }
-.home-auto .omakase-sheen-stage {
+.home-actions .home-sheen-stage {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -13,7 +13,7 @@
   pointer-events: none;
   clip-path: inset(100%);
 }
-.home-auto .omakase-sheen-stage::before {
+.home-actions .home-sheen-stage::before {
   content: "";
   position: absolute;
   top: -40px;
@@ -31,23 +31,23 @@
   opacity: 0;
   pointer-events: none;
   transform: translate3d(0, 0, 0) skewX(-20deg);
-  animation: omakase-unified-sheen 6.2s linear infinite;
+  animation: home-unified-sheen 6.2s linear infinite;
 }
-@keyframes omakase-unified-sheen {
+@keyframes home-unified-sheen {
   0%, 12% {
     transform: translate3d(0, 0, 0) skewX(-20deg);
     opacity: 0;
   }
   17% { opacity: 0.8; }
   49% {
-    transform: translate3d(calc(var(--omakase-stage-width) + 640px), 0, 0) skewX(-20deg);
+    transform: translate3d(calc(var(--home-sheen-stage-width) + 640px), 0, 0) skewX(-20deg);
     opacity: 0.8;
   }
   54%, 100% {
-    transform: translate3d(calc(var(--omakase-stage-width) + 640px), 0, 0) skewX(-20deg);
+    transform: translate3d(calc(var(--home-sheen-stage-width) + 640px), 0, 0) skewX(-20deg);
     opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-auto .omakase-sheen-stage { display: none; }
+  .home-actions .home-sheen-stage { display: none; }
 }
