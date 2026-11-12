@@ -11,7 +11,7 @@ const data: DashboardData = {
     { entry_type: "word", kind: "meaning", level: "P", total: 30, learned: 12, review: 4, memory: [7, 3, 2], attempts: 80 },
     { entry_type: "word", kind: "reading", level: "P", total: 30, learned: 25, review: 8, memory: [10, 10, 5], attempts: 900 },
   ],
-  activity: [{ entry_type: "word", kind: "meaning", level: "P", day: "2026-11-08", attempts: 9, correct: 5, correct_ms: 4000 }],
+  activity: [{ entry_type: "word", kind: "meaning", level: "P", day: "2026-11-08", attempts: 9, correct: 5, timed_correct: 5, correct_ms: 4000 }],
 };
 const summary = dashboardSummary(data, "word", "meaning");
 

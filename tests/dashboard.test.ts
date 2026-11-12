@@ -30,7 +30,7 @@ const data: DashboardData = {
       day: "2026-11-03",
       attempts: 4,
       correct: 3,
-      correct_ms: 6000,
+      timed_correct: 3, correct_ms: 6000,
     },
     {
       entry_type: "word",
@@ -39,7 +39,7 @@ const data: DashboardData = {
       day: "2026-10-28",
       attempts: 2,
       correct: 0,
-      correct_ms: 0,
+      timed_correct: 0, correct_ms: 0,
     },
     {
       entry_type: "word",
@@ -48,7 +48,7 @@ const data: DashboardData = {
       day: "2026-11-03",
       attempts: 10,
       correct: 10,
-      correct_ms: 10000,
+      timed_correct: 8, correct_ms: 10000,
     },
   ],
 };
