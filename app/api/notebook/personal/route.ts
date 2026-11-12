@@ -1,3 +1,4 @@
+import { personalCopy } from "@/lib/notebook/personal-copy";
 import { z } from "zod";
 import { authorize, failure, privateHeaders, readInput } from "@/lib/personal/server";
 
@@ -19,13 +20,7 @@ export async function POST(request: Request) {
       results.push({ id, status: "unavailable" }); continue;
     }
     // Read the current database row, never vocabulary supplied by the browser.
-    const pronunciation = (word as unknown as { pronunciation_ko?: string | null }).pronunciation_ko;
-    const { error: saveError } = await auth.client.from("personal_word").insert({
-      user_id: auth.user.id, term: word.term, kana: word.kana,
-      meaning_ko: word.meaning_ko, hanja_reading: word.hanja_reading,
-      pronunciation_ko: pronunciation ?? null, note: word.note,
-      difficulty: word.difficulty, has_kanji: word.has_kanji, entry_type: "word",
-    });
+    const { error: saveError } = await auth.client.from("personal_word").insert(personalCopy(word, auth.user.id));
     results.push({ id, status: !saveError ? "added" : saveError.code === "23505" ? "exists" : "failed" });
   }
   return Response.json({ results }, { headers: privateHeaders });
