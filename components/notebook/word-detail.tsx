@@ -20,7 +20,7 @@ export function WordDetail({
   return (
     <Modal dismissDisabled={busy} open={word !== null} onClose={onClose} titleId="notebook-word-title">
       {word && (
-        <>
+        <div className={styles.detail}>
           <p className="eyebrow">
             {word.source === "personal"
               ? t("個人単語", "개인 단어")
@@ -29,7 +29,7 @@ export function WordDetail({
           </p>
           <h2
             id="notebook-word-title"
-            className="notebook-detail-term"
+            className={styles.detailTitle}
             lang="ja"
           >
             {word.term}
@@ -59,14 +59,14 @@ export function WordDetail({
               </div>
             </div> : <button className={styles.removeButton} disabled={busy} onClick={() => setConfirmRemove(true)}>{t("Pから解除", "P에서 해제")}</button>
           ) : word.source === "word" && word.can_add_personal && <button className={styles.addButton} disabled={busy || word.in_personal} onClick={() => { setConfirmRemove(false); onAdd(word.id); }}>{word.in_personal ? t("Pに登録済み", "이미 P에 있음") : busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>}
-          <p role="status" aria-live="polite">{message}</p>
+          {message && <p className={styles.detailFeedback} role="status">{message}</p>}
           <p className="footnote">
             {t("最後のまちがい", "마지막 오답")} ·{" "}
             {new Date(word.last_incorrect_at).toLocaleString(
               prefs.lang === "jp" ? "ja-JP" : "ko-KR",
             )}
           </p>
-        </>
+        </div>
       )}
     </Modal>
   );
