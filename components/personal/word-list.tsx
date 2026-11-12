@@ -107,36 +107,20 @@ export function WordList({
                   onClick={() => onSelect("detail", word)}
                   aria-label={word.term + " · " + t("詳細を表示", "상세 보기")}
                 >
-                  <strong lang="ja">{word.term}</strong>
-                  <span className={styles.reading}>
-                    <span lang="ja">{word.kana}</span>
-                    {word.pronunciation_ko && (
-                      <span lang="ko"> · {word.pronunciation_ko}</span>
-                    )}
+                  <span className={styles.identity}>
+                    <strong lang="ja">{word.term}</strong>
+                    {(word.kana !== word.term || word.pronunciation_ko) && <span className={styles.reading}>
+                      {word.kana !== word.term && <span lang="ja">{word.kana}</span>}
+                      {word.pronunciation_ko && <span lang="ko">{word.kana !== word.term ? " · " : ""}{word.pronunciation_ko}</span>}
+                    </span>}
                   </span>
-                  <span className={styles.meaning} lang="ko">
-                    {choiceLabel(word, "meaning")}
-                  </span>
+                  <span className={styles.meaning} lang="ko">{choiceLabel(word, "meaning")}</span>
+                  <span className={styles.chevron} aria-hidden="true">›</span>
                 </button>
-                <div className={styles.rowActions}>
-                  <button
-                    disabled={loading}
-                    onClick={() => onSelect("edit", word)}
-                  >
-                    {t("編集", "수정")}
-                  </button>
-                  <button
-                    className={styles.deleteLink}
-                    disabled={loading}
-                    onClick={() => onSelect("delete", word)}
-                  >
-                    {t("削除", "삭제")}
-                  </button>
-                </div>
               </article>
             ))}
           </div>
-          <nav
+          {pages > 1 && <nav
             className={styles.pagination}
             aria-label={t("ページ移動", "페이지 이동")}
           >
@@ -155,7 +139,7 @@ export function WordList({
             >
               {t("次へ", "다음")} →
             </button>
-          </nav>
+          </nav>}
         </>
       )}
     </section>
