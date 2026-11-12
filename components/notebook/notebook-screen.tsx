@@ -16,6 +16,7 @@ export default function NotebookScreen() {
   const [reload, setReload] = useState(0);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NotebookWord | null>(null);
+  const [selecting, setSelecting] = useState(false);
   const [checked, setChecked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -149,42 +150,42 @@ export default function NotebookScreen() {
           </div>
         ) : (
           <>
-            <div className={styles.actions}>
-              <label><input type="checkbox" disabled={busy || !eligible.length} checked={eligible.length > 0 && checked.length === eligible.length} onChange={e => setChecked(e.target.checked ? eligible.map(w => w.id) : [])} />{t("全ページから選択", "전체 페이지에서 선택")} ({eligible.length})</label>
-              <button className="primary" disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t(`選択した ${checked.length} 語をPに追加`, `선택한 ${checked.length}개 P에 추가`)}</button>
+            <div className={styles.toolbar}>
+              <span className={styles.caption}>{selecting ? t(`${checked.length}語を選択`, `${checked.length}개 선택됨`) : t("単語をタップして詳細へ", "단어를 누르면 상세 보기")}</span>
+              <button className={styles.textButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); }}>
+                {selecting ? t("キャンセル", "취소") : t("選択", "선택")}
+              </button>
             </div>
-            <p role="status" aria-live="polite">{message}</p>
-            <div className="notebook-columns" aria-hidden="true">
-              <span>{t("単語", "단어")}</span>
-              <span>{t("読み方", "읽기")}</span>
-              <span>{t("意味", "뜻")}</span>
+            {selecting && <div className={styles.selectionTools}>
+              <button className={styles.textButton} disabled={busy || !eligible.length} onClick={() => setChecked(checked.length === eligible.length ? [] : eligible.map(w => w.id))}>
+                {checked.length === eligible.length ? t("すべて解除", "전체 해제") : t("すべて選択", "전체 선택")}
+              </button>
+              <span>{t(`全ページの追加可能な${eligible.length}語`, `전체 페이지 · 추가 가능한 ${eligible.length}개`)}</span>
+            </div>}
+            {message && <p className={styles.feedback} role="status">{message}</p>}
+            <div className={`notebook-columns ${selecting ? styles.selectingColumns : ""}`} aria-hidden="true">
+              <span>{t("単語", "단어")}</span><span>{t("読み方", "읽기")}</span><span>{t("意味", "뜻")}</span>
             </div>
             <ul className="notebook-list">
-              {visible.map((word) => (
-                <li key={`${word.source}:${word.id}`}>
-                  {word.can_add_personal && !word.in_personal && <label className={styles.select}><input type="checkbox" disabled={busy} checked={checked.includes(word.id)} onChange={e => setChecked(previous => e.target.checked ? [...previous, word.id] : previous.filter(id => id !== word.id))} />{word.term} {t("選択", "선택")}</label>}
-                  {word.in_personal && word.source !== "personal" && <small>{t("Pに登録済み", "P에 있음")}</small>}
-                  <button
-                    className="notebook-row"
-                    onClick={() => setSelected(word)}
-                    aria-haspopup="dialog"
-                  >
-                    <span className="notebook-term" lang="ja">
-                      {word.term}
-                      {word.source === "personal" && (
-                        <small aria-label={t("個人単語", "개인 단어")}>P</small>
-                      )}
-                    </span>
-                    <span className="notebook-kana" lang="ja">
-                      {word.kana}
-                    </span>
-                    <span className="notebook-meaning" lang="ko">
-                      {choiceLabel(word, "meaning")}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {visible.map(word => {
+                const available = !!word.can_add_personal && !word.in_personal;
+                const content = <>
+                  <span className="notebook-term" lang="ja">{word.term}{word.in_personal && <small aria-label={t("Pに登録済み", "P에 있음")}>P</small>}</span>
+                  <span className="notebook-kana" lang="ja">{word.kana}</span>
+                  <span className="notebook-meaning" lang="ko">{choiceLabel(word, "meaning")}</span>
+                </>;
+                return <li key={`${word.source}:${word.id}`}>
+                  {selecting ? <label className={`${styles.selectableRow} ${checked.includes(word.id) ? styles.checked : ""} ${!available ? styles.unavailable : ""}`}>
+                    <input type="checkbox" className={styles.checkbox} checked={checked.includes(word.id)} disabled={busy || !available} aria-label={t(`${word.term}を選択`, `${word.term} 선택`)} onChange={e => setChecked(previous => e.target.checked ? [...previous, word.id] : previous.filter(id => id !== word.id))} />
+                    <span className={styles.rowContent}>{content}</span>
+                  </label> : <button className="notebook-row" onClick={() => setSelected(word)} aria-haspopup="dialog">{content}</button>}
+                </li>;
+              })}
             </ul>
+            {selecting && <div className={styles.bottomBar}>
+              <span aria-live="polite">{t(`${checked.length}語を選択`, `${checked.length}개 선택`)}</span>
+              <button className={styles.addButton} disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
+            </div>}
             <nav
               className="notebook-pagination"
               aria-label={t("ノートのページ", "오답노트 페이지")}
