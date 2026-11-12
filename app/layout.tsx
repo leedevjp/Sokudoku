@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Outfit } from "next/font/google";
 import { SettingsProvider } from "@/components/settings/settings-provider";
+import { DeploymentWatcher } from "@/components/deployment/deployment-watcher";
 import "./globals.css";
 const outfit = Outfit({
   subsets: ["latin"],
@@ -25,7 +27,12 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning>
       <body className={outfit.variable}>
-        <SettingsProvider>{children}</SettingsProvider>
+        <SettingsProvider>
+          <Suspense fallback={null}>
+            <DeploymentWatcher />
+          </Suspense>
+          {children}
+        </SettingsProvider>
       </body>
     </html>
   );

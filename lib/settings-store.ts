@@ -24,6 +24,7 @@ function getSnapshot(): Preferences {
             pronunciation: saved.pronunciation === "always" || saved.pronunciation === "wrong" || saved.pronunciation === "off" ? saved.pronunciation : "always",
             pronunciationSource: saved.pronunciationSource === "kana" ? "kana" : "term",
             showReadingHints: saved.showReadingHints === true,
+            correctAnswerReview: saved.correctAnswerReview === "card" ? "card" : "instant",
           }
         : defaultPreferences;
       rawSnapshot = raw;

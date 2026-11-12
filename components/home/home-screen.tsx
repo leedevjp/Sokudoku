@@ -1,10 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
 import {
-  defaultLevels,
   trainingKinds,
   parseKinds,
   trainingLevels,
@@ -25,6 +24,34 @@ import {
 } from "@/lib/game/learning/types";
 import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
+import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
+import { useFolderOutline } from "./use-folder-outline";
+
+type ModeFamily = "auto" | "manual" | "exam";
+type ModeScope = { levels: TrainingLevel[]; kinds: Kind[] };
+type ModeScopes = Record<ModeFamily, ModeScope>;
+const MODE_SCOPES_KEY = "sokudoku-mode-scopes-v1";
+const freshScope = (): ModeScope => ({ levels: [...trainingLevels], kinds: [...trainingKinds] });
+const freshScopes = (): ModeScopes => ({
+  auto: freshScope(),
+  manual: freshScope(),
+  exam: freshScope(),
+});
+const modeFamily = (modes: TrainingMode[]): ModeFamily =>
+  modes.includes("auto") ? "auto" : modes.includes("exam") ? "exam" : "manual";
+
+function restoreScope(value: unknown): ModeScope {
+  if (!value || typeof value !== "object") return freshScope();
+  const data = value as Partial<ModeScope>;
+  return {
+    levels: Array.isArray(data.levels)
+      ? parseLevels(data.levels.filter((level): level is TrainingLevel => typeof level === "string").join(","))
+      : [...trainingLevels],
+    kinds: Array.isArray(data.kinds)
+      ? parseKinds(data.kinds.filter((kind): kind is Kind => typeof kind === "string").join(","))
+      : [...trainingKinds],
+  };
+}
 
 export default function HomeScreen() {
   const { prefs } = useSettings();
@@ -36,10 +63,15 @@ export default function HomeScreen() {
   );
   const account = useAccount(authenticated);
   const { user, loading, notice } = account;
-  const [levels, setLevels] = useState<TrainingLevel[]>(defaultLevels);
+  const [levels, setLevels] = useState<TrainingLevel[]>([...trainingLevels]);
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
-  const [timeLimited, setTimeLimited] = useState(true);
+  const [timeLimited, setTimeLimited] = useState(false);
+  const homeActionsRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
+  const { folderRef, folderOutline } = useFolderOutline(modes, prefs.lang);
+  const modeScopesRef = useRef<ModeScopes>(freshScopes());
+  const activeFolder = modeFamily(modes);
   const kanaOnly =
     levels.length > 0 &&
     levels.every((level) => level === "H" || level === "K");
@@ -58,42 +90,139 @@ export default function HomeScreen() {
         const savedTimeLimit = localStorage.getItem("sokudoku-time-limit-v1");
         if (savedTimeLimit !== null) setTimeLimited(savedTimeLimit !== "off");
         const savedModes = localStorage.getItem("sokudoku-modes-v1");
-        if (savedModes !== null) setModes(parseModes(savedModes));
-        const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
-        if (savedKinds !== null) setKinds(parseKinds(savedKinds));
-        const saved = localStorage.getItem("sokudoku-levels-v1");
-        if (saved !== null) setLevels(parseLevels(saved));
+        const restoredModes = parseModes(savedModes);
+        const activeFamily = modeFamily(restoredModes);
+        const rawScopes = localStorage.getItem(MODE_SCOPES_KEY);
+        const scopes = freshScopes();
+        if (rawScopes !== null) {
+          const raw = JSON.parse(rawScopes) as Partial<Record<ModeFamily, unknown>>;
+          for (const family of ["auto", "manual", "exam"] as const) {
+            scopes[family] = restoreScope(raw?.[family]);
+          }
+        } else {
+          // One-time migration: honor the previous shared selection in the
+          // last active mode. Other modes start with everything selected.
+          const savedLevels = localStorage.getItem("sokudoku-levels-v1");
+          const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
+          if (savedLevels !== null || savedKinds !== null) {
+            scopes[activeFamily] = {
+              levels: savedLevels === null ? [...trainingLevels] : parseLevels(savedLevels),
+              kinds: savedKinds === null ? [...trainingKinds] : parseKinds(savedKinds),
+            };
+          }
+          localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(scopes));
+        }
+        modeScopesRef.current = scopes;
+        setModes(restoredModes);
+        setLevels([...scopes[activeFamily].levels]);
+        setKinds([...scopes[activeFamily].kinds]);
       } catch {
         /* Optional preference. */
       }
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    const home = homeActionsRef.current;
+    const sheen = sheenRef.current;
+    if (!home || !sheen) return;
+
+    // All selected buttons reveal the same animated light beam. Their rounded
+    // rectangles form one clip-path in home-relative coordinates, so the beam
+    // moves across the whole UI at precisely the same speed and phase.
+    const round = (value: number) => Math.round(value * 10) / 10;
+    const updateSheenMask = () => {
+      const area = home.getBoundingClientRect();
+      home.style.setProperty("--home-sheen-stage-width", `${round(area.width)}px`);
+      const selected = home.querySelectorAll<HTMLElement>(
+        '.training-levels button[aria-pressed="true"], .home-launch-group .primary:not(:disabled):not([aria-disabled="true"])',
+      );
+      const selectedButtons = Array.from(selected);
+      const joinedTabs = selectedButtons.filter((button) =>
+        button.closest(".training-modes.tab-manual-both"),
+      );
+      const rectangles = selectedButtons.flatMap((button) => {
+        if (joinedTabs.length === 2 && button === joinedTabs[1]) return [];
+        if (joinedTabs.length === 2 && button === joinedTabs[0]) {
+          const first = joinedTabs[0].getBoundingClientRect();
+          const second = joinedTabs[1].getBoundingClientRect();
+          return [{
+            left: first.left,
+            top: Math.min(first.top, second.top),
+            width: second.right - first.left,
+            height: Math.max(first.bottom, second.bottom) - Math.min(first.top, second.top),
+          }];
+        }
+        return [button.getBoundingClientRect()];
+      });
+      const paths = rectangles.map((rect) => {
+        const x = round(rect.left - area.left);
+        const y = round(rect.top - area.top);
+        const w = round(rect.width);
+        const h = round(rect.height);
+        const r = round(Math.min(13, w / 2, h / 2));
+        return [
+          `M ${round(x + r)} ${y}`,
+          `H ${round(x + w - r)}`,
+          `Q ${round(x + w)} ${y} ${round(x + w)} ${round(y + r)}`,
+          `V ${round(y + h - r)}`,
+          `Q ${round(x + w)} ${round(y + h)} ${round(x + w - r)} ${round(y + h)}`,
+          `H ${round(x + r)}`,
+          `Q ${x} ${round(y + h)} ${x} ${round(y + h - r)}`,
+          `V ${round(y + r)}`,
+          `Q ${x} ${y} ${round(x + r)} ${y} Z`,
+        ].join(" ");
+      });
+      sheen.style.clipPath = paths.length ? `path("${paths.join(" ")}")` : "inset(100%)";
+    };
+
+    const observer = new ResizeObserver(updateSheenMask);
+    observer.observe(home);
+    for (const button of home.querySelectorAll<HTMLElement>(
+      ".training-levels button, .home-launch-group .primary",
+    )) observer.observe(button);
+    window.addEventListener("resize", updateSheenMask);
+    updateSheenMask();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSheenMask);
+    };
+  }, [modes, levels, kinds, loading, user]);
+
+  function persistScopes() {
+    try {
+      localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(modeScopesRef.current));
+    } catch { /* Optional preference. */ }
+  }
   function toggleLevel(level: TrainingLevel) {
     const next = trainingLevels.filter((item) =>
       item === level ? !levels.includes(item) : levels.includes(item),
     );
     setLevels(next);
-    try {
-      localStorage.setItem("sokudoku-levels-v1", next.join(","));
-    } catch {
-      /* Optional preference. */
-    }
+    modeScopesRef.current[activeFolder] = { levels: next, kinds: [...kinds] };
+    persistScopes();
   }
   function toggleKind(kind: Kind) {
     const next = trainingKinds.filter((item) =>
       item === kind ? !kinds.includes(item) : kinds.includes(item),
     );
     setKinds(next);
-    try {
-      localStorage.setItem("sokudoku-kinds-v1", next.join(","));
-    } catch {
-      /* Optional preference. */
-    }
+    modeScopesRef.current[activeFolder] = { levels: [...levels], kinds: next };
+    persistScopes();
   }
   function toggleMode(mode: TrainingMode) {
     const next = toggleTrainingMode(modes, mode);
+    const nextFolder = modeFamily(next);
+    // Save the current selections before switching folders. Each folder gets
+    // full defaults only on its first visit, then remembers every adjustment.
+    modeScopesRef.current[activeFolder] = { levels: [...levels], kinds: [...kinds] };
+    if (nextFolder !== activeFolder) {
+      const restored = modeScopesRef.current[nextFolder];
+      setLevels([...restored.levels]);
+      setKinds([...restored.kinds]);
+    }
     setModes(next);
+    persistScopes();
     try {
       localStorage.setItem("sokudoku-modes-v1", next.join(","));
     } catch {
@@ -142,83 +271,118 @@ export default function HomeScreen() {
         </div>
       </header>
       <HomeHero authenticated={!!user} />
-      <div className="home-actions">
-        <div className="home-setting-group">
-          <ModeSelector modes={modes} onToggle={toggleMode} timeLimited={timeLimited} onTimeLimitChange={(value) => { setTimeLimited(value); try { localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off"); } catch { /* Optional preference. */ } }} />
-        </div>
-        <div className="home-setting-group">
-          <KindSelector kinds={kinds} onToggle={toggleKind} />
-        </div>
-        <div className="home-setting-group">
-          <LevelSelector levels={levels} onToggle={toggleLevel} />
-        </div>
-        {kanaOnly && !kinds.includes("meaning") && (
-          <p className="level-hint" role="status">
-            {t(
-              "かなの学習には「意味」を選んでください。",
-              "가나를 학습하려면 뜻 맞추기를 선택해주세요.",
-            )}
-          </p>
-        )}
-        <div className="home-launch-group">
-          {loading ? (
-            <button className="primary" disabled>
-              {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
-            </button>
-          ) : user ? (
-            <Link
-              className="primary"
-              aria-disabled={!canStart}
-              href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}&timeLimit=${timeLimited ? "on" : "off"}`}
-              onClick={(event) => {
-                if (!canStart) event.preventDefault();
-              }}
+      <div className="home-actions" ref={homeActionsRef}>
+        <div className="home-sheen-stage" ref={sheenRef} aria-hidden="true" />
+        <section
+          ref={folderRef}
+          className={`home-mode-folder folder-${activeFolder}${folderOutline ? " outline-ready" : ""}`}
+          aria-label={t("学習設定", "학습 설정")}
+        >
+          {folderOutline && (
+            <svg
+              className="home-folder-outline"
+              viewBox={`0 0 ${folderOutline.width} ${folderOutline.height}`}
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
             >
-              {t("トレーニングを始める", "훈련 시작하기")}
-              <span>→</span>
-            </Link>
-          ) : (
-            <button
-              className="primary"
-              disabled={!canStart}
-              onClick={() => setModal("auth")}
-            >
-              {t("ログインして始める", "로그인하고 시작하기")}
-              <span>→</span>
-            </button>
+              <path d={folderOutline.d} />
+            </svg>
           )}
-          <div className="home-secondary-actions">
-            {/* Temporarily hidden while sentence quiz data is being edited.
-            <Link className="notebook-link" href={`/sentence?levels=${levels.filter(level=>['1','2','3','4','5'].includes(level)).join(',')}`}>{t('文章を読む','문장 읽기')} ↗</Link>
-            */}
-            <Link
-              className="notebook-link"
-              href="/dashboard"
-              onClick={(event) => {
-                if (!user) {
-                  event.preventDefault();
-                  setModal("auth");
-                }
+          <div className="home-folder-tabs">
+            <ModeSelector
+              modes={modes}
+              onToggle={toggleMode}
+              timeLimited={timeLimited}
+              onTimeLimitChange={(value) => {
+                setTimeLimited(value);
+                try {
+                  localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off");
+                } catch { /* Optional preference. */ }
               }}
-            >
-              <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
-              <span aria-hidden="true">↗</span>
-            </Link>
-            <Link
-              className="notebook-link"
-              href="/notebook"
-              onClick={(event) => {
-                if (!user) {
-                  event.preventDefault();
-                  setModal("auth");
-                }
-              }}
-            >
-              <span aria-hidden="true">▤</span>{" "}
-              {t("まちがいノート", "오답노트")}
-              <span aria-hidden="true">↗</span>
-            </Link>
+            />
           </div>
+          <div className="home-folder-body">
+            {!modes.length && (
+              <p className="level-hint" role="status">
+                {t("学習モードを選んでください。", "학습 모드를 선택해주세요.")}
+              </p>
+            )}
+            <div className="home-setting-group">
+              <KindSelector kinds={kinds} onToggle={toggleKind} />
+            </div>
+            <div className="home-setting-group">
+              <LevelSelector levels={levels} onToggle={toggleLevel} />
+            </div>
+            {kanaOnly && !kinds.includes("meaning") && (
+              <p className="level-hint" role="status">
+                {t(
+                  "かなの学習には「意味」を選んでください。",
+                  "가나를 학습하려면 뜻 맞추기를 선택해주세요.",
+                )}
+              </p>
+            )}
+            <div className="home-launch-group">
+              {loading ? (
+                <button className="primary" disabled>
+                  {t("ログイン状態を確認中…", "로그인 상태 확인 중…")}
+                </button>
+              ) : user ? (
+                <Link
+                  className="primary"
+                  aria-disabled={!canStart}
+                  href={`/game?levels=${encodeURIComponent(levels.join(","))}&kinds=${encodeURIComponent(kinds.join(","))}&modes=${encodeURIComponent(modes.join(","))}&timeLimit=${timeLimited ? "on" : "off"}`}
+                  onClick={(event) => {
+                    if (!canStart) event.preventDefault();
+                  }}
+                >
+                  {t("トレーニングを始める", "훈련 시작하기")}
+                  <span>→</span>
+                </Link>
+              ) : (
+                <button
+                  className="primary"
+                  disabled={!canStart}
+                  onClick={() => setModal("auth")}
+                >
+                  {t("ログインして始める", "로그인하고 시작하기")}
+                  <span>→</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+        <div className="home-secondary-actions">
+          {/* Temporarily hidden while sentence quiz data is being edited.
+          <Link className="notebook-link" href={`/sentence?levels=${levels.filter(level=>['1','2','3','4','5'].includes(level)).join(',')}`}>{t('文章を読む','문장 읽기')} ↗</Link>
+          */}
+          <Link
+            className="notebook-link"
+            href="/dashboard"
+            onClick={(event) => {
+              if (!user) {
+                event.preventDefault();
+                setModal("auth");
+              }
+            }}
+          >
+            <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link
+            className="notebook-link"
+            href="/notebook"
+            onClick={(event) => {
+              if (!user) {
+                event.preventDefault();
+                setModal("auth");
+              }
+            }}
+          >
+            <span aria-hidden="true">▤</span>{" "}
+            {t("まちがいノート", "오답노트")}
+            <span aria-hidden="true">↗</span>
+          </Link>
         </div>
         {notice && modal === null && (
           <p className="home-notice" role="status">
@@ -229,6 +393,7 @@ export default function HomeScreen() {
       <footer>
         {t("毎日の「わかった」を、もっと速く。", "매일의 이해를, 더 빠르게.")}
       </footer>
+      <DeploymentLabel lang={prefs.lang} />
       <Modal
         open={modal !== null}
         onClose={() => setModal(null)}

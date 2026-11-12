@@ -14,34 +14,54 @@ export function ModeSelector({
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
+  const tabShape = modes.includes("auto")
+    ? "tab-auto"
+    : modes.includes("exam")
+      ? "tab-exam"
+      : modes.includes("exploration") && modes.includes("review")
+        ? "tab-manual-both"
+        : modes.includes("exploration")
+          ? "tab-exploration"
+          : modes.includes("review")
+            ? "tab-review"
+            : "tab-none";
   return (
     <>
-      <div className="selection-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span>{t("学習モード", "학습 모드")}</span>
-        <label style={{ display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}>
+      <div className="home-mode-heading">
+        <span className="home-mode-caption">{t("学習モード", "학습 모드")}</span>
+        <label className="home-time-toggle">
           <span>{t("制限時間", "시간제한")}</span>
-          <input type="checkbox" role="switch" aria-label={t("制限時間", "시간제한")} checked={timeLimited} onChange={(event) => onTimeLimitChange(event.target.checked)} style={{ position: "absolute", opacity: 0, width: 1, height: 1 }} />
-          <span aria-hidden="true" style={{ width: 38, height: 22, borderRadius: 99, background: timeLimited ? "#2d7deb" : "#9ca3af", display: "inline-flex", alignItems: "center", padding: 3, boxSizing: "border-box", justifyContent: timeLimited ? "flex-end" : "flex-start", transition: "background .15s" }}>
-            <span style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px #0002" }} />
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label={t("制限時間", "시간제한")}
+            checked={timeLimited}
+            onChange={(event) => onTimeLimitChange(event.target.checked)}
+          />
+          <span className="home-time-track" aria-hidden="true">
+            <span className="home-time-thumb" />
           </span>
         </label>
       </div>
       <div
-        className="training-levels training-kinds training-modes"
+        className={`training-levels training-modes ${tabShape}${prefs.lang === "jp" ? " is-japanese" : ""}`}
         role="group"
         aria-label={t(
-          "学習モード（探索と復習は併用可、テストは単独）",
-          "학습 모드 (탐색과 복습은 함께 선택 가능, 시험은 단독)",
+          "自動とテストは単独、探索と復習は併用可",
+          "자동과 시험은 단독, 탐색과 복습은 함께 선택 가능",
         )}
       >
         {trainingModes.map((mode) => (
           <button
             key={mode}
+            className={`training-mode-${mode}`}
             type="button"
             aria-pressed={modes.includes(mode)}
             onClick={() => onToggle(mode)}
             title={
-              mode === "exploration"
+              mode === "auto"
+                ? t("記憶と実力に合わせて出題。範囲と問題タイプは自由に変更できます。", "기억과 실력에 맞게 자동 출제해요. 범위와 문제 유형은 직접 제한할 수 있어요.")
+                : mode === "exploration"
                 ? t(
                     "まだ出会っていない単語を均等ランダムに出題",
                     "아직 만나지 않은 단어를 균등 랜덤으로 출제해요",
@@ -60,7 +80,9 @@ export function ModeSelector({
             <span className="kind-check" aria-hidden="true">
               {modes.includes(mode) ? "✓" : "+"}
             </span>
-            {mode === "exploration"
+            {mode === "auto"
+              ? t("おまかせ", "자동")
+              : mode === "exploration"
               ? t("探索", "탐색")
               : mode === "exam"
                 ? t("テスト", "시험")
@@ -68,19 +90,6 @@ export function ModeSelector({
           </button>
         ))}
       </div>
-      {modes.includes("exam") && (
-        <p className="level-hint" role="status">
-          {t(
-            "学習済みも含む全範囲からランダム出題。結果は学習・復習に反映します。",
-            "이미 학습한 단어도 포함해 전체 범위에서 랜덤 출제합니다. 결과는 학습·복습에 반영됩니다.",
-          )}
-        </p>
-      )}
-      {!modes.length && (
-        <p className="level-hint" role="status">
-          {t("学習モードを選んでください。", "학습 모드를 선택해주세요.")}
-        </p>
-      )}
     </>
   );
 }

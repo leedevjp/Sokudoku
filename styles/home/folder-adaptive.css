@@ -1,0 +1,95 @@
+/* Home only: remove cast shadows and thick 3D lips from every interactive
+   control, including header settings, preview answer mockups and footer links.
+   The folder *paper* may keep its very subtle ambient separation. */
+.home-shell button,
+.home-shell .primary,
+.home-shell .notebook-link,
+.home-shell .preview-answer,
+.home-shell .preview-word,
+.home-shell .brand-mark {
+  box-shadow: none;
+}
+.home-shell .settings-bar button,
+.home-shell .logout-button,
+.home-shell .preview-answer,
+.home-shell .preview-word {
+  border-bottom-width: 2px;
+}
+.home-shell .brand-mark {
+  border-bottom-width: 0;
+}
+.home-shell .home-folder-body .primary {
+  border: 1.5px solid var(--folder-edge);
+}
+
+/* The external dashboard/notebook actions are not part of the colored sheet. */
+.home-actions > .home-secondary-actions {
+  margin-top: 14px;
+  flex-shrink: 0;
+}
+@media (min-height: 921px) {
+  .home-shell .home-actions > .home-secondary-actions {
+    margin-top: 16px;
+  }
+}
+@media (max-width: 599px) {
+  /* Keep the footer and last-updated line reachable without pushing them
+     out of a typical phone viewport; retain at least 44px content targets. */
+  .home-mode-folder .home-folder-body .training-levels button {
+    min-height: 44px;
+  }
+  .home-mode-folder .home-folder-body .primary {
+    min-height: 54px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+@media (max-width: 599px) {
+  /* A folder expands vertically. Scroll the page instead of crushing the
+     preview into the header when a hint or accessibility font grows. */
+  .home-shell {
+    height: auto;
+    min-height: 100svh;
+    max-height: none;
+    overflow: visible;
+  }
+  .home-shell .home-content {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 370px) {
+  .home-mode-folder .home-folder-tabs .training-modes { --mode-gap: 5px; }
+  .home-mode-folder .training-modes > button { gap: 3px; font-size: 11px; }
+  /* The five-character Japanese おまかせ label otherwise spills beyond its tab. */
+  .home-mode-folder .training-modes.is-japanese .training-mode-auto { font-size: 10px; letter-spacing: -.3px; }
+  .home-mode-folder .training-modes.is-japanese .training-mode-auto .kind-check { display: none; }
+  .home-mode-folder .home-folder-body {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-mode-folder .home-time-track,
+  .home-mode-folder .home-time-thumb { transition: none; }
+}
+
+/* Dark theme keeps the folder as a single sheet without forcing light colors. */
+[data-theme="dark"] .home-mode-folder {
+  --folder-paper: #152c53;
+  --folder-edge: #42679e;
+  --folder-ink: #c9dfff;
+  --folder-tab: #214678;
+  --folder-shadow: rgb(0 0 0 / 22%);
+}
+[data-theme="dark"] .home-mode-folder.folder-auto {
+  --folder-paper: #173f33;
+  --folder-edge: #348a66;
+  --folder-ink: #d5ffe3;
+  --folder-tab: #235642;
+}
+[data-theme="dark"] .home-mode-folder.folder-exam {
+  --folder-paper: #40361d;
+  --folder-edge: #9b7c3f;
+  --folder-ink: #ffedc8;
+  --folder-tab: #584823;
+}

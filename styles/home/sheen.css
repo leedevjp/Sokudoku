@@ -1,0 +1,53 @@
+/* One continuous beam across every selected training control, in every mode.
+ * Button shapes are remeasured by HomeScreen and projected into this
+ * layer. The animation is never restarted on filter/tap changes. */
+.home-actions {
+  position: relative;
+  --home-sheen-stage-width: 0px;
+}
+.home-actions .home-sheen-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+  clip-path: inset(100%);
+}
+.home-actions .home-sheen-stage::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  bottom: -40px;
+  left: -320px;
+  width: 76px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 6%) 14%,
+    rgb(255 255 255 / 48%) 50%,
+    rgb(255 255 255 / 6%) 86%,
+    transparent
+  );
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0) skewX(-20deg);
+  animation: home-unified-sheen 6.2s linear infinite;
+}
+@keyframes home-unified-sheen {
+  0%, 12% {
+    transform: translate3d(0, 0, 0) skewX(-20deg);
+    opacity: 0;
+  }
+  17% { opacity: 0.8; }
+  49% {
+    transform: translate3d(calc(var(--home-sheen-stage-width) + 640px), 0, 0) skewX(-20deg);
+    opacity: 0.8;
+  }
+  54%, 100% {
+    transform: translate3d(calc(var(--home-sheen-stage-width) + 640px), 0, 0) skewX(-20deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-actions .home-sheen-stage { display: none; }
+}

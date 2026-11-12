@@ -2,12 +2,14 @@ import type { DefaultSchedulerCard } from "ts-fsrs";
 import type { Answer, Kind } from "../types";
 
 export const LEARNING_VERSION = "ts-fsrs@6.0.0/FSRS-7/again-good-kana-v2";
-export type TrainingMode = "exploration" | "review" | "exam";
-export const trainingModes: TrainingMode[] = ["exploration", "review", "exam"];
+export type TrainingMode = "exploration" | "review" | "exam" | "auto";
+export const trainingModes: TrainingMode[] = ["auto", "exploration", "review", "exam"];
 export const defaultTrainingModes: TrainingMode[] = ["exploration", "review"];
 export function parseModes(value: string | null): TrainingMode[] {
   return value === null
     ? [...defaultTrainingModes]
+    : value.split(",").includes("auto")
+      ? ["auto"]
     : value.split(",").includes("exam")
       ? ["exam"]
       : defaultTrainingModes.filter((mode) => value.split(",").includes(mode));
@@ -16,6 +18,7 @@ export function toggleTrainingMode(
   current: TrainingMode[],
   mode: TrainingMode,
 ): TrainingMode[] {
+  if (mode === "auto") return current.includes("auto") ? [] : ["auto"];
   if (mode === "exam") return current.includes("exam") ? [] : ["exam"];
   return defaultTrainingModes.filter((item) =>
     item === mode ? !current.includes(item) : current.includes(item),

@@ -113,6 +113,5 @@
   color: var(--accent);
 }
 
-.training-modes {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
+/* Mode tabs and folder styles live in styles/home/folder.css.
+   The shared selection and level controls above remain generic. */

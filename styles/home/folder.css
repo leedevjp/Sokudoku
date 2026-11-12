@@ -1,0 +1,201 @@
+/* Home training folder
+ *
+ * One component owns its paper, tab seam, controls and mode palette.
+ * Home-wide viewport rules stay in home-compact.css and generic selectors
+ * stay in home-controls.css. Avoid positioning mode tabs independently.
+ */
+.home-mode-folder {
+  --folder-paper: #eaf3ff;
+  --folder-edge: #98bcea;
+  --folder-ink: #21528c;
+  --folder-accent: #327fe8;
+  --folder-button: #2b7bf0;
+  --folder-button-text: #fff;
+  --folder-button-shadow: #1b5fc4;
+  --folder-cta: #2b7bf0;
+  --folder-cta-text: #fff;
+  --folder-shadow: rgb(46 106 174 / 10%);
+  --folder-tab: #d6e7ff;
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.home-mode-folder.folder-auto {
+  --folder-paper: #e9fdee;
+  --folder-edge: #96dcb0;
+  --folder-ink: #24603d;
+  --folder-accent: #35b566;
+  --folder-button: linear-gradient(145deg, #c8ffbf, #91edab);
+  --folder-button-text: #214d36;
+  --folder-button-shadow: #6cc58c;
+  --folder-cta: linear-gradient(145deg, #c8ffbf, #91edab);
+  --folder-cta-text: #214d36;
+  --folder-shadow: rgb(67 161 94 / 10%);
+  --folder-tab: #c4facb;
+}
+.home-mode-folder.folder-exam {
+  --folder-paper: #fff7df;
+  --folder-edge: #e3cd8a;
+  --folder-ink: #73561d;
+  --folder-accent: #c99d36;
+  --folder-button: linear-gradient(145deg, #ffebaa, #f4d47c);
+  --folder-button-text: #604817;
+  --folder-button-shadow: #d2b457;
+  --folder-cta: linear-gradient(145deg, #ffebaa, #f4d47c);
+  --folder-cta-text: #604817;
+  --folder-shadow: rgb(165 129 39 / 10%);
+  --folder-tab: #ffebae;
+}
+
+/* The caption and independent timer sit *above* the four equal-sized tabs.
+   Neither can expand the tab row or break the folder's top seam. */
+.home-mode-folder .home-mode-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 29px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.home-mode-folder .home-time-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.home-mode-folder .home-time-toggle input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.home-mode-folder .home-time-track {
+  display: flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  padding: 3px;
+  flex: 0 0 38px;
+  border-radius: 99px;
+  background: #9ca3af;
+  transition: background .18s;
+}
+.home-mode-folder .home-time-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0002;
+  transition: transform .18s;
+}
+.home-mode-folder .home-time-toggle input:checked + .home-time-track {
+  background: var(--folder-accent);
+}
+.home-mode-folder .home-time-toggle input:checked + .home-time-track .home-time-thumb {
+  transform: translateX(16px);
+}
+.home-mode-folder .home-time-toggle input:focus-visible + .home-time-track {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* The raised folder edge is one responsive SVG path covering both the
+   selected tab(s) and the body. Do not recreate any part of its perimeter
+   using ::before, ::after, negative margins, or separate CSS borders. */
+.home-mode-folder .home-folder-outline {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.home-mode-folder .home-folder-outline path {
+  fill: var(--folder-paper);
+  stroke: var(--folder-edge);
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.home-mode-folder .home-folder-tabs {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 0;
+}
+.home-mode-folder .home-folder-tabs .training-modes {
+  --mode-gap: 8px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--mode-gap);
+  margin: 0;
+}
+/* Before hydration, render a plain rounded panel. The measured SVG replaces
+   its border and fill, without shifting layout or changing the button sizes. */
+.home-mode-folder.outline-ready .home-folder-body {
+  background: transparent;
+  border-color: transparent;
+}
+.home-mode-folder .training-mode-auto { grid-column: 1; }
+.home-mode-folder .training-mode-exploration { grid-column: 2; }
+.home-mode-folder .training-mode-review { grid-column: 3; }
+.home-mode-folder .training-mode-exam { grid-column: 4; }
+/* Real buttons are inset from the folder backing on all four sides, always
+   rounded and visibly pressed when selected. All four tap areas are equal. */
+.home-mode-folder .training-modes > button {
+  position: relative;
+  z-index: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  width: calc(100% - 8px);
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  margin: 5px 4px 7px;
+  padding: 0 3px;
+  border: 1.5px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--muted);
+  box-shadow: none;
+  font-size: clamp(11px, 2.7vw, 13px);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: none;
+  transition: border-color .16s, color .16s, background-color .16s;
+}
+.home-mode-folder .training-modes > button[aria-pressed="true"] {
+  border-color: var(--folder-edge);
+  border-radius: 11px;
+  background: var(--folder-button);
+  color: var(--folder-button-text);
+  box-shadow: none;
+}
+.home-mode-folder .training-modes .kind-check {
+  font-size: 15px;
+}
+.home-mode-folder .training-modes > button[aria-pressed="true"] .kind-check {
+  color: inherit;
+}
+
