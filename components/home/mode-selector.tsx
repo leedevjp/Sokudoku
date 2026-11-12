@@ -44,7 +44,7 @@ export function ModeSelector({
         </label>
       </div>
       <div
-        className={`training-levels training-modes ${tabShape}`}
+        className={`training-levels training-modes ${tabShape}${prefs.lang === "jp" ? " is-japanese" : ""}`}
         role="group"
         aria-label={t(
           "自動とテストは単独、探索と復習は併用可",
