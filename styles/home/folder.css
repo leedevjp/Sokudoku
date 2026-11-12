@@ -112,10 +112,10 @@
   outline-offset: 3px;
 }
 
-/* A single folder sheet with four small, equal tap targets. One continuous
-   background shape rises behind the active tab(s). The *same* shared tab
-   covers both Explore and Review when both are selected, including the gap
-   between their hit targets, so there are no artificial seams or overlaps. */
+/* A folder-tab BACKING surrounds real, rounded, pressed-state buttons.
+   One shared backing spans Explore+Review when both are selected. The backing
+   ends exactly at the body edge; the paper bridge erases just the top stroke
+   beneath it, so no vertical border hangs below the horizontal seam. */
 .home-mode-folder .home-folder-tabs {
   position: relative;
   z-index: 2;
@@ -128,42 +128,56 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--mode-gap);
   margin: 0;
+  overflow: visible;
 }
-/* The raised outline is one native CSS grid item, not four separate tab
-   borders or fragile percentage offsets. Spanning 2/4 joins both manual
-   selections and the gap between them into a continuous folder tab. */
-.home-mode-folder .training-modes:not(.tab-none)::before {
+/* Shared tab backing and top-border bridge occupy the same grid columns. */
+.home-mode-folder .training-modes:not(.tab-none)::before,
+.home-mode-folder .training-modes:not(.tab-none)::after {
   content: "";
   display: block;
   grid-row: 1;
   grid-column: 1;
   position: relative;
+  pointer-events: none;
+}
+.home-mode-folder .training-modes:not(.tab-none)::before {
   z-index: 1;
   align-self: stretch;
   box-sizing: border-box;
-  margin-bottom: -3px;
   border: 1.5px solid var(--folder-edge);
   border-bottom: 0;
-  border-radius: 13px 13px 0 0;
-  background: linear-gradient(180deg, var(--folder-tab), var(--folder-paper) 94%);
-  pointer-events: none;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, var(--folder-tab), var(--folder-paper) 100%);
 }
-.home-mode-folder .training-modes.tab-exploration::before {
+.home-mode-folder .training-modes:not(.tab-none)::after {
+  z-index: 3;
+  align-self: end;
+  height: 4px;
+  margin: 0 2px -2px;
+  background: var(--folder-paper);
+}
+.home-mode-folder .training-modes.tab-exploration::before,
+.home-mode-folder .training-modes.tab-exploration::after {
   grid-column: 2;
 }
-.home-mode-folder .training-modes.tab-review::before {
+.home-mode-folder .training-modes.tab-review::before,
+.home-mode-folder .training-modes.tab-review::after {
   grid-column: 3;
 }
-.home-mode-folder .training-modes.tab-manual-both::before {
+.home-mode-folder .training-modes.tab-manual-both::before,
+.home-mode-folder .training-modes.tab-manual-both::after {
   grid-column: 2 / 4;
 }
-.home-mode-folder .training-modes.tab-exam::before {
+.home-mode-folder .training-modes.tab-exam::before,
+.home-mode-folder .training-modes.tab-exam::after {
   grid-column: 4;
 }
 .home-mode-folder .training-mode-auto { grid-column: 1; }
 .home-mode-folder .training-mode-exploration { grid-column: 2; }
 .home-mode-folder .training-mode-review { grid-column: 3; }
 .home-mode-folder .training-mode-exam { grid-column: 4; }
+/* Real buttons are inset from the folder backing on all four sides, always
+   rounded and visibly pressed when selected. All four tap areas are equal. */
 .home-mode-folder .training-modes > button {
   position: relative;
   z-index: 2;
@@ -172,14 +186,15 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  width: 100%;
-  min-width: 0;
-  height: 41px;
-  min-height: 41px;
-  padding: 0 3px;
   box-sizing: border-box;
+  width: calc(100% - 8px);
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  margin: 5px 4px 7px;
+  padding: 0 3px;
   border: 1.5px solid var(--line);
-  border-radius: 12px;
+  border-radius: 11px;
   background: var(--card);
   color: var(--muted);
   box-shadow: none;
@@ -191,16 +206,17 @@
   transition: border-color .16s, color .16s, background-color .16s;
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] {
-  border-color: transparent;
-  background: transparent;
-  color: var(--folder-ink);
+  border-color: var(--folder-edge);
+  border-radius: 11px;
+  background: var(--folder-button);
+  color: var(--folder-button-text);
   box-shadow: none;
 }
 .home-mode-folder .training-modes .kind-check {
   font-size: 15px;
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] .kind-check {
-  color: var(--folder-accent);
+  color: inherit;
 }
 
 /* The paper sits directly under the active shared tab, completing the
@@ -209,8 +225,8 @@
   position: relative;
   z-index: 1;
   min-width: 0;
-  margin-top: -1px;
-  padding: 18px clamp(12px, 2.8vw, 18px) 17px;
+  margin-top: 0;
+  padding: 14px clamp(12px, 2.8vw, 18px) 13px;
   border: 1.5px solid var(--folder-edge);
   border-radius: 18px;
   background: var(--folder-paper);
@@ -224,23 +240,23 @@
   border-top-right-radius: 0;
 }
 .home-mode-folder .home-folder-body .home-setting-group + .home-setting-group {
-  margin-top: 14px;
+  margin-top: 11px;
 }
 .home-mode-folder .home-folder-body .selection-label,
 .home-mode-folder .home-folder-body .level-heading a {
   color: var(--folder-ink);
 }
 .home-mode-folder .home-folder-body .selection-label {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 .home-mode-folder .home-folder-body .training-levels {
   margin: 0;
 }
 .home-mode-folder .home-folder-body .kana-levels {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .home-mode-folder .home-folder-body .level-hint {
-  margin: 10px 0 0;
+  margin: 7px 0 0;
   color: var(--folder-ink);
   opacity: .8;
 }
@@ -257,7 +273,7 @@
   box-shadow: none;
 }
 .home-mode-folder .home-folder-body .home-launch-group {
-  margin-top: 21px;
+  margin-top: 14px;
   gap: 0;
 }
 .home-mode-folder .home-folder-body .primary {
@@ -298,12 +314,24 @@
 
 /* The external dashboard/notebook actions are not part of the colored sheet. */
 .home-actions > .home-secondary-actions {
-  margin-top: 19px;
+  margin-top: 14px;
   flex-shrink: 0;
 }
 @media (min-height: 921px) {
   .home-shell .home-actions > .home-secondary-actions {
-    margin-top: 22px;
+    margin-top: 16px;
+  }
+}
+@media (max-width: 599px) {
+  /* Keep the footer and last-updated line reachable without pushing them
+     out of a typical phone viewport; retain at least 44px content targets. */
+  .home-mode-folder .home-folder-body .training-levels button {
+    min-height: 44px;
+  }
+  .home-mode-folder .home-folder-body .primary {
+    min-height: 54px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
 }
 @media (max-width: 599px) {
