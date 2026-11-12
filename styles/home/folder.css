@@ -109,8 +109,9 @@
   outline-offset: 3px;
 }
 
-/* One four-column tab strip. The selected tab is an extension of the sheet,
-   not a floating pill or a frame behind the buttons. */
+/* Four equal-sized mode tabs sit just above the folder's top border.
+   Only the selected tab meets the sheet. Inactive tabs are lifted slightly
+   so their shadows don't collide with the paper's top rule. */
 .home-mode-folder .home-folder-tabs {
   position: relative;
   z-index: 2;
@@ -120,6 +121,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
+  position: relative;
 }
 .home-mode-folder .training-modes > button {
   display: flex;
@@ -135,40 +137,45 @@
   border-radius: 14px;
   background: var(--card);
   color: var(--muted);
-  box-shadow: 0 3px 0 var(--shade);
+  box-shadow: 0 2px 0 var(--shade);
   font-size: clamp(11px, 2.8vw, 14px);
   font-weight: 800;
   white-space: nowrap;
   position: relative;
+  transform: translateY(-5px);
 }
 .home-mode-folder .training-modes > button[aria-pressed="true"] {
   z-index: 3;
-  transform: translateY(2px);
+  transform: translateY(1px);
   background: var(--folder-paper);
   color: var(--folder-ink);
   border: 1.5px solid var(--folder-edge);
   border-bottom-color: var(--folder-paper);
   border-radius: 14px 14px 0 0;
-  box-shadow: none;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
 }
-.home-mode-folder .training-modes > button[aria-pressed="true"]::before {
-  content: "";
-  position: absolute;
-  top: 5px;
-  left: 23%;
-  right: 23%;
-  height: 3px;
-  border-radius: 99px;
-  background: var(--folder-accent);
-  opacity: .6;
-}
+/* Hide only the panel's top border *under* the active tab. Keeping the
+   bridge inside the tab's border avoids white nicks at its lower corners. */
 .home-mode-folder .training-modes > button[aria-pressed="true"]::after {
   content: "";
   position: absolute;
+  bottom: -7px;
+  left: 1.5px;
+  right: 1.5px;
+  height: 8px;
+  background: var(--folder-paper);
+  pointer-events: none;
+}
+/* When Explore and Review are both on, their bottom edges should merge into
+   the same sheet instead of exposing an 8px strip of paper's top border. */
+.home-mode-folder .training-modes.is-dual-manual::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: calc(50% - 4px);
   bottom: -5px;
-  left: 0;
-  right: 0;
-  height: 6px;
+  width: 8px;
+  height: 7px;
   background: var(--folder-paper);
   pointer-events: none;
 }
