@@ -86,3 +86,27 @@ test("gracefully handles zero, malformed and ultra-narrow geometry", () => {
     assert.doesNotMatch(path, /NaN|undefined|Infinity/);
   }
 });
+
+test("the same mode remains seamless after vertical resizing", () => {
+  for (const mode of scenarios) {
+    const geometry = measuredFolder(390, mode);
+    const short = makeFolderOutline({ ...geometry, height: 340, bodyTop: 75 });
+    const tall = makeFolderOutline({ ...geometry, height: 760, bodyTop: 110 });
+    assert.notEqual(short, tall);
+    assert.equal((short.match(/M /g) ?? []).length, 1);
+    assert.equal((tall.match(/M /g) ?? []).length, 1);
+    assert.ok(short.endsWith(" Z") && tall.endsWith(" Z"));
+  }
+});
+
+test("changing between manual single and dual selections changes one perimeter", () => {
+  const exploration = makeFolderOutline(measuredFolder(390, "exploration"));
+  const review = makeFolderOutline(measuredFolder(390, "review"));
+  const joined = makeFolderOutline(measuredFolder(390, "exploration+review"));
+  assert.notEqual(exploration, review);
+  assert.notEqual(exploration, joined);
+  assert.notEqual(review, joined);
+  for (const path of [exploration, review, joined]) {
+    assert.equal((path.match(/M /g) ?? []).length, 1);
+  }
+});
