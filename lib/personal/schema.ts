@@ -50,6 +50,11 @@ export const personalWordInput = z
       .pipe(z.string().regex(/^[가-힣 ・·]*$/u))
       .nullable()
       .transform((v) => v || null),
+    pronunciation_ko: normalized(200)
+      .pipe(z.string().regex(/^[가-힣 ]*$/u))
+      .nullable()
+      .optional()
+      .transform((value) => (value === undefined ? undefined : value || null)),
     difficulty: z.number().int().min(0).max(10),
     note: prose(4000, true)
       .nullable()
