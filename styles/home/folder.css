@@ -123,46 +123,51 @@
 }
 .home-mode-folder .home-folder-tabs .training-modes {
   --mode-gap: 8px;
-  --mode-col: calc((100% - 3 * var(--mode-gap)) / 4);
-  --tab-left: 0px;
-  --tab-width: var(--mode-col);
   position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--mode-gap);
   margin: 0;
 }
-.home-mode-folder .training-modes.tab-exploration,
-.home-mode-folder .training-modes.tab-manual-both {
-  --tab-left: calc(var(--mode-col) + var(--mode-gap));
-}
-.home-mode-folder .training-modes.tab-review {
-  --tab-left: calc(2 * (var(--mode-col) + var(--mode-gap)));
-}
-.home-mode-folder .training-modes.tab-exam {
-  --tab-left: calc(3 * (var(--mode-col) + var(--mode-gap)));
-}
-.home-mode-folder .training-modes.tab-manual-both {
-  --tab-width: calc(2 * var(--mode-col) + var(--mode-gap));
-}
+/* The raised outline is one native CSS grid item, not four separate tab
+   borders or fragile percentage offsets. Spanning 2/4 joins both manual
+   selections and the gap between them into a continuous folder tab. */
 .home-mode-folder .training-modes:not(.tab-none)::before {
   content: "";
-  position: absolute;
+  display: block;
+  grid-row: 1;
+  grid-column: 1;
+  position: relative;
   z-index: 1;
-  top: 0;
-  bottom: -3px;
-  left: var(--tab-left);
-  width: var(--tab-width);
+  align-self: stretch;
   box-sizing: border-box;
+  margin-bottom: -3px;
   border: 1.5px solid var(--folder-edge);
   border-bottom: 0;
   border-radius: 13px 13px 0 0;
   background: linear-gradient(180deg, var(--folder-tab), var(--folder-paper) 94%);
   pointer-events: none;
 }
+.home-mode-folder .training-modes.tab-exploration::before {
+  grid-column: 2;
+}
+.home-mode-folder .training-modes.tab-review::before {
+  grid-column: 3;
+}
+.home-mode-folder .training-modes.tab-manual-both::before {
+  grid-column: 2 / 4;
+}
+.home-mode-folder .training-modes.tab-exam::before {
+  grid-column: 4;
+}
+.home-mode-folder .training-mode-auto { grid-column: 1; }
+.home-mode-folder .training-mode-exploration { grid-column: 2; }
+.home-mode-folder .training-mode-review { grid-column: 3; }
+.home-mode-folder .training-mode-exam { grid-column: 4; }
 .home-mode-folder .training-modes > button {
   position: relative;
   z-index: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: center;
