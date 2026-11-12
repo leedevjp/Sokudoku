@@ -4,10 +4,10 @@
 @import "../styles/preview.css";
 @import "../styles/game.css";
 @import "../styles/responsive.css";
-@import "../styles/home.css";
+@import "../styles/home/base.css";
 @import "../styles/dialog.css";
-@import "../styles/home-responsive.css";
-@import "../styles/home-controls.css";
+@import "../styles/home/responsive.css";
+@import "../styles/home/controls.css";
 @import "../styles/notebook.css";
 /* Home layout modules preserve the original home-compact.css cascade order. */
 @import "../styles/home/preview-layout.css";
