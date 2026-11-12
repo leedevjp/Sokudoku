@@ -122,24 +122,14 @@ export default function NotebookScreen() {
         <SettingsBar />
       </header>
       <section className={styles.content} aria-labelledby="notebook-title">
-        <Link href="/" className="notebook-back">
-          ← {t("ホーム", "메인으로")}
-        </Link>
         <div className={styles.heading}>
+          <Link href="/" className={styles.back} aria-label={t("ホームへ戻る", "메인으로 돌아가기")}>←</Link>
           <h1 id="notebook-title">{t("まちがいノート", "오답노트")}</h1>
-          {words && (
-            <span>
-              {words.length}
-              {t("語", "개")}
-            </span>
-          )}
+          {!!words?.length && !error && <button className={styles.modeButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); setMessage(""); }}>
+            {selecting ? t("キャンセル", "취소") : t("選択", "선택")}
+          </button>}
         </div>
-        <p className={styles.description}>
-          {t(
-            "もう一度覚えたい単語を、ここから。",
-            "다시 익힐 단어를 한곳에 모았어요.",
-          )}
-        </p>
+        {!selecting && <p className={styles.description}>{words ? t(`最近のまちがい ${words.length}語 · タップで詳細`, `최근 오답 ${words.length}개 · 누르면 상세 보기`) : t("最近のまちがい", "최근 오답")}</p>}
         {error ? (
           <div className="notebook-state" role="status">
             <p>
@@ -190,17 +180,12 @@ export default function NotebookScreen() {
           </div>
         ) : (
           <>
-            <div className={styles.toolbar}>
-              <span className={styles.caption}>{selecting ? t(`${checked.length}語を選択`, `${checked.length}개 선택됨`) : t("最近のまちがい · 最大100語", "최근 오답 · 최대 100개")}</span>
-              <button className={styles.textButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); setMessage(""); }}>
-                {selecting ? t("キャンセル", "취소") : t("選択", "선택")}
-              </button>
-            </div>
-            {selecting && <div className={styles.selectionTools}>
-              <button className={styles.textButton} disabled={busy || !eligible.length} onClick={() => setChecked(checked.length === eligible.length ? [] : eligible.map(w => w.id))}>
+            {selecting && <div className={styles.selectionTools} role="group" aria-label={t("単語の選択", "단어 선택 도구")}>
+              <span className={styles.selectionCount} aria-live="polite">{t(`${checked.length}語`, `${checked.length}개`)}<small>{t("選択", "선택")}</small></span>
+              <button className={styles.textButton} disabled={busy || !eligible.length} title={t(`全ページの${eligible.length}語を選択`, `전체 페이지에서 추가 가능한 ${eligible.length}개 선택`)} onClick={() => setChecked(checked.length === eligible.length ? [] : eligible.map(w => w.id))}>
                 {checked.length === eligible.length ? t("すべて解除", "전체 해제") : t("すべて選択", "전체 선택")}
               </button>
-              <span>{t(`全ページの追加可能な${eligible.length}語`, `전체 페이지 · 추가 가능한 ${eligible.length}개`)}</span>
+              <button className={styles.addButton} disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
             </div>}
             {message && !selected && <div className={styles.feedback} role="status"><span>{message}</span><button onClick={() => setMessage("")} aria-label={t("通知を閉じる", "알림 닫기")}>×</button></div>}
             <ul className={styles.list}>
@@ -221,10 +206,6 @@ export default function NotebookScreen() {
                 </li>;
               })}
             </ul>
-            {selecting && <div className={styles.bottomBar}>
-              <span aria-live="polite">{t(`${checked.length}語を選択`, `${checked.length}개 선택`)}</span>
-              <button className={styles.addButton} disabled={busy || !checked.length} onClick={() => void addPersonal(checked)}>{busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>
-            </div>}
             <nav
               className={styles.pagination}
               aria-label={t("ノートのページ", "오답노트 페이지")}

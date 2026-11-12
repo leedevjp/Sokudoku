@@ -1,8 +1,5 @@
-.toolbar,.selectionTools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px;min-height:44px}
-.caption,.selectionTools>span{color:var(--muted);font-size:12px}
 .textButton{display:inline-flex;align-items:center;justify-content:center;flex:none;min-height:44px;margin:0;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--accent);font:inherit;font-size:13px;font-weight:700;box-shadow:none}
 .textButton:hover{background:var(--input)}
-.selectionTools{margin-bottom:12px;justify-content:flex-start;border-top:1px solid var(--line)}
 .selectableRow{display:flex;align-items:center;gap:10px;margin:0;padding:14px;min-height:64px;font:inherit;color:var(--text);cursor:pointer}
 .checkbox{appearance:auto;display:block;flex:0 0 20px;width:20px;height:20px;min-height:20px;max-height:20px;min-width:20px;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;accent-color:var(--accent);background:transparent}
 .rowContent{display:grid;flex:1;min-width:0;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:10px;align-items:center;text-align:left;font-size:13px;line-height:1.7;font-weight:400}
@@ -10,7 +7,6 @@
 .checked{background:var(--input)}
 .unavailable{opacity:.55;cursor:default}
 .selectingColumns{padding-left:44px}
-.bottomBar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:0 4px 16px #0002;font-size:13px;font-weight:700}
 .addButton{display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:44px;margin:0;padding:10px 24px;border:0;border-radius:11px;background:var(--accent);color:#fff;font:inherit;font-size:14px;font-weight:700;box-shadow:none}
 .addButton:disabled,.textButton:disabled{cursor:default;opacity:.45}
 .feedback{margin:8px 0 12px;color:var(--accent);font-size:13px;line-height:1.6}
@@ -24,12 +20,6 @@
 /* Notebook surface: isolate layout from global form and home styles. */
 .shell.shell { max-width: 720px; padding: 0 20px 28px; }
 .content { min-width: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.heading { display: flex; align-items: center; gap: 12px; margin: 12px 0 6px; }
-.heading h1 { margin: 0; font-size: 28px; letter-spacing: -.04em; line-height: 1.3; }
-.heading > span { color: var(--accent); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; }
-.description { margin: 0 0 22px; font-size: 13px; line-height: 1.6; color: var(--muted); }
-.toolbar { margin: 0 0 10px; min-height: 40px; }
-.toolbar .textButton { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); background: var(--card); border-radius: 12px; }
 .list { min-width: 0; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 20px; background: var(--card); overflow: hidden; box-shadow: 0 4px 20px #14264a05; }
 .list li { min-width: 0; margin: 0; padding: 0; }
 .list li + li { border-top: 1px solid var(--line); }
@@ -51,7 +41,6 @@
 .pagination > span { min-width: 52px; text-align: center; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .feedback { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); padding: 8px 12px; }
 .feedback button { flex: none; width: 36px; min-height: 36px; margin: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 20px; }
-.bottomBar { bottom: max(12px, env(safe-area-inset-bottom)); }
 @media (max-width: 380px) { .shell.shell { padding: 0 14px 24px; } .wordRow,.selectableRow { padding: 14px 12px; gap: 8px; } .rowContent { gap: 12px; } .term { font-size: 16px; } }
 
 .detail { min-width: 0; }
@@ -63,3 +52,20 @@
 .detail :global(.footnote) { margin: 18px 0 0; text-align: left; font-size: 10px; line-height: 1.7; }
 .detail .addButton,.detail > .removeButton { width: 100%; }
 .detailFeedback { color: var(--accent); font-size: 12px; line-height: 1.7; margin: 12px 0 0; }
+
+/* One compact header and one contextual action row. */
+.shell :global(.site-header) { height: 64px; min-height: 64px; }
+.heading { display: flex; align-items: center; gap: 8px; min-height: 48px; margin: 6px 0 0; }
+.heading h1 { flex: 1; min-width: 0; margin: 0; font-size: clamp(20px, 5.6vw, 24px); letter-spacing: -.04em; line-height: 1.35; }
+.back { display: inline-flex; align-items: center; justify-content: center; width: 32px; min-height: 44px; flex: none; border-radius: 10px; color: var(--muted); font-size: 20px; }
+.back:hover { background: var(--input); }
+.modeButton { flex: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); color: var(--accent); font: inherit; font-size: 12px; font-weight: 700; box-shadow: none; }
+.modeButton:disabled { cursor: default; }
+.description { margin: 2px 0 16px 40px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.selectionTools { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 6px; box-sizing: border-box; width: 100%; min-width: 0; margin: 8px 0 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.selectionCount { display: flex; align-items: baseline; gap: 4px; min-width: 0; flex-wrap: wrap; color: var(--text); font-size: 14px; font-weight: 700; }
+.selectionCount small { color: var(--muted); font-size: 10px; font-weight: 400; }
+.selectionTools .textButton { padding: 0 8px; font-size: 12px; }
+.selectionTools .addButton { padding: 10px 14px; font-size: 12px; white-space: nowrap; }
+.list { scroll-margin-top: 72px; }
+.list li { scroll-margin-top: 72px; }
