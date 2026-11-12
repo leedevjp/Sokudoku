@@ -1,0 +1,9 @@
+.trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; min-height: 40px; margin: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text); font: inherit; font-size: 12px; box-shadow: none; }
+.trigger > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel { padding: 6px; }
+.panel h2 { margin: 0 0 16px; font-size: 20px; }
+.options { display: grid; gap: 4px; }
+.option { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 10px 14px; margin: 0; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--text); text-align: left; font: inherit; font-size: 15px; box-shadow: none; }
+.option small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.option[aria-pressed="true"] { background: var(--press); border-color: var(--line); color: var(--accent); font-weight: 700; }
+.option:hover { background: var(--tint); }

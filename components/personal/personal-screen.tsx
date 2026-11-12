@@ -1,4 +1,6 @@
 "use client";
+import { StageFilter } from "@/components/ui/stage-filter";
+import type { PersonalStage, PersonalSort } from "@/lib/personal/filters";
 import Link from "next/link";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useState } from "react";
@@ -56,6 +58,12 @@ export default function PersonalScreen() {
         onQueryChange={words.setQuery}
         onRefresh={() => words.refresh()}
       />
+      <div className={styles.filters}>
+        <StageFilter personal value={words.stage} onChange={stage => words.setStage(stage as PersonalStage)} t={t} />
+        <select aria-label={t("並び順", "정렬 순서")} value={words.sort} onChange={e => words.setSort(e.target.value as PersonalSort)}>
+          <option value="recent">{t("追加が新しい順", "최근 추가순")}</option><option value="oldest">{t("追加が古い順", "오래된순")}</option><option value="reading">{t("五十音順", "읽기순")}</option><option value="easy">{t("易しい順", "쉬운순")}</option><option value="hard">{t("難しい順", "어려운순")}</option>
+        </select>
+      </div>
       {notice && (
         <p className={styles.notice} role="status">
           {notice === "created"
@@ -80,7 +88,7 @@ export default function PersonalScreen() {
         error={error}
         onSelect={(mode, word) => setDialog({ mode, word })}
         onCreate={() => setDialog({ mode: "create" })}
-        onClear={() => words.setQuery("")}
+        onClear={() => { words.setQuery(""); words.setStage("all"); }}
         onRetry={() => words.refresh()}
         onPage={words.setPage}
       />
