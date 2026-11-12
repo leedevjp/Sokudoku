@@ -1,3 +1,4 @@
+import { personalStages, personalSorts } from "./filters";
 import { z } from "zod";
 export const PAGE_SIZE = 20;
 // Content is always plain text. These rules are for vocabulary quality and
@@ -68,6 +69,8 @@ export const personalWordUpdate = personalWordInput.extend({
   updated_at: z.iso.datetime({ offset: true }),
 });
 export const listInput = z.object({
+  stage: z.enum(personalStages).default("all"),
+  sort: z.enum(personalSorts).default("recent"),
   q: normalized(100).default(""),
   page: z.coerce.number().int().min(1).max(100000).default(1),
 });

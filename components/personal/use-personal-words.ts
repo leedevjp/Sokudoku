@@ -1,9 +1,10 @@
+import type { PersonalStage, PersonalSort } from "@/lib/personal/filters";
 import { useEffect, useState } from "react";
 import type { PersonalWordList } from "@/lib/personal/types";
 
 export function usePersonalWords() {
   const [query, setQuery] = useState("");
-  const [request, setRequest] = useState({ q: "", page: 1, revision: 0 });
+  const [request, setRequest] = useState({ q: "", page: 1, revision: 0, stage: "all" as PersonalStage, sort: "recent" as PersonalSort });
   const [result, setResult] = useState<{
     key: string;
     data: PersonalWordList | null;
@@ -30,7 +31,7 @@ export function usePersonalWords() {
           "/api/personal?q=" +
             encodeURIComponent(request.q) +
             "&page=" +
-            request.page,
+            request.page + "&stage=" + request.stage + "&sort=" + request.sort,
           { cache: "no-store", signal: controller.signal },
         );
         if (!response.ok) {
@@ -56,12 +57,13 @@ export function usePersonalWords() {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [key, request.q, request.page]);
+  }, [key, request.q, request.page, request.stage, request.sort]);
   function refresh(reset = false) {
     if (reset) setQuery("");
     setRequest((old) => ({
       ...old,
       q: reset ? "" : old.q,
+      stage: reset ? "all" : old.stage,
       page: reset ? 1 : old.page,
       revision: old.revision + 1,
     }));
@@ -69,6 +71,10 @@ export function usePersonalWords() {
   return {
     query,
     setQuery,
+    stage: request.stage,
+    sort: request.sort,
+    setStage: (stage: PersonalStage) => setRequest(old => ({ ...old, stage, page: 1 })),
+    setSort: (sort: PersonalSort) => setRequest(old => ({ ...old, sort, page: 1 })),
     data: result.data,
     error: result.key === key ? result.error : null,
     loading: result.key !== key,
