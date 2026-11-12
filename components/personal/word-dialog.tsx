@@ -122,6 +122,12 @@ export function WordDialog({
                 <dt>{t("難易度", "난이도")}</dt>
                 <dd>{word.difficulty}</dd>
               </div>
+              {word.pronunciation_ko && (
+                <div>
+                  <dt>{t("韓国語の発音表記", "한글 발음")}</dt>
+                  <dd lang="ko">{word.pronunciation_ko}</dd>
+                </div>
+              )}
               {word.hanja_reading && (
                 <div>
                   <dt>{t("韓国漢字音", "한국 한자음")}</dt>

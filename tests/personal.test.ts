@@ -16,6 +16,7 @@ const input = {
   kana: "ジッソウ",
   meaning_ko: "구현",
   hanja_reading: "실장",
+  pronunciation_ko: "짓소우",
   difficulty: 6,
   note: "",
 };
@@ -24,9 +25,32 @@ test("personal content is normalized without merging meaning and hanja reading",
   assert.equal(word.term, "実装");
   assert.equal(word.kana, "じっそう");
   assert.equal(word.hanja_reading, "실장");
+  assert.equal(word.pronunciation_ko, "짓소우");
   assert.equal(word.meaning_ko, "구현");
   assert.equal(word.note, null);
   assert.equal(word.has_kanji, true);
+});
+test("Korean phonetic pronunciation is optional and distinct from hanja reading", () => {
+  const parsed = personalWordInput.parse({
+    ...input,
+    pronunciation_ko: "  짓소우  ",
+  });
+  assert.equal(parsed.pronunciation_ko, "짓소우");
+  assert.equal(parsed.hanja_reading, "실장");
+  assert.equal(
+    personalWordInput.parse({ ...input, pronunciation_ko: "" }).pronunciation_ko,
+    null,
+  );
+  const { pronunciation_ko: unused, ...legacyInput } = input;
+  void unused;
+  assert.equal(personalWordInput.parse(legacyInput).pronunciation_ko, undefined);
+  for (const value of ["ジッソウ", "実装", "jitssou", "<script>", "짓소우\n"]) {
+    assert.equal(
+      personalWordInput.safeParse({ ...input, pronunciation_ko: value }).success,
+      false,
+      value,
+    );
+  }
 });
 test("personal input cannot assign ownership, lifecycle or arbitrary fields", () => {
   for (const field of [
@@ -84,7 +108,7 @@ test("markup, invisible controls, malformed Unicode and excessive content are re
       term,
     );
   }
-  for (const field of ["meaning_ko", "note", "hanja_reading"] as const) {
+  for (const field of ["meaning_ko", "note", "hanja_reading", "pronunciation_ko"] as const) {
     assert.equal(
       personalWordInput.safeParse({
         ...input,
@@ -109,6 +133,7 @@ test("markup, invisible controls, malformed Unicode and excessive content are re
     ["meaning_ko", 1000],
     ["note", 4000],
     ["hanja_reading", 100],
+    ["pronunciation_ko", 200],
   ] as const) {
     assert.equal(
       personalWordInput.safeParse({ ...input, [field]: "あ".repeat(max + 1) })

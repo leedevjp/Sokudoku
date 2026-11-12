@@ -4,6 +4,7 @@ import styles from "./personal-styles";
 export type WordEditorFieldName =
   | "term"
   | "kana"
+  | "pronunciation_ko"
   | "meaning_ko"
   | "hanja_reading";
 type Props = {
@@ -50,6 +51,11 @@ export function WordEditorField({
                 "かなで入力してください。数字・記号・改行は使えません。",
                 "히라가나·가타카나로 입력해주세요. 숫자·특수문자·줄바꿈은 쓸 수 없어요.",
               )
+            : name === "pronunciation_ko"
+              ? t(
+                  "韓国語の発音だけを200文字以内で入力してください。",
+                  "일본어 발음을 한글로 200자 이내로 입력해주세요.",
+                )
             : name === "hanja_reading"
               ? t(
                   "韓国語の漢字音だけを入力してください。",
