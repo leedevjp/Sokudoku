@@ -4,13 +4,19 @@
 @import "../styles/preview.css";
 @import "../styles/game.css";
 @import "../styles/responsive.css";
-@import "../styles/home.css";
+@import "../styles/home/base.css";
 @import "../styles/dialog.css";
-@import "../styles/home-responsive.css";
-@import "../styles/home-controls.css";
+@import "../styles/home/responsive.css";
+@import "../styles/home/controls.css";
 @import "../styles/notebook.css";
-@import "../styles/home-compact.css";
+/* Home layout modules preserve the original home-compact.css cascade order. */
+@import "../styles/home/preview-layout.css";
+@import "../styles/home/header-actions.css";
+@import "../styles/home/viewport-layout.css";
+@import "../styles/home/deployment-layout.css";
 /* Home folder is the final home override; motion is independent from its skin. */
 @import "../styles/home/folder.css";
+@import "../styles/home/folder-controls.css";
+@import "../styles/home/folder-adaptive.css";
 @import "../styles/home/sheen.css";
 @import "../styles/game-loading.css";
