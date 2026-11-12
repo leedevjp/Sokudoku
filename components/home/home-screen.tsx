@@ -135,8 +135,25 @@ export default function HomeScreen() {
       const selected = home.querySelectorAll<HTMLElement>(
         '.training-levels button[aria-pressed="true"], .home-launch-group .primary:not(:disabled):not([aria-disabled="true"])',
       );
-      const paths = Array.from(selected, (button) => {
-        const rect = button.getBoundingClientRect();
+      const selectedButtons = Array.from(selected);
+      const joinedTabs = selectedButtons.filter((button) =>
+        button.closest(".training-modes.tab-manual-both"),
+      );
+      const rectangles = selectedButtons.flatMap((button) => {
+        if (joinedTabs.length === 2 && button === joinedTabs[1]) return [];
+        if (joinedTabs.length === 2 && button === joinedTabs[0]) {
+          const first = joinedTabs[0].getBoundingClientRect();
+          const second = joinedTabs[1].getBoundingClientRect();
+          return [{
+            left: first.left,
+            top: Math.min(first.top, second.top),
+            width: second.right - first.left,
+            height: Math.max(first.bottom, second.bottom) - Math.min(first.top, second.top),
+          }];
+        }
+        return [button.getBoundingClientRect()];
+      });
+      const paths = rectangles.map((rect) => {
         const x = round(rect.left - area.left);
         const y = round(rect.top - area.top);
         const w = round(rect.width);
