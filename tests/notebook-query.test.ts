@@ -10,14 +10,25 @@ test("search matches kana variants, halfwidth, Korean meaning and hanja with AND
   assert.equal(queryNotebook(words, { ...defaults, search: "실장" }).length, 1);
   assert.equal(queryNotebook(words, { ...defaults, search: "実装 시험" }).length, 0);
 });
-test("P membership and exact difficulty combine without confusing source and membership", () => {
+test("P membership and stages combine without confusing source and membership", () => {
   assert.deepEqual(queryNotebook(words, { ...defaults, membership: "registered" }).map(w => w.id), ["b", "c"]);
-  assert.deepEqual(queryNotebook(words, { ...defaults, membership: "unregistered", difficulty: "6" }).map(w => w.id), ["a"]);
-  assert.deepEqual(queryNotebook(words, { ...defaults, difficulty: "-1" }).map(w => w.id), ["c"]);
-  assert.equal(queryNotebook(words, { ...defaults, membership: "registered", difficulty: "6" }).length, 0);
+  assert.deepEqual(queryNotebook(words, { ...defaults, membership: "unregistered", stage: "4" }).map(w => w.id), ["a"]);
+  assert.deepEqual(queryNotebook(words, { ...defaults, stage: "P" }).map(w => w.id), ["c"]);
+  assert.equal(queryNotebook(words, { ...defaults, membership: "registered", stage: "4" }).length, 0);
 });
 test("all sort orders are deterministic and never reorder source data", () => {
   const expected = { recent: ["b", "c", "a"], oldest: ["a", "c", "b"], reading: ["c", "a", "b"], easy: ["c", "b", "a"], hard: ["a", "b", "c"] } as const;
   for (const sort of Object.keys(expected) as (keyof typeof expected)[]) assert.deepEqual(queryNotebook(words, { ...defaults, sort }).map(w => w.id), expected[sort]);
   assert.deepEqual(words.map(w => w.id), ["a", "b", "c"]);
+});
+
+test("stages share homepage ranges and keep kana, personal and membership distinct", () => {
+  const entries = Array.from({ length: 11 }, (_, difficulty) => word(String(difficulty), { difficulty, in_personal: true }));
+  entries.push(word("h", { difficulty: -1, entry_type: "hiragana" }), word("k", { difficulty: -1, entry_type: "katakana" }), word("p", { source: "personal", difficulty: 0 }), word("p10", { source: "personal", difficulty: 10 }));
+  for (const stage of ["1", "2", "3", "4", "5"] as const) {
+    assert.deepEqual(queryNotebook(entries, { ...defaults, stage }).map(w => w.difficulty).sort((a,b) => a-b), [(Number(stage)-1)*2, (Number(stage)-1)*2+1]);
+  }
+  for (const [stage, ids] of [["H", ["h"]], ["K", ["k"]], ["P", ["p", "p10"]]] as const) {
+    assert.deepEqual(queryNotebook(entries, { ...defaults, stage }).map(w => w.id).sort(), [...ids]);
+  }
 });
