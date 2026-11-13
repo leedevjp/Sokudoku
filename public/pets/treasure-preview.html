@@ -6,21 +6,22 @@
 <main><a href="/">← 메인</a><h1>보물상자 · 도트 스프라이트</h1><p>상자 3등급과 캐릭터 동작을 분리한 연출 미리보기. 학습 보상 지급 기능은 포함하지 않습니다.</p>
 <div class="controls" aria-label="상자 등급"><button data-tier="0" aria-pressed="true">커먼</button><button data-tier="1" aria-pressed="false">레어</button><button data-tier="2" aria-pressed="false">유니크</button><button id="open" disabled>상자 열기</button></div>
 <section class="stage"><canvas id="scene" width="256" height="128" role="img" aria-label="마법사와 보물상자 열기 미리보기"></canvas><p id="status" role="status">스프라이트 불러오는 중…</p></section>
+<h2>원본과 크기·비율 비교</h2><p>같은 128px 셀 · 같은 발 기준선 · 왼쪽 원본 / 오른쪽 새 동작</p><canvas id="comparison" width="320" height="144" style="width:100%;height:auto;image-rendering:pixelated" role="img" aria-label="같은 크기로 비교하는 기존 마법사와 수정한 열기 동작"></canvas>
 <h2>상자만 · 8프레임</h2><div class="strip" id="chest-strip"></div>
 <h2>캐릭터만 · 8프레임</h2><div class="strip" id="mage-strip"></div>
-<footer>64px 논리 셀에서 최근접 샘플링해 표시합니다. 원본은 생성 시트이며 JSON의 실제 프레임 좌표로 잘라 씁니다. 밝은/어두운 배경은 기기 테마를 따릅니다.</footer></main>
+<footer>캐릭터는 기존 마법사의 128px 셀과 발 위치를 기준으로 표시합니다. 머리/몸을 따로 늘리지 않고 중립 자세의 키로 한 번만 배율을 보정합니다. 밝은/어두운 배경은 기기 테마를 따릅니다.</footer></main>
 <script>
 const scene=document.getElementById('scene'),ctx=scene.getContext('2d');ctx.imageSmoothingEnabled=false;
 const status=document.getElementById('status'),openButton=document.getElementById('open');let tier=0,step=0,timer;
 const load=async name=>{const response=await fetch('/treasure/'+name+'.json');if(!response.ok)throw Error('manifest');const atlas=await response.json();const image=new Image();image.src='/treasure/'+atlas.image;await image.decode();return{...atlas,image}};
-const frame=(dest,atlas,index,x,y,size=64)=>{const f=atlas.frames[index];dest.imageSmoothingEnabled=false;dest.drawImage(atlas.image,f.x,f.y,f.w,f.h,x,y,size,size)};
+const frame=(dest,atlas,index,x,y,size=64)=>{const f=atlas.frames[index];dest.imageSmoothingEnabled=false;if(f.draw){const k=size/atlas.renderCell;dest.drawImage(atlas.image,f.x,f.y,f.w,f.h,x+f.draw.x*k,y+f.draw.y*k,f.draw.w*k,f.draw.h*k)}else dest.drawImage(atlas.image,f.x,f.y,f.w,f.h,x,y,size,size)};
 const phase=['발견','몸을 기울임','손을 뻗음','잠금 해제','뚜껑을 밀어 올림','열기 완료','놀람','기쁨'];
-let chest,mage;
-function paint(){ctx.clearRect(0,0,256,128);frame(ctx,mage,step,64,40);frame(ctx,chest,tier*8+[0,0,0,2,3,4,5,7][step],100,42);status.textContent=['커먼','레어','유니크'][tier]+' · '+phase[step]}
+let chest,mage,original;
+function paint(){ctx.clearRect(0,0,256,128);frame(ctx,chest,tier*8+[0,0,0,2,3,4,5,7][step],50,32,96);frame(ctx,mage,step,80,4,128);const comparison=document.getElementById('comparison').getContext('2d');comparison.clearRect(0,0,320,144);comparison.strokeStyle='#8194ad';comparison.beginPath();comparison.moveTo(0,129);comparison.lineTo(320,129);comparison.stroke();frame(comparison,original,0,16,16,128);frame(comparison,mage,step,176,16,128);status.textContent=['커먼','레어','유니크'][tier]+' · '+phase[step]}
 function strip(id,atlas,start){const root=document.getElementById(id);root.replaceChildren();for(let i=0;i<8;i++){const box=document.createElement('div');box.className='frame';const c=document.createElement('canvas');c.width=c.height=64;c.setAttribute('role','img');c.setAttribute('aria-label',id==='mage-strip'?phase[i]:'상자 프레임 '+i);frame(c.getContext('2d'),atlas,start+i,0,0);const label=document.createElement('small');label.textContent=String(i);box.append(c,label);root.append(box)}}
 function stop(){clearTimeout(timer);openButton.disabled=false}
 document.querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{if(!chest||!mage)return;stop();tier=Number(b.dataset.tier);step=0;document.querySelectorAll('[data-tier]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));paint();strip('chest-strip',chest,tier*8)});
 openButton.onclick=()=>{stop();openButton.disabled=true;step=0;const advance=()=>{paint();if(step<7){step++;timer=setTimeout(advance,step===3?260:180)}else openButton.disabled=false};if(matchMedia('(prefers-reduced-motion: reduce)').matches){step=7;paint();openButton.disabled=false}else advance()};
-Promise.all([load('chests-pixel-v1'),load('mage-opening-pixel-v1')]).then(([c,m])=>{chest=c;mage=m;paint();strip('chest-strip',chest,0);strip('mage-strip',mage,0);openButton.disabled=false}).catch(()=>{status.textContent='이미지를 불러오지 못했습니다. 새로고침해주세요.'});
+Promise.all([load('chests-pixel-v1'),load('mage-opening-v2'),new Promise((resolve,reject)=>{const image=new Image();image.src='/battle/mage-v5.png';image.onload=()=>resolve({image,frames:[{x:0,y:0,w:128,h:128}]});image.onerror=reject})]).then(([c,m,o])=>{chest=c;mage=m;original=o;paint();strip('chest-strip',chest,0);strip('mage-strip',mage,0);openButton.disabled=false}).catch(()=>{status.textContent='이미지를 불러오지 못했습니다. 새로고침해주세요.'});
 addEventListener('pagehide',()=>clearTimeout(timer));
 </script></html>
