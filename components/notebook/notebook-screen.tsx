@@ -73,7 +73,7 @@ export default function NotebookScreen() {
       const existing = saved.size - added;
       const failed = results.length - saved.size;
       setMessage([
-        added ? t(`${added}語をPに追加しました。`, `${added}개를 P에 추가했어요.`) : "",
+        added ? t(`${added}語をマイ単語帳に追加しました。`, `${added}개를 내 단어장에 추가했어요.`) : "",
         existing ? t(`登録済み ${existing}語`, `이미 등록된 ${existing}개`) : "",
         failed ? t(`未追加 ${failed}語。再試行できます。`, `미추가 ${failed}개. 다시 시도할 수 있어요.`) : "",
       ].filter(Boolean).join(" "));
@@ -134,7 +134,7 @@ export default function NotebookScreen() {
           <Link href="/" className={styles.back} aria-label={t("ホームへ戻る", "메인으로 돌아가기")}>←</Link>
           <h1 id="notebook-title">{t("まちがいノート", "오답노트")}</h1>
           {!!words?.length && !error && <button className={styles.modeButton} disabled={busy || (!selecting && !eligible.length)} onClick={() => { setSelecting(!selecting); setChecked([]); setMessage(""); }}>
-            {selecting ? t("キャンセル", "취소") : t("Pに追加", "P에 추가")}
+            {selecting ? t("キャンセル", "취소") : t("マイ単語帳に追加", "내 단어장에 추가")}
           </button>}
         </div>
         {words !== null && !error && <NotebookControls query={query} onChange={changeQuery} count={filtered.length} total={words.length} disabled={busy} t={t} />}
