@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import GameHost from "@/app/game/game-host";
 import type { Word } from "@/lib/game/types";
@@ -26,5 +27,5 @@ export default function Preview() {
     updated_at: "2026-01-01",
     deleted_at: null,
   }));
-  return <GameHost previewWords={words} />;
+  return <Suspense fallback={null}><GameHost previewWords={words} /></Suspense>;
 }

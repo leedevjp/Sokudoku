@@ -297,7 +297,7 @@ export class TrainingPlanner {
         ? (scheduled.get(cardKey(ticket.word.source, ticket.word.id, ticket.kind)) ?? 1)
         : 0), 0);
     const weekAgo = now - 7 * 86_400_000;
-    const recentlyStudied = available.filter(({ word, kind, state }) => {
+    const recentlyStudied = available.filter(({ word, state }) => {
       if (!state || Date.parse(state.last_review_at) < weekAgo) return false;
       const tier = entryType(word) === "hiragana" ? 0 :
         entryType(word) === "katakana" ? 1 : vocabularyTier(word.difficulty) + 1;

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type Phaser from "phaser";
 import { GameLoading } from "@/components/game/game-loading";
 import { useSettings } from "@/components/settings/settings-provider";
@@ -13,6 +13,7 @@ import { TrainingRuntime } from "@/lib/game/data/training-runtime";
 export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   const { prefs, change } = useSettings();
   const router = useRouter();
+  const search = useSearchParams().toString();
   const parent = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -26,7 +27,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     let cancelled = false;
     let game: Phaser.Game | undefined;
     let readyTimer: ReturnType<typeof setTimeout> | undefined;
-    const query = new URLSearchParams(window.location.search);
+    const query = new URLSearchParams(search);
     const kinds = parseKinds(query.get("kinds"));
     const timeLimited = query.get("timeLimit") !== "off";
     const runtime = new TrainingRuntime({
@@ -81,9 +82,9 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
         onRetry: () => runtime.retry(),
         onExit: () => router.push("/"),
         onExam: () => {
-          const params = new URLSearchParams(window.location.search);
+          const params = new URLSearchParams(search);
           params.set("modes", "exam");
-          window.location.assign(`/game?${params.toString()}`);
+          router.push(`/game?${params.toString()}`);
         },
       });
     }
@@ -97,7 +98,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       game?.destroy(true);
       runtime.dispose();
     };
-  }, [previewWords, router]);
+  }, [previewWords, router, search]);
   return (
     <main className="game-viewport">
       <div className="game-canvas" ref={parent} />

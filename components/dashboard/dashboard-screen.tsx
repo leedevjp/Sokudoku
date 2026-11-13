@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { companionModeStore } from "@/lib/dashboard/companion-mode-store";
+import { useSyncExternalStore, useMemo, useState, type ReactNode } from "react";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { EntryType, Kind } from "@/lib/game/types";
 import type { Translate } from "@/lib/dashboard/types";
@@ -51,15 +52,8 @@ export default function DashboardScreen() {
   const [entry, setEntry] = useState<EntryType>("word");
   const [kind, setKind] = useState<Kind>("meaning");
   const [expandedPanel, setExpandedPanel] = useState<DashboardPanel | null>("memory");
-  const [companionMode, setCompanionMode] = useState<"fixed" | "follow">("fixed");
-  useEffect(() => {
-    try { if (localStorage.getItem("sokudoku-companion-mode-v2") === "follow") setCompanionMode("follow"); } catch {}
-  }, []);
-  const toggleCompanion = () => setCompanionMode(old => {
-    const next = old === "fixed" ? "follow" : "fixed";
-    try { localStorage.setItem("sokudoku-companion-mode-v2", next); } catch {}
-    return next;
-  });
+  const companionMode = useSyncExternalStore(companionModeStore.subscribe, companionModeStore.getSnapshot, companionModeStore.getServerSnapshot);
+  const toggleCompanion = companionModeStore.toggle;
   const companionToggle = () => (
     <button type="button" className={companionCss.modeToggle} onClick={toggleCompanion}
       aria-label={companionMode === "fixed" ? t("キャラクターを追従させる", "캐릭터 이동 모드로 전환") : t("キャラクターを固定する", "캐릭터 고정 모드로 전환")}
