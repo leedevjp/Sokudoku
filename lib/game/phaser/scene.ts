@@ -224,7 +224,7 @@ export class TrainingScene extends Phaser.Scene {
     // The timer starts only after the new question has actually been rendered.
     this.game.events.once("postrender", () => {
       if (this.phase === "arming" && generation === this.viewGeneration) {
-        if (this.pauseRequested || document.hidden) {
+        if (this.pauseRequested || (this.timeLimited && document.hidden)) {
           this.pauseRequested = false;
           this.pause();
           return;
@@ -454,7 +454,11 @@ export class TrainingScene extends Phaser.Scene {
   }
   private hidden = () => {
     this.trainingInput.clear();
-    this.pause();
+    if (this.timeLimited) this.pause();
+    else {
+      this.battleAudio?.stop();
+      this.stopPronunciation();
+    }
   };
   private pause() {
     this.battleAudio?.stop();
@@ -627,7 +631,7 @@ export class TrainingScene extends Phaser.Scene {
     const generation = this.viewGeneration;
     this.game.events.once("postrender", () => {
       if (this.phase === "arming" && generation === this.viewGeneration) {
-        if (this.pauseRequested || document.hidden) {
+        if (this.pauseRequested || (this.timeLimited && document.hidden)) {
           this.pauseRequested = false;
           this.pause();
           return;
