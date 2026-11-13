@@ -1,0 +1,71 @@
+/* Desktop owns its natural document height. Never size the preview from
+   remaining viewport height: the settings and localized hints can grow. */
+@media (min-width: 600px) {
+  .home-shell {
+    width: 100%; max-width: 680px;
+    height: auto; min-height: 100svh; max-height: none;
+    overflow: visible; padding: 0 28px;
+    display: flex; flex-direction: column;
+  }
+  .home-shell .site-header { width: 100%; height: 82px; min-height: 82px; }
+  .home-shell .home-content {
+    display: flex; flex: 0 0 auto; min-height: auto;
+    padding: 24px 0 28px; justify-content: center;
+  }
+  .home-shell .home-visual {
+    --visual-size: 216px;
+    container-type: normal;
+    display: grid; grid-template-columns: minmax(0,1fr); gap: 28px;
+    width: 100%; max-width: 480px;
+    height: auto; min-height: 0; max-height: none;
+    aspect-ratio: auto; flex: none; margin: 0; padding: 16px;
+  }
+  .home-shell .home-visual .preview-target {
+    position: relative; left: auto; top: auto;
+    transform: none; margin: 0 auto;
+    width: var(--visual-size); height: var(--visual-size); aspect-ratio: auto;
+  }
+  .home-visual .preview-kind { top: 10px; left: 10px; font-size: 11px; padding: 4px 8px; }
+  .home-visual .preview-reading { bottom: 16px; font-size: 14px; }
+  .home-shell .home-answer-list {
+    position: static; inset: auto;
+    display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+    grid-template-rows: auto auto; gap: 12px;
+  }
+  .home-shell .home-answer-list .preview-answer {
+    position: static; transform: none; width: 100%; min-width: 0;
+    min-height: 72px; padding: 12px; gap: 10px;
+    border-radius: 15px;
+  }
+  .home-shell .home-answer-list .preview-answer > span {
+    width: 28px; height: 28px; flex-basis: 28px; font-size: 13px;
+  }
+  .home-shell .home-answer-list .preview-answer b { font-size: 14px; line-height: 1.4; }
+  .home-shell .home-actions {
+    display: flex; flex: 0 0 auto; min-width: 0;
+    flex-direction: column; justify-content: flex-start;
+    margin: 0; padding: 0; gap: 16px;
+  }
+  .home-shell .home-mode-folder .home-folder-body .training-levels button { min-height: 44px; font-size: 14px; }
+  .home-shell .home-actions .primary { min-height: 54px; font-size: 16px; }
+  .home-shell .home-actions .selection-label { font-size: 12px; }
+  .home-shell .home-actions .selection-label span { font-size: 11px; }
+  .home-shell .home-actions > .home-secondary-actions { margin-top: 0; }
+  .home-shell footer { display: flex; margin: 18px 0 0; padding: 10px 0; }
+  .home-shell .home-deploy-label { margin-top: 0; white-space: normal; }
+}
+
+@media (min-width: 1000px) {
+  .home-shell {
+    max-width: 1120px;
+    display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr);
+    grid-template-rows: auto 1fr auto auto;
+    column-gap: 40px; align-items: center;
+  }
+  .home-shell .site-header { grid-column: 1 / -1; }
+  .home-shell .home-content { grid-column: 1; grid-row: 2; padding: 32px 0; }
+  .home-shell .home-actions { grid-column: 2; grid-row: 2; padding: 32px 0; }
+  .home-shell footer { grid-column: 1 / -1; margin-top: 0; }
+  .home-shell .home-deploy-label { grid-column: 1 / -1; justify-self: center; }
+  .home-shell .home-visual { --visual-size: 240px; }
+}
