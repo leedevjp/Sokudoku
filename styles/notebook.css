@@ -1,10 +1,29 @@
 /* Home utilities share one row so the mobile launch surface stays compact. */
 .home-secondary-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 8px;
   align-items: center;
+}
+.home-secondary-actions .notebook-link {
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 4px;
+  gap: 5px;
+  font-size: clamp(10px, 2.8vw, 12px);
+  white-space: nowrap;
+  transition: background-color 150ms, border-color 150ms;
+}
+.home-secondary-actions .notebook-link:hover {
+  background: var(--press);
+  border-color: var(--accent);
+}
+@media (max-width: 370px) {
+  .home-secondary-actions .notebook-link {
+    flex-direction: column;
+    gap: 3px;
+  }
 }
 .home-secondary-actions .details-button {
   margin: 0;

@@ -352,7 +352,10 @@ export default function HomeScreen() {
             </div>
           </div>
         </section>
-        <div className="home-secondary-actions">
+        <nav
+          className="home-secondary-actions"
+          aria-label={t("学習メニュー", "학습 메뉴")}
+        >
           {/* Temporarily hidden while sentence quiz data is being edited.
           <Link className="notebook-link" href={`/sentence?levels=${levels.filter(level=>['1','2','3','4','5'].includes(level)).join(',')}`}>{t('文章を読む','문장 읽기')} ↗</Link>
           */}
@@ -366,8 +369,8 @@ export default function HomeScreen() {
               }
             }}
           >
-            <span aria-hidden="true">▥</span> {t("学習状況", "학습 현황")}{" "}
-            <span aria-hidden="true">↗</span>
+            <span aria-hidden="true">▥</span>
+            <span>{t("学習状況", "학습 현황")}</span>
           </Link>
           <Link
             className="notebook-link"
@@ -379,11 +382,14 @@ export default function HomeScreen() {
               }
             }}
           >
-            <span aria-hidden="true">▤</span>{" "}
-            {t("まちがいノート", "오답노트")}
-            <span aria-hidden="true">↗</span>
+            <span aria-hidden="true">▤</span>
+            <span>{t("まちがいノート", "오답노트")}</span>
           </Link>
-        </div>
+          <Link className="notebook-link" href="/personal">
+            <span aria-hidden="true">▣</span>
+            <span>{t("マイ単語帳", "내 단어장")}</span>
+          </Link>
+        </nav>
         {notice && modal === null && (
           <p className="home-notice" role="status">
             {notices[notice]}
