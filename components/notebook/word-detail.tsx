@@ -58,7 +58,7 @@ export function WordDetail({
                 <button className={styles.removeButton} disabled={busy} onClick={() => onRemove(word)}>{busy ? t("解除中…", "해제 중…") : t("解除する", "해제하기")}</button>
               </div>
             </div> : <button className={styles.removeButton} disabled={busy} onClick={() => setConfirmRemove(true)}>{t("Pから解除", "P에서 해제")}</button>
-          ) : word.source === "word" && word.can_add_personal && <button className={styles.addButton} disabled={busy || word.in_personal} onClick={() => { setConfirmRemove(false); onAdd(word.id); }}>{word.in_personal ? t("Pに登録済み", "이미 P에 있음") : busy ? t("追加中…", "추가 중…") : t("Pに追加", "P에 추가")}</button>}
+          ) : word.source === "word" && word.can_add_personal && <button className={styles.addButton} disabled={busy || word.in_personal} onClick={() => { setConfirmRemove(false); onAdd(word.id); }}>{word.in_personal ? t("Pに登録済み", "이미 P에 있음") : busy ? t("追加中…", "추가 중…") : t("マイ単語帳に追加", "내 단어장에 추가")}</button>}
           {message && <p className={styles.detailFeedback} role="status">{message}</p>}
           <p className="footnote">
             {t("最後のまちがい", "마지막 오답")} ·{" "}

@@ -59,7 +59,7 @@
 .heading h1 { flex: 1; min-width: 0; margin: 0; font-size: clamp(20px, 5.6vw, 24px); letter-spacing: -.04em; line-height: 1.35; }
 .back { display: inline-flex; align-items: center; justify-content: center; width: 32px; min-height: 44px; flex: none; border-radius: 10px; color: var(--muted); font-size: 20px; }
 .back:hover { background: var(--input); }
-.modeButton { flex: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); color: var(--accent); font: inherit; font-size: 12px; font-weight: 700; box-shadow: none; }
+.modeButton { flex: none; max-width: 52%; min-height: 40px; padding: 8px 12px; line-height: 1.4; word-break: keep-all; border: 1px solid var(--line); border-radius: 11px; background: var(--card); color: var(--accent); font: inherit; font-size: 12px; font-weight: 700; box-shadow: none; }
 .modeButton:disabled { cursor: default; }
 .description { margin: 2px 0 16px 40px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .selectionTools { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 6px; box-sizing: border-box; width: 100%; min-width: 0; margin: 8px 0 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
