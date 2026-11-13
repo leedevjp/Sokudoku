@@ -1,5 +1,5 @@
 /* Fill tall browser windows and scale the launch controls with the viewport. */
-@media (min-height: 921px) {
+@media (max-width: 599px) and (min-height: 921px) {
   .home-shell {
     max-height: none;
     max-width: clamp(480px, 52svh, 680px);
@@ -67,7 +67,7 @@
   margin-top: 0;
 }
 /* Keep the three section gaps equal instead of stretching them independently. */
-@media (min-height: 921px) {
+@media (max-width: 599px) and (min-height: 921px) {
   .home-shell .home-actions {
     flex: 0 0 auto;
     justify-content: flex-start;
@@ -83,126 +83,6 @@
     padding: 24px 0;
   }
 }
-/* Wide home preview uses the game's 632-wide board, 300-square word,
-   308-by-128 answers, 16-unit gutters and 142-unit card-to-answer gap. */
-@media (min-width: 600px) and (min-height: 800px) {
-  .home-shell .home-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 12px 0;
-  }
-  .home-shell .home-visual {
-    container-type: inline-size;
-    width: min(100%, max(260px, calc(88.5svh - 540px)));
-    height: auto;
-    min-height: 0;
-    max-height: none;
-    aspect-ratio: 632 / 714;
-    flex: 0 0 auto;
-    margin: 0;
-    --visual-size: 47.468354cqw;
-  }
-  .home-visual .preview-target {
-    left: 50%;
-    top: 9.943977%;
-    width: 47.468354%;
-    height: auto;
-    aspect-ratio: 1;
-  }
-  .home-answer-list {
-    left: 0;
-    right: 0;
-    top: 61.904762%;
-    bottom: 0;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: 2.531646cqw;
-  }
-  .home-answer-list .preview-answer {
-    min-height: 0;
-    padding: 3.481cqw;
-    gap: 2.69cqw;
-    border-radius: 3.481cqw;
-  }
-  .home-answer-list .preview-answer b {
-    font-size: clamp(11px, 3.797468cqw, 24px);
-  }
-  .home-answer-list .preview-answer > span {
-    width: 6.012658cqw;
-    height: 6.012658cqw;
-    flex-basis: 6.012658cqw;
-    font-size: clamp(10px, 3.006329cqw, 19px);
-  }
-  .home-shell .home-actions {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 16px;
-    margin-top: 0;
-    padding-top: 12px;
-  }
-  .home-actions .training-levels {
-    margin-bottom: 8px;
-  }
-  .home-actions .home-setting-group > :last-child,
-  .home-actions .kind-selector > :last-child {
-    margin-bottom: 0;
-  }
-  .home-actions .training-levels button {
-    min-height: 46px;
-    font-size: 15px;
-  }
-  .home-actions .selection-label,
-  .home-actions .level-heading a {
-    font-size: 12px;
-  }
-  .home-actions .selection-label span {
-    font-size: 11px;
-  }
-  .home-actions .primary {
-    min-height: 56px;
-    font-size: 16px;
-  }
-  .home-shell footer {
-    margin-top: 0;
-  }
-}
 
-@media (min-width: 600px) and (min-height: 800px) and (max-height: 920px) {
-  .home-shell .home-actions {
-    gap: 8px;
-    padding-top: 8px;
-  }
-  .home-actions .training-levels {
-    margin-bottom: 4px;
-  }
-  .home-actions .training-levels button {
-    min-height: 42px;
-    font-size: 13px;
-  }
-  .home-actions .primary {
-    min-height: 48px;
-    padding: 10px 18px;
-  }
-  .home-launch-group {
-    gap: 16px;
-  }
-}
-
-/* Center the square in the space above the answer grid and scale its captions. */
 .home-visual .preview-kind { font-size: 12px; }
 .home-visual .preview-reading { font-size: 14px; }
-@media (min-width: 600px) and (min-height: 800px) {
-  .home-visual .preview-kind {
-    font-size: clamp(11px, 3.006329cqw, 18px);
-    top: clamp(6px, 2cqw, 12px);
-    left: clamp(6px, 2cqw, 12px);
-    padding: 4px 8px;
-  }
-  .home-visual .preview-reading {
-    font-size: clamp(12px, 3.006329cqw, 18px);
-    bottom: clamp(8px, 3cqw, 18px);
-  }
-}
-

@@ -21,6 +21,7 @@ const orderedHomeModules = [
   "../styles/home/folder.css",
   "../styles/home/folder-controls.css",
   "../styles/home/folder-adaptive.css",
+  "../styles/home/desktop-layout.css",
   "../styles/home/sheen.css",
 ];
 
