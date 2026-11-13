@@ -1,3 +1,4 @@
+import { readIdentity } from "@/lib/supabase/read-identity";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -12,9 +13,7 @@ export async function GET(request: Request) {
     );
   }
   const client = await createClient();
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  const user = await readIdentity(client);
   if (!user)
     return Response.json({ error: "unauthorized" }, { status: 401, headers });
   const { data, error } = await client.rpc("learning_dashboard", {

@@ -1,3 +1,4 @@
+import { readIdentity } from "@/lib/supabase/read-identity";
 import { createClient } from "@/lib/supabase/server";
 export { readInput } from "./input";
 export const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -20,9 +21,9 @@ export async function authorize(request: Request, write = false) {
     return { response: failure("forbidden", 403) } as const;
   }
   const client = await createClient();
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  const user = write
+    ? (await client.auth.getUser()).data.user
+    : await readIdentity(client);
   if (!user) return { response: failure("unauthorized", 401) } as const;
   return { client, user } as const;
 }
