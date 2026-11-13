@@ -600,6 +600,11 @@ export type Database = {
       }
     }
     Functions: {
+      notebook_page: { Args: never; Returns: Json }
+      personal_word_page: {
+        Args: { p_query?: string; p_page?: number; p_stage?: string; p_sort?: string }
+        Returns: Json
+      }
       commit_learning: {
         Args: {
           expected_revision: number
