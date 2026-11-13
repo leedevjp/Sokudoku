@@ -7,6 +7,7 @@ import { useSettings } from "@/components/settings/settings-provider";
 import type { Word } from "@/lib/game/types";
 import { parseModes } from "@/lib/game/learning/types";
 import { parseKinds } from "@/lib/game/selection";
+import styles from "./game-host.module.css";
 import { TrainingRuntime } from "@/lib/game/data/training-runtime";
 
 /** Connects React lifecycle and preferences to the dynamically loaded game. */
@@ -17,6 +18,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   const parent = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [storedChests, setStoredChests] = useState<number | null>(null);
   const preferences = useRef(prefs);
   const changeRef = useRef(change);
   useEffect(() => {
@@ -26,6 +28,8 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   useEffect(() => {
     let cancelled = false;
     let game: Phaser.Game | undefined;
+    let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+    const rewardRequests = new AbortController();
     let readyTimer: ReturnType<typeof setTimeout> | undefined;
     const query = new URLSearchParams(search);
     const kinds = parseKinds(query.get("kinds"));
@@ -36,6 +40,17 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       modes: parseModes(query.get("modes")),
       previewWords,
       onLoginRequired: () => router.replace("/"),
+      onAnswersSaved: () => {
+        void fetch("/api/treasure", { cache: "no-store", signal: AbortSignal.any([rewardRequests.signal, AbortSignal.timeout(15000)]) })
+          .then(async response => {
+            if (!response.ok) return;
+            const inventory: { pending_count?: number } = await response.json();
+            if (cancelled || typeof inventory.pending_count !== "number" || inventory.pending_count < 1) return;
+            setStoredChests(inventory.pending_count);
+            clearTimeout(noticeTimer);
+            noticeTimer = setTimeout(() => setStoredChests(null), 5000);
+          }).catch(() => {});
+      },
     });
     const online = () => runtime.online();
     window.addEventListener("online", online);
@@ -94,6 +109,8 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     return () => {
       cancelled = true;
       clearTimeout(readyTimer);
+      clearTimeout(noticeTimer);
+      rewardRequests.abort();
       window.removeEventListener("online", online);
       game?.destroy(true);
       runtime.dispose();
@@ -102,6 +119,10 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   return (
     <main className="game-viewport">
       <div className="game-canvas" ref={parent} />
+      {storedChests !== null && <div className={styles.rewardNotice} role="status">
+        <strong>{prefs.lang === "jp" ? `宝箱 ${storedChests}個を保管中` : `보물상자 ${storedChests}개 보관 중`}</strong>
+        <span>{prefs.lang === "jp" ? "学習状況で開けられます" : "학습 현황에서 열 수 있어요"}</span>
+      </div>}
       {(!loaded || error) && <GameLoading error={error} lang={prefs.lang} />}
     </main>
   );
