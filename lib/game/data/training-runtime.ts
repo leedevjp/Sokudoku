@@ -20,6 +20,7 @@ type RuntimeOptions = {
   modes: TrainingMode[];
   previewWords?: Word[];
   onLoginRequired: () => void;
+  onAnswersSaved?: () => void;
 };
 
 /** Owns data loading, local recovery and persistence; knows nothing about React or Phaser. */
@@ -28,7 +29,7 @@ export class TrainingRuntime {
   private data!: Bootstrap;
   private planner!: TrainingPlanner;
   private journal!: AnswerJournal;
-  private ended = false;
+  private solvedSinceSave = 0;
   private reading?: ReadingSearch;
   private disposed = false;
 
@@ -67,7 +68,12 @@ export class TrainingRuntime {
     for (const word of data.words) delete word.reading_choices;
     return reading;
   }
-  dispose() { this.disposed = true; this.reading?.close(); }
+  dispose() {
+    this.disposed = true;
+    this.reading?.close();
+    // Navigation must also save a partial group of fewer than five answers.
+    if (this.journal) void this.journal.sync();
+  }
   async load(): Promise<TrainingData> {
     const { previewWords, kinds, modes } = this.options;
     if (!kinds.length) throw Error("KINDS");
@@ -125,16 +131,25 @@ export class TrainingRuntime {
   }
   record(answer: Answer) {
     this.journal.record(answer);
+    if (!this.options.previewWords && answer.result !== "timeout" && ++this.solvedSinceSave >= 5) {
+      this.solvedSinceSave = 0;
+      void this.save();
+    }
+  }
+  private async save(): Promise<boolean> {
+    const saved = await this.journal.sync();
+    if (saved && !this.disposed && !this.options.previewWords) this.options.onAnswersSaved?.();
+    return saved;
   }
   finish(): Promise<boolean> {
-    this.ended = true;
-    return this.journal.sync();
+    this.solvedSinceSave = 0;
+    return this.save();
   }
   online() {
-    if (this.ended) void this.journal.sync();
+    if (this.journal) void this.save();
   }
   async retry(): Promise<TrainingData> {
-    this.ended = false;
+    this.solvedSinceSave = 0;
     if (this.options.previewWords) return { ...this.current(), stats: [] };
     if (!(await this.journal.sync())) return { ...this.current(), stats: [] };
     try {
