@@ -44,12 +44,12 @@ export type Database = {
           personal_word_id?: string | null
           question_type: string
           received_at?: string
-          response_ms: number | null
+          response_ms?: number | null
           result: string
           selected_extra_meaning_choice_id?: string | null
           selected_personal_word_id?: string | null
           selected_word_id?: string | null
-          time_limit_ms: number | null
+          time_limit_ms?: number | null
           user_id?: string
           word_id?: string | null
         }
@@ -378,148 +378,95 @@ export type Database = {
           },
         ]
       }
+      study_chest: {
+        Row: {
+          created_at: string
+          id: string
+          opened_at: string | null
+          ordinal: number
+          tier: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          ordinal: number
+          tier?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          ordinal?: number
+          tier?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      treasure_progress: {
+        Row: {
+          solved: number
+          user_id: string
+        }
+        Insert: {
+          solved?: number
+          user_id: string
+        }
+        Update: {
+          solved?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       word: {
         Row: {
-          adjective_stem: string | null
-          adjective_stem_kana: string | null
-          can_be_adverb: boolean | null
-          can_be_conjunction: boolean | null
-          can_be_expression: boolean | null
-          can_be_i_adjective: boolean | null
-          can_be_na_adjective: boolean | null
-          can_be_noun: boolean | null
-          can_be_prefix: boolean | null
-          can_be_suffix: boolean | null
-          can_be_verb: boolean | null
           created_at: string
           deleted_at: string | null
           difficulty: number
           entry_type: string
-          grammar_batch: string | null
-          grammar_status: string
           hanja_reading: string | null
           has_kanji: boolean
           id: string
           kana: string
           meaning_ko: string
           note: string | null
-          sentence_reading: string | null
-          sentence_surface: string | null
+          pronunciation_ko: string | null
           term: string
           updated_at: string
-          verb_class: string | null
-          verb_stem: string | null
-          verb_stem_kana: string | null
         }
         Insert: {
-          adjective_stem?: string | null
-          adjective_stem_kana?: string | null
-          can_be_adverb?: boolean | null
-          can_be_conjunction?: boolean | null
-          can_be_expression?: boolean | null
-          can_be_i_adjective?: boolean | null
-          can_be_na_adjective?: boolean | null
-          can_be_noun?: boolean | null
-          can_be_prefix?: boolean | null
-          can_be_suffix?: boolean | null
-          can_be_verb?: boolean | null
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
           entry_type?: string
-          grammar_batch?: string | null
-          grammar_status?: string
           hanja_reading?: string | null
           has_kanji: boolean
           id?: string
           kana: string
           meaning_ko: string
           note?: string | null
-          sentence_reading?: string | null
-          sentence_surface?: string | null
+          pronunciation_ko?: string | null
           term: string
           updated_at?: string
-          verb_class?: string | null
-          verb_stem?: string | null
-          verb_stem_kana?: string | null
         }
         Update: {
-          adjective_stem?: string | null
-          adjective_stem_kana?: string | null
-          can_be_adverb?: boolean | null
-          can_be_conjunction?: boolean | null
-          can_be_expression?: boolean | null
-          can_be_i_adjective?: boolean | null
-          can_be_na_adjective?: boolean | null
-          can_be_noun?: boolean | null
-          can_be_prefix?: boolean | null
-          can_be_suffix?: boolean | null
-          can_be_verb?: boolean | null
           created_at?: string
           deleted_at?: string | null
           difficulty?: number
           entry_type?: string
-          grammar_batch?: string | null
-          grammar_status?: string
           hanja_reading?: string | null
           has_kanji?: boolean
           id?: string
           kana?: string
           meaning_ko?: string
           note?: string | null
-          sentence_reading?: string | null
-          sentence_surface?: string | null
+          pronunciation_ko?: string | null
           term?: string
           updated_at?: string
-          verb_class?: string | null
-          verb_stem?: string | null
-          verb_stem_kana?: string | null
         }
         Relationships: []
-      }
-      word_form_override: {
-        Row: {
-          created_at: string
-          form_key: string
-          id: string
-          note: string | null
-          reading: string
-          review_status: string
-          surface: string
-          updated_at: string
-          word_id: string
-        }
-        Insert: {
-          created_at?: string
-          form_key: string
-          id?: string
-          note?: string | null
-          reading: string
-          review_status?: string
-          surface: string
-          updated_at?: string
-          word_id: string
-        }
-        Update: {
-          created_at?: string
-          form_key?: string
-          id?: string
-          note?: string | null
-          reading?: string
-          review_status?: string
-          surface?: string
-          updated_at?: string
-          word_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "word_form_override_word_id_fkey"
-            columns: ["word_id"]
-            isOneToOne: false
-            referencedRelation: "word"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       word_learning_state: {
         Row: {
@@ -600,11 +547,6 @@ export type Database = {
       }
     }
     Functions: {
-      notebook_page: { Args: never; Returns: Json }
-      personal_word_page: {
-        Args: { p_query?: string; p_page?: number; p_stage?: string; p_sort?: string }
-        Returns: Json
-      }
       commit_learning: {
         Args: {
           expected_revision: number
@@ -624,9 +566,20 @@ export type Database = {
       learning_dashboard: { Args: { p_timezone?: string }; Returns: Json }
       learning_history: { Args: { pending_only?: boolean }; Returns: Json }
       learning_snapshot: { Args: never; Returns: Json }
+      notebook_page: { Args: never; Returns: Json }
+      open_study_chest: { Args: { p_id: string }; Returns: Json }
       personal_game_bootstrap: { Args: never; Returns: Json }
       personal_word_list: {
         Args: { p_page?: number; p_query?: string }
+        Returns: Json
+      }
+      personal_word_page: {
+        Args: {
+          p_page?: number
+          p_query?: string
+          p_sort?: string
+          p_stage?: string
+        }
         Returns: Json
       }
       recent_mistake_word: {
@@ -643,6 +596,7 @@ export type Database = {
           term: string
         }[]
       }
+      treasure_inventory: { Args: never; Returns: Json }
     }
     Enums: {
       [_ in never]: never
