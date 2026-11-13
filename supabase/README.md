@@ -1,89 +1,34 @@
-# SokudokuのSupabase設定
+# Supabase 안내
 
-- プロジェクト名: Sokudoku
-- プロジェクト参照ID: wjwtfuocfbvkwhspacpg
-- 組織: leedevjp
-- リージョン: ap-northeast-1（東京）
-- 管理画面: https://supabase.com/dashboard/project/wjwtfuocfbvkwhspacpg
+Sokudoku의 DB 변경은 `migrations/`에 시간순으로 기록합니다. 현재 데이터 관계와 규칙은 [데이터 모델](../docs/data-model.md), API 연결은 [아키텍처](../docs/architecture.md)를 먼저 읽으세요.
 
-ローカル接続設定はGit管理対象外の`.env.local`に保存します。デプロイ先の環境変数はVercelで別途設定します。現在の認証実装にservice_roleキーは不要です。`word`テーブルのマイグレーションを適用済みです。
+## 연결
 
-## word
+`.env.example`에 필요한 공개 환경 변수 이름이 있습니다. 실제 값은 Git에서 제외된 `.env.local` 또는 배포 환경 설정에 둡니다. 일반 앱 인증/사용자 데이터 처리에 service role 키를 추가하지 않습니다.
 
-| カラム | 内容 |
+## 현재 주요 계약
+
+| 대상 | 역할 |
 | --- | --- |
-| id | 自動生成UUIDの主キー |
-| term | 日本語の表記 |
-| kana | 仮名の読み |
-| hanja_reading | 韓国漢字音、該当しなければNULL |
-| meaning_ko | 韓国語の意味 |
-| has_kanji | 漢字を含むか（登録時に明示） |
-| difficulty | 0〜10、既定値3 |
-| note | 任意の説明 |
-| created_at | 登録日時 |
-| updated_at | DBトリガーで更新される変更日時 |
-| deleted_at | 論理削除日時、通常NULL |
+| `word` | 공통 단어/가나 카탈로그 |
+| `personal_word` | 소유자별 개인 단어; `(user_id,term,kana)` 중복 제약 |
+| `answer_log` | 중복 방지 ID를 가진 답변 이벤트 |
+| 학습 snapshot/history/commit RPC | 공유 학습 엔진의 상태 동기화와 revision 제어 |
+| `personal_word_page` | 검색/단계/정렬/전체 개수/20개 페이지 |
+| `notebook_page` | 최근 오답과 P 등록 상태 |
+| `learning_dashboard` | 시간대별 학습 현황 집계 |
+| `word_recent_stat` | 최근 답변 통계 |
 
-`term + kana`は論理削除済みを含めて一意です。再登録時は既存行を復元します。難易度は0〜1がN5、2〜3がN4、4〜5がN3、6〜7がN2、8〜9がN1です。10は個人単語（P）専用です。共通単語は各段階内でcreated_at ASC, id ASC順に二等分し、前半を偶数、後半を奇数に割り当てます（奇数件の余りは前半）。
+초기 migration의 정책은 이후 migration으로 변경될 수 있습니다. 특히 개인 단어 삭제를 초기 논리 삭제 설명으로 구현하지 마세요. 현재 API는 물리 삭제와 관련 기록 정리를 수행하며 수정/삭제 충돌에는 `updated_at`을 사용합니다.
 
-RLSを有効にし、ログイン済みユーザーにはSELECTだけを許可します。キャッシュ同期に削除マーカーが必要なため、論理削除済みの行も参照可能です。出題時はdeleted_atがNULLの行に絞ります。未認証アクセスと一般ユーザーによる追加・更新・削除は禁止します。編集は信頼された管理用接続またはSupabase MCPで行います。
+## 변경과 검증
 
-## personal_word
+1. 현재 스키마·RLS·기존 RPC를 확인합니다.
+2. 기존 적용 파일을 다시 쓰지 않고 새 migration을 만듭니다.
+3. 인증/소유자 격리, 함수 실행 권한, `search_path`, 입력 한도를 검토합니다.
+4. 별도 검증 DB에서 관련 `../tests/sql/*.sql`을 확인하고 실행합니다.
+5. 타입 생성 결과와 API 호출을 맞추고, 적용된 migration과 검증 결과를 PR에 기록합니다.
 
-共通wordとは独立した個人単語です。単語カラムはwordと同じで、所有者user_idを追加します。
-一意制約は(user_id, term, kana)。本人だけが参照・追加・更新・削除できます。
-回答済み単語はdeleted_atで論理削除し、回答履歴を保持します。
-answer_logのpersonal_word_idとselected_personal_word_idで個人単語の回答を保存し、word_recent_statで直近20件の統計を取得します。
+SQL 테스트는 `pnpm test`에 포함되지 않습니다. 테스트용 데이터 생성/삭제와 BEGIN/ROLLBACK 여부를 먼저 확인하세요. Git 머지가 DB 적용 완료를 의미하지 않습니다.
 
-ホームの出題範囲は複数選択可能です。1=難易度0・1、2=2・3、3=4・5、4=6・7、5=8・9、P=自分の個人単語。
-共通単語は差分キャッシュを維持し、個人単語はユーザー別キャッシュを最新の集合で置換します。
-
-## answer_log
-
-1問につき1件の回答結果を保存します。
-
-| カラム | 内容 |
-| --- | --- |
-| id | ブラウザーで生成するUUID、再送時も同じ値 |
-| user_id | auth.usersへの外部キー、既定値auth.uid() |
-| word_id | 出題したwordのID |
-| question_type | meaning / reading |
-| mode | exploration / review。旧クライアント・過去の記録はNULLで保持 |
-| selected_word_id | 選んだwordのID、時間切れはNULL |
-| result | correct / incorrect / timeout |
-| response_ms | 有効応答時間（ミリ秒） |
-| time_limit_ms | 出題時の制限時間（ミリ秒）、正の整数 |
-| answered_at | ブラウザーで結果を確定した日時 |
-| received_at | DBの初回受信日時、一般ユーザーは指定不可 |
-
-正答は選択IDが出題IDと一致、不正解は不一致とします。どちらもresponse_msは0以上かつtime_limit_ms未満です。時間切れでは選択IDをNULLとし、response_msとtime_limit_msを一致させます。制限時間ちょうどの回答は時間切れです。
-
-RLSにより自分のログだけをSELECT・INSERTできます。一般ユーザーによるUPDATE・DELETEは禁止します。ユーザー削除時はログも削除し、参照されている単語の物理削除は禁止します。単語は論理削除してください。
-
-再送は同じUUIDでINSERT ... ON CONFLICT (id) DO NOTHINGを使い、記録を上書きしません。今後の保存APIでは認証セッションからuser_idを設定します。
-
-最近の回答はuser_id・word_id・question_typeごとにanswered_at DESC, id DESCで決定的に並べます。その複合インデックスと、単語の外部キー用インデックスを作成済みです。統計VIEWは次のマイグレーションで作成します。回答保存APIを実装済みです。
-
-## word_recent_stat
-
-通常のVIEWで、回答履歴があるユーザー×単語の組み合わせだけを返します。wordとの全件結合や、未学習の単語の行生成は行いません。未学習かどうかは出題側でwordと統計を比較して判断します。
-
-意味問題と読み問題を合算し、answered_at DESC, id DESCで直近最大20試行を対象にします。時間切れと不正解も試行数に含めます。
-
-| カラム | 内容 |
-| --- | --- |
-| user_id | ユーザーID |
-| word_id | 単語ID |
-| attempt_count | 直近の試行数、1〜20 |
-| correct_count | その中の正答数 |
-| accuracy | 正答数÷試行数、0〜1 |
-| average_correct_response_ms | 正答だけの平均応答時間、正答がなければNULL |
-| last_answered_at | 最後の回答日時 |
-
-security_invokerを有効にし、基になるanswer_logのRLSを適用します。通常のログイン利用では本人の統計だけを参照できます。履歴に存在すれば論理削除済みの単語の統計も残ります。出題側でword.deleted_atを確認してください。集計結果は保存せず、読み取り時に計算するためREFRESHは不要です。
-
-回帰検証SQL: tests/sql/word_recent_stat.sql。専用の検証環境でSQLを一括実行すると、25件からの最新20件選択、同時刻の順序、問題形式合算、未学習行の不在、時間切れ、ユーザー分離を確認できます。検証用ユーザーとデータは同一トランザクションの最後でROLLBACKします。
-
-## game_bootstrap
-
-認証済みユーザー向けのsecurity invoker関数です。アクティブなwordとRLSで絞られたword_recent_statをJSONで返し、同じSQLスナップショットで取得します。anonとPUBLICには実行権限を付与しません。アプリは認証済みのNext.js APIを経由して呼び出します。
+2026-11-13 읽기 최적화는 `20261113005917_optimize_learning_page_reads.sql`과 `../tests/sql/learning_page_reads.sql`에서 확인할 수 있습니다. 과거 `personal_word_list` 등은 이전 호출 경로이며 현재 API는 위 페이지 RPC를 사용합니다.
