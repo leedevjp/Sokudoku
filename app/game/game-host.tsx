@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type Phaser from "phaser";
+import { TREASURE_UI_ENABLED } from "@/lib/features";
 import { GameLoading } from "@/components/game/game-loading";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { Word } from "@/lib/game/types";
@@ -41,6 +42,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       previewWords,
       onLoginRequired: () => router.replace("/"),
       onAnswersSaved: () => {
+        if (!TREASURE_UI_ENABLED) return;
         void fetch("/api/treasure", { cache: "no-store", signal: AbortSignal.any([rewardRequests.signal, AbortSignal.timeout(15000)]) })
           .then(async response => {
             if (!response.ok) return;
@@ -119,7 +121,7 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
   return (
     <main className="game-viewport">
       <div className="game-canvas" ref={parent} />
-      {storedChests !== null && <div className={styles.rewardNotice} role="status">
+      {TREASURE_UI_ENABLED && storedChests !== null && <div className={styles.rewardNotice} role="status">
         <strong>{prefs.lang === "jp" ? `宝箱 ${storedChests}個を保管中` : `보물상자 ${storedChests}개 보관 중`}</strong>
         <span>{prefs.lang === "jp" ? "学習状況で開けられます" : "학습 현황에서 열 수 있어요"}</span>
       </div>}
