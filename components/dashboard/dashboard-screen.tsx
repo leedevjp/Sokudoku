@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { TreasureVault } from "./treasure-vault";
 import { companionModeStore } from "@/lib/dashboard/companion-mode-store";
 import { useSyncExternalStore, useMemo, useState, type ReactNode } from "react";
 import { useSettings } from "@/components/settings/settings-provider";
@@ -148,6 +149,7 @@ export default function DashboardScreen() {
         style={companionMode === "fixed" ? undefined : { display: "none" }}
         aria-hidden={companionMode !== "fixed"}
         aria-label={companionMode === "fixed" ? t("キャラクターの応援", "캐릭터 응원") : undefined} />
+      {data && <TreasureVault />}
       <div aria-live="polite" aria-busy={!data && !error}>
         {!summary ? (
           <DashboardState error={error} summary={summary} t={t} retry={retry} />
