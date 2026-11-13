@@ -5,11 +5,13 @@ import { flushAnswers, queueAnswer, pendingAnswers } from "./answer-queue";
 export class AnswerJournal {
   private answers: Answer[] = [];
   private writes: Promise<unknown>[] = [];
+  private syncTail: Promise<unknown> = Promise.resolve();
   private sources = new Map<string, Word["source"]>();
   constructor(
     private owner: string,
     words: Word[],
     private preview = false,
+    private storage = { queueAnswer, flushAnswers, pendingAnswers },
   ) {
     this.setWords(words);
   }
@@ -18,8 +20,8 @@ export class AnswerJournal {
   }
   async recover(): Promise<Answer[]> {
     if (this.preview) return [];
-    const pending = await pendingAnswers(this.owner).catch(() => []);
-    if (pending.length) await flushAnswers(this.owner).catch(() => {});
+    const pending = await this.storage.pendingAnswers(this.owner).catch(() => []);
+    if (pending.length) await this.storage.flushAnswers(this.owner).catch(() => {});
     return pending;
   }
   record(answer: Answer) {
@@ -36,21 +38,28 @@ export class AnswerJournal {
     };
     this.answers.push(entry);
     if (!this.preview) {
-      const write = queueAnswer(this.owner, entry);
+      const write = this.storage.queueAnswer(this.owner, entry);
       this.writes.push(write);
       void write.catch(() => {});
     }
   }
-  async sync(): Promise<boolean> {
-    if (this.preview) return true;
+  sync(): Promise<boolean> {
+    if (this.preview) return Promise.resolve(true);
+    // A checkpoint and the result screen can save concurrently. Serialize them,
+    // and retain answers recorded while an earlier upload is still in flight.
+    const save = this.syncTail.then(() => this.save());
+    this.syncTail = save;
+    return save;
+  }
+  private async save(): Promise<boolean> {
+    const batch = this.answers.slice();
+    const writes = this.writes.splice(0);
     try {
-      await Promise.allSettled(this.writes);
-      await Promise.all(
-        this.answers.map((answer) => queueAnswer(this.owner, answer)),
-      );
-      await flushAnswers(this.owner);
-      this.answers.length = 0;
-      this.writes.length = 0;
+      await Promise.allSettled(writes);
+      await Promise.all(batch.map((answer) => this.storage.queueAnswer(this.owner, answer)));
+      await this.storage.flushAnswers(this.owner);
+      const saved = new Set(batch.map((answer) => answer.id));
+      this.answers = this.answers.filter((answer) => !saved.has(answer.id));
       return true;
     } catch {
       return false;
