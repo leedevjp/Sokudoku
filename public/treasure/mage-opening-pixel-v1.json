@@ -1,0 +1,60 @@
+{
+  "image": "mage-opening-pixel-v1.png",
+  "width": 1774,
+  "height": 887,
+  "columns": 4,
+  "rows": 2,
+  "renderCell": 64,
+  "frames": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 443,
+      "h": 443
+    },
+    {
+      "x": 443,
+      "y": 0,
+      "w": 444,
+      "h": 443
+    },
+    {
+      "x": 887,
+      "y": 0,
+      "w": 443,
+      "h": 443
+    },
+    {
+      "x": 1330,
+      "y": 0,
+      "w": 444,
+      "h": 443
+    },
+    {
+      "x": 0,
+      "y": 443,
+      "w": 443,
+      "h": 444
+    },
+    {
+      "x": 443,
+      "y": 443,
+      "w": 444,
+      "h": 444
+    },
+    {
+      "x": 887,
+      "y": 443,
+      "w": 443,
+      "h": 444
+    },
+    {
+      "x": 1330,
+      "y": 443,
+      "w": 444,
+      "h": 444
+    }
+  ],
+  "sampling": "nearest at logical 64px then integer scale",
+  "note": "Generated source atlas; use explicit frame rectangles, not assumed 64px source cells."
+}
