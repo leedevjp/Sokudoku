@@ -28,9 +28,10 @@ test("settings restore once, notify subscribers and survive blocked storage", ()
       },
     },
   });
+  const optionDefaults = { pronunciation: "always", pronunciationSource: "term", showReadingHints: false, correctAnswerReview: "instant" };
   try {
     const restored = settingsStore.getSnapshot();
-    assert.deepEqual(restored, { lang: "kr", theme: "dark" });
+    assert.deepEqual(restored, { ...optionDefaults, lang: "kr", theme: "dark" });
     assert.equal(
       settingsStore.getSnapshot(),
       restored,
@@ -40,24 +41,37 @@ test("settings restore once, notify subscribers and survive blocked storage", ()
     const unsubscribe = settingsStore.subscribe(() => notifications++);
     settingsStore.change({ theme: "light" });
     assert.deepEqual(settingsStore.getSnapshot(), {
+      ...optionDefaults,
       lang: "kr",
       theme: "light",
     });
-    assert.deepEqual(JSON.parse(raw!), { lang: "kr", theme: "light" });
+    assert.deepEqual(JSON.parse(raw!), { ...optionDefaults, lang: "kr", theme: "light" });
     assert.equal(notifications, 1);
     raw = JSON.stringify({ lang: "jp", theme: "dark" });
     events.dispatchEvent(
       Object.assign(new Event("storage"), { key: "sokudoku-preferences" }),
     );
     assert.deepEqual(settingsStore.getSnapshot(), {
+      ...optionDefaults,
       lang: "jp",
       theme: "dark",
     });
     assert.equal(notifications, 2);
+    raw = JSON.stringify({ lang: "kr", theme: "dark", pronunciation: "off", pronunciationSource: "kana", showReadingHints: true, correctAnswerReview: "card" });
+    assert.deepEqual(settingsStore.getSnapshot(), { lang: "kr", theme: "dark", pronunciation: "off", pronunciationSource: "kana", showReadingHints: true, correctAnswerReview: "card" });
+    raw = JSON.stringify({ lang: "jp", theme: "dark", pronunciation: "invalid", pronunciationSource: "invalid", showReadingHints: "true", correctAnswerReview: "invalid" });
+    assert.deepEqual(settingsStore.getSnapshot(), { ...optionDefaults, lang: "jp", theme: "dark" });
+    for (const malformed of ["{", "[]", "null"]) {
+      raw = malformed;
+      assert.deepEqual(settingsStore.getSnapshot(), { ...optionDefaults, lang: "jp", theme: "light" });
+    }
+    raw = JSON.stringify({ lang: "jp", theme: "dark" });
+    settingsStore.getSnapshot();
     unsubscribe();
     blocked = true;
     settingsStore.change({ lang: "kr" });
     assert.deepEqual(settingsStore.getSnapshot(), {
+      ...optionDefaults,
       lang: "kr",
       theme: "dark",
     });

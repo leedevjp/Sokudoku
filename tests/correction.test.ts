@@ -28,16 +28,18 @@ const question: Question = {
 test("correction uses the original answer number and current question type first", () => {
   assert.deepEqual(correctionContent(question), {
     index: 2,
+    readingHint: "じっそう",
     primary: "실장(구현)",
     secondary: "じっそう",
   });
   assert.deepEqual(correctionContent({ ...question, kind: "reading" }), {
     index: 2,
+    readingHint: "じっそう",
     primary: "じっそう",
     secondary: "실장(구현)",
   });
 });
-test("kana corrections show only the Korean pronunciation", () => {
+test("kana corrections keep the Korean answer separate from the reading hint", () => {
   for (const entry_type of ["hiragana", "katakana"] as const) {
     const kana: Word = {
       ...word,
@@ -51,7 +53,7 @@ test("kana corrections show only the Korean pronunciation", () => {
     };
     assert.deepEqual(
       correctionContent({ word: kana, kind: "meaning", options: [kana] }),
-      { index: 0, primary: "조", secondary: null },
+      { index: 0, primary: "조", readingHint: "じょ", secondary: null },
     );
   }
 });
@@ -78,4 +80,12 @@ test("only the correct number or a card tap can complete, including during local
   const tap = new Correction(question);
   assert.equal(tap.complete(), true);
   assert.equal(tap.tick(2000), false);
+});
+
+test("reading hints normalize katakana and preserve optional Korean pronunciation", () => {
+  const hint = (kana: string, pronunciation_ko?: string | null) => correctionContent({ ...question, word: { ...word, kana, pronunciation_ko } }).readingHint;
+  assert.equal(hint(" ジッソウ ", " 짓소우 "), "じっそう [짓소우]");
+  assert.equal(hint("じっそう", null), "じっそう");
+  assert.equal(hint("じっそう", "  "), "じっそう");
+  assert.equal(hint("  ", "짓소우"), null);
 });
