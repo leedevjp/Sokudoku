@@ -17,6 +17,7 @@
 아래 자료는 특정 구현/디자인 작업의 배경입니다. 전체 시스템 사양이나 현재 배포 상태 증명으로 사용하지 않습니다.
 
 - [시험 모드와 정답 효과](exam-and-effects.md)
+- [보물상자 도트 시트와 여는 동작](treasure-sprites.md)
 - [전투 연출](meadow-battle.md)
 - [토끼 캐릭터](rabbit-companion.md)
 - 아트 제작 이력: [v2](pixel-art-v2.md), [v3](reference-art-v3.md), [v4](original-art-v4.md), [v5](magic-art-v5.md)
