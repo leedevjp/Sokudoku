@@ -109,12 +109,15 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
     [`7日間で${fmt(week.attempts)}問！よく頑張ったね。`, `7일 동안 ${fmt(week.attempts)}문제! 정말 열심히 했네.`],
     [`${days}日も机に向かったんだね。私も見習わなきゃ！`, `${days}일이나 공부하러 왔네. 나도 본받아야겠어!`],
   ];
-  if (topic === "dayDetail") {
-    return [
+  if (focus.section === "activity" && focus.day) {
+    const day = summary.days.find(day => day.day === focus.day);
+    if (!day) return zero; // Unknown dates must not borrow today's or the week's totals.
+    return day.attempts > 0 ? [
+      [`この日は${fmt(day.attempts)}問！ひとつひとつ、大切な記録だね。`, `이날은 ${fmt(day.attempts)}문제를 풀었네! 하나하나 소중한 기록이야.`],
       ["その日に積み重ねた一問一問、ちゃんと残ってるよ。", "그날 하나씩 풀었던 문제들이 전부 남아 있네."],
-      ["今日の頑張り、ちゃんとここに残ってるよ。", "오늘 노력한 것도 여기 잘 남아 있어."],
-    ];
+    ] : [["お休みの日もあって大丈夫。また会えたらうれしいな。", "쉬어간 날이 있어도 괜찮아. 다시 만나면 반가우니까."]];
   }
+  if (topic === "dayDetail") return []; // A day-specific claim requires an actual selected date.
   if (topic === "accuracy") {
     const accuracy = week.attempts ? Math.round(week.correct / week.attempts * 100) : null;
     return accuracy === null ? [["まだこれからだね。一緒に始めよう！", "아직 시작 전이네. 같이 해보자!"]] : [

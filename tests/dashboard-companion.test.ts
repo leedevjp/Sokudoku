@@ -16,7 +16,7 @@ const data: DashboardData = {
 const summary = dashboardSummary(data, "word", "meaning");
 
 test("encouragement follows selected scope, day, memory band and stage", () => {
-  assert.match(companionMessage(summary, { section: "overview" }, "kr"), /9문제/);
+  assert.match(companionMessage(summary, { section: "overview" }, "kr"), /12개/);
   assert.match(companionMessage(summary, { section: "memory" }, "kr"), /5개/);
   assert.match(companionMessage(summary, { section: "memory", band: 0 }, "kr"), /7개/);
   assert.match(companionMessage(summary, { section: "stages", level: "P" }, "kr"), /내 단어에서 12개/);
@@ -28,29 +28,37 @@ test("encouragement follows selected scope, day, memory band and stage", () => {
 test("empty history gets encouragement without invented achievements", () => {
   const empty = dashboardSummary({ ...data, groups: [], activity: [] }, "word", "meaning");
   assert.match(companionMessage(empty, { section: "overview" }, "kr"), /첫 번째/);
-  assert.match(companionMessage(empty, { section: "memory", band: 2 }, "kr"), /비어 있어/);
+  assert.match(companionMessage(empty, { section: "memory", band: 2 }, "kr"), /시작 전/);
   assert.match(companionMessage(empty, { section: "activity" }, "kr"), /반가워/);
 });
 
 test("every context offers a full non-repeating bilingual cycle", () => {
   const empty = dashboardSummary({ ...data, groups: [], activity: [] }, "word", "meaning");
-  const cases: [typeof summary, CompanionFocus, number][] = [
-    [summary, { section: "overview" }, 11],
-    [empty, { section: "overview" }, 17],
-    [summary, { section: "memory" }, 11],
-    ...[0, 1, 2].map(band => [summary, { section: "memory", band }, 16] as [typeof summary, CompanionFocus, number]),
-    [empty, { section: "memory", band: 0 }, 11],
-    [summary, { section: "activity" }, 11],
-    [summary, { section: "activity", day: "2026-11-07" }, 17],
-    [empty, { section: "activity" }, 17],
-    [summary, { section: "stages" }, 11],
-    [summary, { section: "stages", level: "P" }, 17],
+  const cases: [typeof summary, CompanionFocus][] = [
+    [summary, { section: "overview" }], [empty, { section: "overview" }],
+    [summary, { section: "memory" }],
+    ...[0, 1, 2].map(band => [summary, { section: "memory", band }] as [typeof summary, CompanionFocus]),
+    [empty, { section: "memory", band: 0 }], [summary, { section: "activity" }],
+    [summary, { section: "activity", day: "2026-11-07" }], [empty, { section: "activity" }],
+    [summary, { section: "stages" }], [summary, { section: "stages", level: "P" }],
+    [summary, { section: "activity", day: "2026-11-08", topic: "dayDetail" }],
+    [summary, { section: "overview", topic: "total" }],
   ];
-  for (const [scope, focus, length] of cases) for (const lang of ["kr", "jp"]) {
-    const lines = Array.from({ length }, (_, i) => companionMessage(scope, focus, lang, i));
-    assert.equal(new Set(lines).size, length, JSON.stringify({ focus, lang }));
-    assert.equal(companionMessage(scope, focus, lang, length), lines[0]);
-    assert.notEqual(lines.at(-1), lines[0]);
+  for (const [scope, focus] of cases) for (const lang of ["kr", "jp"]) {
+    const first = companionMessage(scope, focus, lang);
+    const lines = [first];
+    let length = 1;
+    for (; length <= 100; length++) {
+      const next = companionMessage(scope, focus, lang, length);
+      if (next === first) break;
+      assert.ok(!lines.includes(next), `premature duplicate: ${JSON.stringify({ focus, lang, next })}`);
+      lines.push(next);
+    }
+    assert.ok(length >= companionLines[focus.section].length && length <= 100, "a complete bounded cycle must include the section's variety");
+    for (let i = 0; i < length; i++) {
+      assert.equal(companionMessage(scope, focus, lang, length + i), lines[i]);
+      assert.equal(companionMessage(scope, focus, lang, i - length), lines[i]);
+    }
   }
   const all = Object.values(companionLines).flat();
   for (const index of [0, 1]) {
@@ -77,4 +85,25 @@ test("scroll follows a substantially visible card near the reading area", () => 
   ], 800), "memory");
   assert.equal(visibleCompanionSection([{ section: "stages", top: -800, bottom: 1200 }], 800), "stages");
   assert.equal(visibleCompanionSection([{ section: "overview", top: -100, bottom: 30 }], 800), null);
+});
+
+test("historical day counts never borrow current-day or weekly achievements", () => {
+  const scoped = dashboardSummary({ ...data, activity: [
+    ...data.activity,
+    { ...data.activity[0], day: "2026-11-07", attempts: 3, correct: 2 },
+  ] }, "word", "meaning");
+  for (const topic of [undefined, "dayDetail"]) {
+    assert.match(companionMessage(scoped, { section: "activity", day: "2026-11-07", topic }, "kr"), /3문제/);
+    assert.match(companionMessage(scoped, { section: "activity", day: "2026-11-07", topic }, "jp"), /3問/);
+    for (let i = 0; i < 20; i++) {
+      const text = companionMessage(scoped, { section: "activity", day: "2026-11-07", topic }, "kr", i);
+      assert.doesNotMatch(text, /오늘도 많이|오늘 공부한|9문제|12문제/);
+    }
+  }
+  assert.match(companionMessage(scoped, { section: "activity", day: "2026-11-06", topic: "dayDetail" }, "kr"), /쉬어간 날/);
+  assert.match(companionMessage(scoped, { section: "activity", day: "2020-01-01", topic: "dayDetail" }, "kr"), /시작 전/);
+});
+test("total vocabulary and learned counts remain distinct", () => {
+  assert.match(companionMessage(summary, { section: "overview", topic: "total" }, "kr"), /전체 30개/);
+  assert.match(companionMessage(summary, { section: "overview", topic: "learned" }, "kr"), /12개/);
 });
