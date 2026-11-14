@@ -4,29 +4,21 @@ import { SceneMedia } from "./scene-media";
 import { battleReady } from "./presentation-assets";
 import { PetMotionState } from "../pet-motion";
 import { RunPersistence } from "./run-persistence";
-import { paintAnswerFeedback } from "./answer-feedback";
 import { TrainingInput } from "./training-input";
 import { drawPause } from "./pause-overlay";
 import { drawTrainingResult } from "./result-presentation";
 import { TrainingFeedback } from "./training-feedback";
 import { TrainingSession } from "../session";
 import Phaser from "phaser";
-import {
-  AnswerGate,
-  limitFor,
-  START_INPUT_DELAY_MS,
-} from "../rules";
-import type { Question } from "../types";
+import { AnswerGate, limitFor } from "../rules";
 import type { Preferences } from "../preferences";
-import type { TrainingOptions, Phase } from "./types";
+import type { TrainingOptions } from "./types";
 import { TrainingView } from "./board";
-import { answerImpact, burst } from "./effects";
-import { resizeProgress } from "./resize-progress";
-import { Correction } from "../correction";
-import { BattleProgress, comboTier } from "../battle-progress";
+import { TrainingState } from "./training-state";
+import { TrainingViewport } from "./training-viewport";
+import { BattleProgress } from "../battle-progress";
 import { BattleAudio } from "./battle-audio";
-import type { CorrectionCard } from "./correction-card";
-import { showCorrection } from "./correction-presentation";
+import { TrainingAnswers } from "./training-answers";
 export class TrainingScene extends Phaser.Scene {
   private pet?: RabbitCompanion;
   private battle?: MeadowBattle;
@@ -35,62 +27,39 @@ export class TrainingScene extends Phaser.Scene {
   private options: TrainingOptions;
   private prefs: Preferences;
   private view: TrainingView;
-  private phase: Phase = "arming";
-  private beforePause: Phase = "play";
-  private resizeElapsed = 0;
-  private afterSettle: Exclude<Phase, "paused" | "settling"> = "play";
-  private settleUntil = 0;
-  private settleElapsed = 0;
+  private state = new TrainingState();
+  private viewport: TrainingViewport;
   private gate = new AnswerGate();
-  private question!: Question;
   private session = new TrainingSession();
   private battleProgress = new BattleProgress();
   private battleAudio?: BattleAudio;
   private media?: SceneMedia;
-  private questionHasBattle = false;
   private soundExpanded = false;
   private feedback = new TrainingFeedback({
-    canAdvance: () => this.phase === "feedback",
+    canAdvance: () => this.state.phase === "feedback",
     advance: () => {
-      if (this.hearts === 0) this.finish();
+      if (this.session.hearts === 0) this.finish();
       else void this.next();
     },
     delay: (milliseconds, callback) => { this.time.delayedCall(milliseconds, callback); },
   });
-  private get hearts() {
-    return this.session.hearts;
-  }
-  private get correct() {
-    return this.session.correct;
-  }
-  private get logs() {
-    return this.session.answers;
-  }
-  private started = 0;
-  private pauseAt = 0;
-  private maxTime = 10000;
   private get timeLimited() { return this.options.timeLimited !== false; }
   private overlay?: Phaser.GameObjects.Container;
   private trainingInput = new TrainingInput({
-    phase: () => this.phase,
-    press: (source, index) => this.press(source, index),
-    correct: (index) => this.finishCorrection(index),
-    toggleCorrection: () => this.toggleCorrection(),
-    pause: () => this.pause(),
-    resume: () => this.resume(),
+    phase: () => this.state.phase,
+    press: (source, index) => this.answers.press(source, index),
+    correct: (index) => this.answers.finishCorrection(index),
+    toggleCorrection: () => this.answers.toggleCorrection(),
+    pause: () => this.viewport.pause(),
+    resume: () => this.viewport.resume(),
     hidden: () => this.hidden(),
-    cancel: () => this.cancelPress(),
+    cancel: () => this.answers.cancelPress(),
   });
   private persistence = new RunPersistence();
   private reviewComplete = false;
   private failed = false;
-  private viewGeneration = 0;
-  private nextGeneration = 0;
-  private preparingQuestion = false;
-  private pauseRequested = false;
   private readyNotified = false;
-  private correction?: Correction;
-  private correctionView?: CorrectionCard;
+  private answers: TrainingAnswers;
   constructor(
     options: TrainingOptions,
     private density: number,
@@ -103,24 +72,39 @@ export class TrainingScene extends Phaser.Scene {
       () => this.density,
       () => this.prefs,
       {
-        pause: () => this.pause(),
+        pause: () => this.viewport.pause(),
         toggleSound: () => this.toggleAllSound(),
         soundEnabled: () => this.battleAudio?.enabled ?? false,
-        press: (source, index) => this.press(source, index),
+        press: (source, index) => this.answers.press(source, index),
       },
     );
-  }
-  private get c() {
-    return this.view.c;
-  }
-  private get w() {
-    return this.view.w;
-  }
-  private get h() {
-    return this.view.h;
-  }
-  private t(jp: string, kr: string) {
-    return this.view.t(jp, kr);
+    this.answers = new TrainingAnswers(
+      this, this.state, this.session, this.gate, this.view, this.feedback, this.petMotion, this.battleProgress,
+      {
+        options: () => this.options,
+        preferences: () => this.prefs,
+        audio: () => this.battleAudio,
+        battle: () => this.battle,
+        reducedMotion: () => this.reducedMotion?.matches ?? false,
+        paintPet: () => this.paintPet(),
+      },
+    );
+    this.viewport = new TrainingViewport(this, this.state, this.session, this.gate, this.view, {
+      planner: () => this.options.planner,
+      timeLimited: () => this.timeLimited,
+      hasCorrection: () => this.answers.correcting,
+      stopSound: () => { this.battleAudio?.stop(); this.feedback.stopSpeech(); },
+      cancelPress: () => this.answers.cancelPress(),
+      closePause: () => { this.overlay?.destroy(); this.overlay = undefined; },
+      drawPause: () => this.drawPause(),
+      drawBoard: () => this.drawBoard(),
+      drawCorrection: () => this.answers.renderCorrection(),
+      drawEnd: () => this.drawEnd(),
+      syncCamera: () => this.syncCamera(),
+      feedbackReady: () => this.feedback.tryAdvance(),
+      finish: (reviewComplete) => this.finish(reviewComplete),
+      error: (error) => this.options.onError?.(error),
+    });
   }
   setRenderDensity(value: number) {
     this.density = value;
@@ -130,14 +114,14 @@ export class TrainingScene extends Phaser.Scene {
     this.cameras.main
       .setViewport(0, 0, this.scale.width, this.scale.height)
       .setZoom(this.density)
-      .centerOn(this.w / 2, this.h / 2);
+      .centerOn(this.view.w / 2, this.view.h / 2);
   }
   create() {
     try {
       this.bootTraining();
     } catch (error) {
       this.failed = true;
-      this.phase = "end";
+      this.state.phase = "end";
       this.options.onError?.(error);
     }
   }
@@ -146,7 +130,7 @@ export class TrainingScene extends Phaser.Scene {
     this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.game.canvas.setAttribute(
       "aria-label",
-      this.t(
+      this.view.t(
         "単語トレーニング。数字1〜4を押した瞬間に回答。Escapeで一時停止。",
         "단어 훈련. 숫자 1~4를 누르는 순간 답하기. Escape로 일시정지.",
       ),
@@ -155,10 +139,10 @@ export class TrainingScene extends Phaser.Scene {
     this.trainingInput.attach();
     this.battleAudio = new BattleAudio(this);
     this.media = new SceneMedia(this, () => this.attachBattleWhenReady());
-    this.scale.on("resize", this.resize, this);
+    this.scale.on("resize", this.viewport.resize, this.viewport);
     const cleanup = () => {
       this.overlay?.destroy(); this.overlay = undefined;
-      this.feedback.stopSpeech(); this.nextGeneration++; this.trainingInput.detach();
+      this.feedback.stopSpeech(); this.state.nextGeneration++; this.trainingInput.detach();
       this.media?.close();
       this.events.off("shutdown", cleanup); this.events.off("destroy", cleanup);
     };
@@ -174,27 +158,27 @@ export class TrainingScene extends Phaser.Scene {
   private clear() {
     this.pet = undefined;
     this.battle = undefined;
-    this.viewGeneration++;
+    this.state.viewGeneration++;
     this.children.removeAll(true);
     this.view.clear();
-    this.correctionView = undefined;
+    this.answers.clearView();
     this.overlay = undefined;
-    this.cameras.main.setBackgroundColor(this.c.bg);
+    this.cameras.main.setBackgroundColor(this.view.c.bg);
     this.view.backdrop();
   }
   private redrawStatic() {
-    if (this.phase === "end") this.drawEnd();
-    else if (this.phase === "paused") {
-      this.cameras.main.setBackgroundColor(this.c.bg);
+    if (this.state.phase === "end") this.drawEnd();
+    else if (this.state.phase === "paused") {
+      this.cameras.main.setBackgroundColor(this.view.c.bg);
       this.drawPause();
     }
   }
   private startRun(usePreparedFirstSet = false) {
     if (this.persistence.saving) return;
     this.feedback.reset();
-    this.pauseRequested = false;
+    this.state.pauseRequested = false;
     this.reviewComplete = false;
-    this.correction = undefined;
+    this.answers.reset();
     this.session.reset();
     this.battleProgress.reset();
     this.petMotion.play("hop");
@@ -204,47 +188,46 @@ export class TrainingScene extends Phaser.Scene {
   }
   private async next(delayInput = false) {
     this.feedback.reset();
-    const request = ++this.nextGeneration;
-    this.phase = "arming";
+    const request = ++this.state.nextGeneration;
+    this.state.phase = "arming";
     this.gate.close();
-    this.preparingQuestion = true;
-    this.correction = undefined;
+    this.state.preparingQuestion = true;
+    this.answers.reset();
     try {
       await this.options.planner.prepareSet();
-      if (request !== this.nextGeneration) return;
-      this.preparingQuestion = false;
+      if (request !== this.state.nextGeneration) return;
+      this.state.preparingQuestion = false;
       const question = this.options.planner.next();
       if (!question) {
         this.finish(true);
         return;
       }
-      this.question = question;
-      this.questionHasBattle = battleReady(key => this.textures.exists(key));
+      this.state.question = question;
     } catch (error) {
-      if (request !== this.nextGeneration) return;
-      this.preparingQuestion = false;
-      this.phase = "end";
+      if (request !== this.state.nextGeneration) return;
+      this.state.preparingQuestion = false;
+      this.state.phase = "end";
       this.options.onError?.(error);
       return;
     }
-    this.maxTime = limitFor(this.correct);
-    this.resizeElapsed = 0;
-    this.phase = "arming";
+    this.state.maxTime = limitFor(this.session.correct);
+    this.state.resizeElapsed = 0;
+    this.state.phase = "arming";
     this.gate.close();
     this.drawBoard();
-    const generation = this.viewGeneration;
+    const generation = this.state.viewGeneration;
     // The timer starts only after the new question has actually been rendered.
     this.game.events.once("postrender", () => {
-      if (this.phase === "arming" && generation === this.viewGeneration) {
-        if (this.pauseRequested || (this.timeLimited && document.hidden)) {
-          this.pauseRequested = false;
-          this.pause();
+      if (this.state.phase === "arming" && generation === this.state.viewGeneration) {
+        if (this.state.pauseRequested || (this.timeLimited && document.hidden)) {
+          this.state.pauseRequested = false;
+          this.viewport.pause();
           return;
         }
-        if (delayInput) this.settle("play", 0);
+        if (delayInput) this.viewport.settle("play", 0);
         else {
-          this.started = performance.now();
-          this.phase = "play";
+          this.state.started = performance.now();
+          this.state.phase = "play";
           this.gate.open();
         }
       }
@@ -252,7 +235,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private drawBoard() {
     this.clear();
-    this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime, this.timeLimited);
+    this.view.drawBoard(this.state.question, this.session.hearts, this.session.correct, this.state.maxTime, this.timeLimited);
     this.attachBattleWhenReady();
     this.notifyReady();
   }
@@ -261,10 +244,9 @@ export class TrainingScene extends Phaser.Scene {
     // actors to the already visible question once every battle texture exists,
     // without rebuilding the board, resetting input or restarting the timer.
     if (!battleReady(key => this.textures.exists(key))) return;
-    this.questionHasBattle = true;
-    if (this.preparingQuestion || !this.question || this.battle ||
-        !["arming", "play", "settling"].includes(this.phase)) return;
-    this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
+    if (this.state.preparingQuestion || !this.state.question || this.battle ||
+        !["arming", "play", "settling"].includes(this.state.phase)) return;
+    this.battle = new MeadowBattle(this, this.view, this.state.question.word.id, this.session.correct, this.battleProgress.combo);
   }
   private notifyReady() {
     if (this.readyNotified) return;
@@ -279,146 +261,29 @@ export class TrainingScene extends Phaser.Scene {
     );
   }
   update(_time: number, delta: number) {
-    this.battleAudio?.update(!["paused", "end"].includes(this.phase), delta);
+    this.battleAudio?.update(!["paused", "end"].includes(this.state.phase), delta);
     this.petMotion.tick(
       delta,
-      this.phase === "paused" || this.phase === "settling",
+      this.state.phase === "paused" || this.state.phase === "settling",
     );
     this.paintPet();
     this.battle?.update(
       delta,
-      this.phase === "paused" || this.phase === "settling",
+      this.state.phase === "paused" || this.state.phase === "settling",
       this.reducedMotion?.matches ?? false,
     );
-    if (this.phase === "settling") {
-      if (performance.now() < this.settleUntil) return;
-      this.phase = this.afterSettle;
-      if (this.phase === "play") {
-        this.started = performance.now() - this.settleElapsed;
-        this.gate.open();
-      }
-      this.time.paused = false;
-      this.tweens.resumeAll();
-      if (this.phase === "feedback") this.feedback.tryAdvance();
-    }
-    if (this.phase === "correction" && this.correction) {
-      const expired = this.correction.tick(delta);
-      this.correctionView?.update(this.correction);
-      if (expired) this.finishCorrection();
+    if (!this.viewport.update()) return;
+    if (this.state.phase === "correction" && this.answers.correcting) {
+      this.answers.update(delta);
       return;
     }
-    if (this.phase !== "play") return;
-    const elapsed = performance.now() - this.started;
+    if (this.state.phase !== "play") return;
+    const elapsed = performance.now() - this.state.started;
     if (this.timeLimited) {
-      this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
-      this.view.seconds?.setText((Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1));
-      if (elapsed >= this.maxTime) this.resolve(null);
+      this.view.drawTime(Math.max(0, 1 - elapsed / this.state.maxTime));
+      this.view.seconds?.setText((Math.max(0, this.state.maxTime - elapsed) / 1000).toFixed(1));
+      if (elapsed >= this.state.maxTime) this.answers.timeout();
     }
-  }
-  private press(source: string, i: number) {
-    if (this.phase !== "play" || !this.gate.claim(source, i)) return;
-    const card = this.view.choices[i];
-    card.setScale(1.04);
-    this.view.paintChoice(card, true);
-    // Commit on down; the projectile is visual feedback, not part of response time.
-    this.resolve(i);
-  }
-  private cancelPress = () => {
-    const i = this.gate.index;
-    this.gate.cancel();
-    if (i !== null && this.view.choices[i]) {
-      const c = this.view.choices[i];
-      this.tweens.killTweensOf(c);
-      c.setScale(1);
-      this.view.paintChoice(c);
-    }
-  };
-  private resolve(index: number | null) {
-    if (this.phase !== "play") return;
-    const rawElapsed = Math.max(0, performance.now() - this.started);
-    const timeout = index === null || (this.timeLimited && rawElapsed >= this.maxTime);
-    this.gate.close();
-    this.phase = timeout ? "feedback" : "flight";
-    const { answer: a, stats } = this.session.record(
-      this.question,
-      index,
-      rawElapsed,
-      this.maxTime,
-      this.options.stats,
-      !this.timeLimited,
-    );
-    this.options.stats = stats;
-    this.options.planner.record(a, this.question.word);
-    // The displayed question remains valid even when a catalog refresh
-    // replaces the runtime's word map before this answer is recorded.
-    this.options.onAnswer({ ...a, source: this.question.word.source === "personal" ? "personal" : "word" });
-    const result = a.result;
-    this.battleProgress.record(result);
-    const tier = comboTier(this.battleProgress.combo);
-    this.battleAudio?.play(result === "timeout" ? "jelly" : "dash", result === "timeout" ? .10 : .12);
-    this.correction =
-      result === "correct" && this.prefs.correctAnswerReview !== "card"
-        ? undefined
-        : new Correction(this.question);
-    const hit = () => {
-      if (result === "correct") this.battleAudio?.impact(tier);
-      else if (result === "incorrect") this.battleAudio?.play("jelly", .12);
-      this.phase = "feedback";
-      paintAnswerFeedback(this.view, a, this.hearts, this.correct);
-      this.feedback.speak(this.question.word, result, this.prefs, this.battleAudio?.enabled ?? false);
-      this.petMotion.play(result === "correct" ? "happy" : "encourage");
-      this.paintPet();
-      if (this.correction) {
-        this.phase = "correction";
-        this.renderCorrection(true);
-        return;
-      }
-      this.feedback.queue();
-    };
-    const impact = () =>
-      answerImpact(this, this.view, index, result, hit, false);
-    if (this.battle)
-      this.battle.attack(result, this.reducedMotion?.matches ?? false, impact, this.battleProgress.combo);
-    else impact();
-  }
-
-  private renderCorrection(animate = false) {
-    const correction = this.correction;
-    if (!correction) return;
-    const lastResult = this.logs.at(-1)?.result;
-    this.petMotion.play(lastResult === "correct" ? "happy" : "encourage");
-    this.paintPet();
-    this.correctionView = showCorrection(
-      this,
-      this.view,
-      correction,
-      this.logs.at(-1),
-      this.maxTime,
-      {
-        advance: () => this.finishCorrection(),
-        toggle: () => this.toggleCorrection(),
-        enabled: () => this.phase === "correction",
-      },
-      animate,
-    );
-  }
-  private toggleCorrection() {
-    if (this.phase !== "correction" || !this.correction) return;
-    this.correction.toggle();
-    this.correctionView?.update(this.correction);
-  }
-  private finishCorrection(index?: number) {
-    if (this.phase !== "correction" || this.feedback.speaking || !this.correction?.complete(index))
-      return;
-    this.phase = "feedback";
-    this.correction = undefined;
-    this.petMotion.play("happy");
-    const card = this.correctionView?.root;
-    if (card) {
-      burst(this, card.x, card.y, this.c.blue);
-      card.disableInteractive().setVisible(false);
-    }
-    this.feedback.queue();
   }
   /** The HUD mute is a master switch for BGM, effects and speech synthesis. */
   private toggleAllSound() {
@@ -432,29 +297,16 @@ export class TrainingScene extends Phaser.Scene {
   }
   private hidden = () => {
     this.trainingInput.clear();
-    if (this.timeLimited) this.pause();
+    if (this.timeLimited) this.viewport.pause();
     else {
       this.battleAudio?.stop();
       this.feedback.stopSpeech();
     }
   };
-  private pause() {
-    this.battleAudio?.stop();
-    this.feedback.stopSpeech();
-    if (this.preparingQuestion) { this.pauseRequested = true; return; }
-    if (this.phase === "paused" || this.phase === "end") return;
-    this.beforePause = this.phase;
-    this.pauseAt = performance.now();
-    this.cancelPress();
-    this.phase = "paused";
-    this.time.paused = true;
-    this.tweens.pauseAll();
-    this.drawPause();
-  }
   private drawPause() {
     this.overlay?.destroy();
     this.overlay = drawPause(this.view, {
-      resume: () => this.resume(),
+      resume: () => this.viewport.resume(),
       finish: () => {
         // DOM controls live outside the Phaser display list. Dispose them first
         // so a saving/result screen can never remain hidden behind the pause UI.
@@ -476,160 +328,17 @@ export class TrainingScene extends Phaser.Scene {
       },
     });
   }
-  private resume() {
-    if (this.phase !== "paused") return;
-    this.overlay?.destroy();
-    this.overlay = undefined;
-    const target = this.correction
-      ? "correction"
-      : this.beforePause === "settling"
-        ? this.afterSettle
-        : this.beforePause === "arming"
-          ? "play"
-          : this.beforePause;
-    const elapsed =
-      this.beforePause === "settling"
-        ? this.settleElapsed
-        : this.beforePause === "arming"
-          ? this.resizeElapsed
-          : Math.max(0, this.pauseAt - this.started);
-    if (target === "play") {
-      this.drawBoard();
-      if (this.timeLimited) {
-        this.view.drawTime(Math.max(0, 1 - elapsed / this.maxTime));
-        this.view.seconds?.setText((Math.max(0, this.maxTime - elapsed) / 1000).toFixed(1));
-      }
-    } else if (target === "correction") {
-      this.tweens.killAll();
-      this.drawBoard();
-      this.renderCorrection();
-    }
-    this.resizeElapsed = 0;
-    this.settle(target === "paused" ? "play" : target, elapsed);
-  }
-  private settle(
-    target: Exclude<Phase, "paused" | "settling">,
-    elapsed: number,
-  ) {
-    // Discard input during the grace period; never queue the resume tap as an answer.
-    this.phase = "settling";
-    this.afterSettle = target;
-    this.settleElapsed = elapsed;
-    this.settleUntil = performance.now() + START_INPUT_DELAY_MS;
-    this.gate.close();
-    this.time.paused = true;
-    this.tweens.pauseAll();
-  }
-  private async resize() {
-    this.syncCamera();
-    if (this.preparingQuestion) return;
-    if (this.phase === "end") {
-      this.drawEnd();
-      return;
-    }
-    if (!this.question) return;
-    // Keep the same wrong answer, remaining review time and local pause state
-    // through rotation, browser chrome changes, and global pause/resume.
-    if (this.correction) {
-      const paused = this.phase === "paused";
-      this.gate.close();
-      this.time.removeAllEvents();
-      this.tweens.killAll();
-      this.drawBoard();
-      this.renderCorrection();
-      if (paused) {
-        this.beforePause = "correction";
-        this.drawPause();
-      } else this.settle("correction", 0);
-      return;
-    }
-    // A resize during answer animation or pronunciation is visual only.
-    // Do not classify the answered question as consumed or end the run.
-    if (this.phase === "flight" || this.phase === "feedback") return;
-    // Paused settings must never consume the current question on viewport changes.
-    if (this.phase === "paused" && (this.beforePause === "flight" || this.beforePause === "feedback")) {
-      this.drawPause();
-      return;
-    }
-    const progress = resizeProgress(
-      {
-        phase: this.phase,
-        beforePause: this.beforePause,
-        afterSettle: this.afterSettle,
-        started: this.started,
-        pauseAt: this.pauseAt,
-        resizeElapsed: this.resizeElapsed,
-        settleElapsed: this.settleElapsed,
-      },
-      performance.now(),
-      this.timeLimited ? this.maxTime : Number.MAX_SAFE_INTEGER,
-    );
-    this.gate.close();
-    this.time.removeAllEvents();
-    this.tweens.killAll();
-    if (progress.resolved) {
-      if (this.hearts === 0) {
-        this.finish();
-        return;
-      }
-      let question: Question | null;
-      const request = ++this.nextGeneration;
-      this.preparingQuestion = true;
-      this.phase = "arming";
-      try {
-        await this.options.planner.prepareSet();
-        if (request !== this.nextGeneration) return;
-        this.preparingQuestion = false;
-        question = this.options.planner.next();
-      } catch (error) {
-        if (request !== this.nextGeneration) return;
-        this.preparingQuestion = false;
-        this.phase = "end";
-        this.options.onError?.(error);
-        return;
-      }
-      if (!question) {
-        this.finish(true);
-        return;
-      }
-      this.question = question;
-      this.questionHasBattle = battleReady(key => this.textures.exists(key));
-      this.maxTime = limitFor(this.correct);
-    }
-    this.resizeElapsed = progress.elapsed;
-    this.drawBoard();
-    if (progress.paused) {
-      // Manual/visibility pauses remain paused; resizing alone never opens this overlay.
-      this.beforePause = "arming";
-      this.phase = "paused";
-      this.pauseRequested = false;
-      this.drawPause();
-      return;
-    }
-    this.phase = "arming";
-    const generation = this.viewGeneration;
-    this.game.events.once("postrender", () => {
-      if (this.phase === "arming" && generation === this.viewGeneration) {
-        if (this.pauseRequested || (this.timeLimited && document.hidden)) {
-          this.pauseRequested = false;
-          this.pause();
-          return;
-        }
-        this.settle("play", progress.elapsed);
-      }
-    });
-  }
   private finish(reviewComplete = false, exitAfterSave = false) {
     this.overlay?.destroy();
     this.overlay = undefined;
     this.battleAudio?.stop();
     this.feedback.stopSpeech();
-    this.nextGeneration++;
-    this.preparingQuestion = false;
-    this.pauseRequested = false;
-    this.correction = undefined;
+    this.state.nextGeneration++;
+    this.state.preparingQuestion = false;
+    this.state.pauseRequested = false;
+    this.answers.reset();
     this.reviewComplete ||= reviewComplete;
-    this.phase = "end";
+    this.state.phase = "end";
     this.petMotion.play(this.reviewComplete ? "celebrate" : "happy");
     this.gate.close();
     this.time.removeAllEvents();
@@ -666,11 +375,11 @@ export class TrainingScene extends Phaser.Scene {
     this.notifyReady();
     this.clear();
     this.pet = drawTrainingResult(
-      this, this.view, this.correct,
+      this, this.view, this.session.correct,
       {
         reviewComplete: this.reviewComplete,
         progress: this.options.planner.progress(),
-        answers: this.logs,
+        answers: this.session.answers,
         preview: this.options.preview,
         syncing: this.persistence.saving,
         syncOK: this.persistence.saved,
