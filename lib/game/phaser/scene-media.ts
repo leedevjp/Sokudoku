@@ -1,7 +1,7 @@
 import type Phaser from "phaser";
 import { prepareMedia } from "@/lib/sync/client";
 import { gameAssetUrl } from "../asset-url";
-import { battleImages, laterImages, effectFiles } from "./presentation-assets";
+import { coreBattleImages, extraBattleImages, laterImages, effectFiles } from "./presentation-assets";
 
 /** Never awaited by the question path. Network work belongs to the root worker. */
 export class SceneMedia {
@@ -11,7 +11,7 @@ export class SceneMedia {
   private urls = new Set<string>();
   private cancellations = new Set<() => void>();
   private uploads = Promise.resolve();
-  constructor(private scene: Phaser.Scene) {}
+  constructor(private scene: Phaser.Scene, private onBattleReady?: () => void) {}
   private async image(key: string, source: string, priority = true) {
     if (this.scene.textures.exists(key)) return;
     const blob = await prepareMedia(gameAssetUrl(source), priority);
@@ -56,12 +56,22 @@ export class SceneMedia {
   start() {
     if (this.closed || this.flight) return;
     clearTimeout(this.retry);
-    this.flight = Promise.allSettled([
-      ...battleImages.map(([key, source]) => this.image(key, source)),
+    // Make the battle visible as soon as its required images are uploaded.
+    // Audio and later stages must not delay the characters appearing.
+    const battle = Promise.allSettled(
+      coreBattleImages.map(([key, source]) => this.image(key, source)),
+    ).then(results => {
+      const ready = results.every(result => result.status === "fulfilled");
+      if (ready && !this.closed) this.onBattleReady?.();
+      return ready;
+    });
+    const optional = Promise.allSettled([
+      ...extraBattleImages.map(([key, source]) => this.image(key, source, false)),
       ...laterImages.map(([key, source]) => this.image(key, source, false)),
       ...effectFiles.map(file => this.audio(file)),
-    ]).then(results => {
-      if (!this.closed && results.some(result => result.status === "rejected"))
+    ]);
+    this.flight = Promise.all([battle, optional]).then(([ready, results]) => {
+      if (!this.closed && (!ready || results.some(result => result.status === "rejected")))
         this.retry = setTimeout(() => this.start(), 15000);
     }).finally(() => { this.flight = undefined; });
   }

@@ -46,6 +46,16 @@ function frames(
   }
   texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
+/** Idle sprites can finish streaming after the battle was created. */
+function prepareIdleFrames(scene: Phaser.Scene) {
+  if (!scene.textures.exists(IDLE)) return;
+  const texture = scene.textures.get(IDLE);
+  if (texture.has("0")) return;
+  IDLE_CROPS.forEach(([x, y], i) => {
+    if (!texture.has(String(i))) texture.add(String(i), 0, x, y, 400, 400);
+  });
+  texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+}
 /** Presentation only: actors move inside the arena without affecting answer time. */
 export class MeadowBattle {
   private mageEmotion?: EmotionEffect;
@@ -96,13 +106,7 @@ export class MeadowBattle {
       12 * s, region === 2 ? 0xffffff : 0x254d48, true).setOrigin(1, .5);
     if (scene.textures.exists(MAGE)) {
       frames(scene, MAGE, 4, 5);
-      if (scene.textures.exists(IDLE)) {
-        const texture = scene.textures.get(IDLE);
-        IDLE_CROPS.forEach(([x, y], i) => {
-          if (!texture.has(String(i))) texture.add(String(i), 0, x, y, 400, 400);
-        });
-        texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-      }
+      prepareIdleFrames(scene);
       if (scene.textures.exists(LOCOMOTION)) frames(scene, LOCOMOTION, 4, 2);
       this.mage = scene.add
         .image(this.startX, this.baseline, MAGE, "0")
@@ -161,6 +165,8 @@ export class MeadowBattle {
   }
   private travel(elapsed: number, run: boolean, right: boolean) {
     if (!this.mage?.scene.textures.exists(LOCOMOTION)) return;
+    if (!this.mage.scene.textures.get(LOCOMOTION).has("0"))
+      frames(this.mage.scene, LOCOMOTION, 4, 2);
     this.mage.setTexture(LOCOMOTION, String((run ? 4 : 0) + Math.floor(elapsed / (run ? 90 : 160)) % 4))
       .setFlipX(run ? !right : right).setDisplaySize(154 * this.s, 154 * this.s);
   }
@@ -176,6 +182,7 @@ export class MeadowBattle {
       // Planted feet: no per-question entrance, bob, sway, scale or rotation.
       this.mage?.setPosition(this.startX, this.baseline);
       if (this.mage?.scene.textures.exists(IDLE)) {
+        prepareIdleFrames(this.mage.scene);
         this.mage.setTexture(IDLE, String(battleIdleFrame(this.idleElapsed, reduced)))
           .setOrigin(.5, 394 / 400).setDisplaySize(140 * this.s, 140 * this.s);
       }
