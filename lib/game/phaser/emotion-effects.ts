@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { gameAssetUrl } from "../asset-url";
 
 export type Emotion = "hearts" | "confusion" | "anger";
 const TEXTURE = "battle-emotion-v1";
@@ -8,11 +7,6 @@ const CLIPS = {
   confusion: { row: 1, step: 110, pause: 440 },
   anger: { row: 2, step: 90, pause: 360 },
 } as const;
-
-export function preloadEmotions(scene: Phaser.Scene) {
-  if (!scene.textures.exists(TEXTURE))
-    scene.load.image(TEXTURE, gameAssetUrl("/battle/emotion-v1.webp"));
-}
 
 /** Fixed 64px cells preserve the authored rise and flutter; never trim frames. */
 export class EmotionEffect {

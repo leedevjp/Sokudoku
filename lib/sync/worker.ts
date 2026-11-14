@@ -5,11 +5,15 @@ import { SyncEngine } from "./engine";
 import { catalogVersion, datasets, versionsMatch, snapshotKey, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
 import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
+import { browserMediaDownloads } from "./media";
 
 let owner: string | null = null;
 let engine: SyncEngine | undefined;
 let requests = new AbortController();
+const mediaDownloads = browserMediaDownloads();
 let media: Promise<void> | undefined;
+let mediaComplete = false;
+let mediaTimer: ReturnType<typeof setTimeout> | undefined;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let syncFlight: { owner: string; work: Promise<SyncSnapshot> } | undefined;
 let wakeAgain = false;
@@ -39,18 +43,17 @@ async function json(path: string, init?: RequestInit) {
   return response.json();
 }
 function warmMedia() {
-  return media ??= (async () => {
-    const urls = gameAssetUrls();
-    let index = 0;
-    await Promise.all(Array.from({ length: 3 }, async () => {
-      while (index < urls.length) {
-        const url = urls[index++];
-        const response = await fetch(url, { cache: "force-cache", signal: AbortSignal.timeout(60000) });
-        if (!response.ok) throw Error("MEDIA_FAILED");
-        await response.arrayBuffer();
-      }
-    }));
-  })().catch(error => { media = undefined; throw error; });
+  if (mediaComplete) return Promise.resolve();
+  if (media) return media;
+  clearTimeout(mediaTimer);
+  // Images first. Media has its own retry clock, independent of user sync.
+  const urls = gameAssetUrls().sort((a, b) => Number(!a.endsWith(".webp")) - Number(!b.endsWith(".webp")));
+  const work = mediaDownloads.warm(urls).then(complete => {
+    mediaComplete = complete;
+    if (!complete) mediaTimer = setTimeout(() => { void warmMedia(); }, 15000);
+  }).finally(() => { media = undefined; });
+  media = work;
+  return work;
 }
 async function pullPages(versions: Versions): Promise<SyncPacket> {
   let base = versions;
@@ -134,15 +137,24 @@ async function synchronize() {
   }
 }
 function background() {
-  void Promise.all([synchronize(), warmMedia()]).catch(error => {
+  void warmMedia();
+  const user = owner;
+  void synchronize().catch(error => {
     postMessage({ type: "error", error: (error as Error).message });
   }).finally(() => {
-    clearTimeout(retryTimer);
-    if (owner) retryTimer = setTimeout(background, 15000);
+    if (owner && owner === user) {
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(background, 15000);
+    }
   });
 }
-self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owner?: string | null; levels?: string | null; kinds?: Kind[] }>) => {
+self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owner?: string | null; levels?: string | null; kinds?: Kind[]; url?: string; priority?: boolean }>) => {
   try {
+    if (data.type === "media") {
+      if (!data.url || !gameAssetUrls().includes(data.url)) throw Error("INVALID_MEDIA");
+      postMessage({ id: data.id, result: await mediaDownloads.get(data.url, data.priority !== false) });
+      return;
+    }
     if (data.type === "owner") {
       if (owner === data.owner) return;
       requests.abort(); requests = new AbortController();
@@ -168,7 +180,6 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
     if (data.type === "sync" || !snapshot?.savedAt) snapshot = await synchronize();
     // A complete local snapshot is playable even while uploads/catch-up continue.
     // The game replays its durable local outbox onto this canonical snapshot.
-    if (data.type === "prepare" && !hadSnapshot) await warmMedia();
     if (!snapshot || snapshot.owner !== owner) throw Error("LOGIN");
     postMessage({ id: data.id, result: data.type === "prepare" ? preparedGame(snapshot, data.levels ?? null, data.kinds ?? []) : true });
   } catch (error) { postMessage({ id: data.id, error: (error as Error).message }); }

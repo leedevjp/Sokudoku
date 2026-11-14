@@ -43,7 +43,7 @@ async function identify() {
   if (!worker) getWorker().postMessage({ type: "owner", owner });
 }
 async function request(type: string, args: object = {}): Promise<unknown> {
-  await identify();
+  if (type !== "media") await identify();
   const id = ++nextId;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => { pending.delete(id); reject(Error("SYNC_TIMEOUT")); }, 150000);
@@ -55,6 +55,9 @@ export async function prepareSharedGame(levels: string | null, kinds: Kind[]): P
   return await request("prepare", { levels, kinds }) as Bootstrap;
 }
 export async function settleSync() { await request("sync"); }
+export async function prepareMedia(url: string, priority = true): Promise<Blob> {
+  return await request("media", { url, priority }) as Blob;
+}
 export function kickSync() {
   if (typeof window === "undefined") return;
   if (owner) getWorker().postMessage({ type: "kick" });

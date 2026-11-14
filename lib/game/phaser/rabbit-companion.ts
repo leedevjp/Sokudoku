@@ -1,13 +1,7 @@
-import { EmotionEffect, preloadEmotions } from "./emotion-effects";
+import { EmotionEffect } from "./emotion-effects";
 import Phaser from "phaser";
-import { gameAssetUrl } from "../asset-url";
 import { petFrame, type PetMotion } from "../pet-motion";
 const TEXTURE = "battle-mage-v5";
-export function preloadRabbit(scene: Phaser.Scene) {
-  preloadEmotions(scene);
-  if (!scene.textures.exists(TEXTURE))
-    scene.load.image(TEXTURE, gameAssetUrl("/battle/mage-v5.webp"));
-}
 /** The same low-resolution atlas supplies combat, results and pause poses. */
 export class RabbitCompanion {
   readonly root: Phaser.GameObjects.Container;

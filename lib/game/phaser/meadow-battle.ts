@@ -1,6 +1,5 @@
-import { EmotionEffect, preloadEmotions } from "./emotion-effects";
+import { EmotionEffect } from "./emotion-effects";
 import Phaser from "phaser";
-import { gameAssetUrl } from "../asset-url";
 import type { Result } from "../types";
 import {
   magicEncounter,
@@ -24,25 +23,6 @@ const MONSTERS = "battle-mandrakes-v5";
 const MAGIC = "battle-magic-v5";
 const REGIONS = [MEADOW, "battle-forest-v1", "battle-moon-ruins-v1"];
 const COMBO = "battle-combo-burst-v1";
-export function preloadBattle(scene: Phaser.Scene) {
-  preloadEmotions(scene);
-  for (const [key, file] of [
-    [MEADOW, "meadow-original-v4.webp"],
-    [MAGE, "mage-v5.webp"],
-    [IDLE, "mage-idle-v1.webp"],
-    [LOCOMOTION, "mage-locomotion-v1.webp"],
-    [MONSTERS, "mandrakes-v5.webp"],
-    [MAGIC, "magic-v5.webp"],
-    [COMBO, "combo-burst-v1.webp"],
-  ]) {
-    if (!scene.textures.exists(key)) scene.load.image(key, gameAssetUrl("/battle/" + file));
-  }
-}
-/** Later regions are not needed until ten/twenty answers into the run. */
-export function preloadLaterRegions(scene: Phaser.Scene) {
-  for (const [key, file] of [[REGIONS[1], "forest-v1.webp"], [REGIONS[2], "moon-ruins-v1.webp"]])
-    if (!scene.textures.exists(key)) scene.load.image(key, gameAssetUrl("/battle/" + file));
-}
 function frames(
   scene: Phaser.Scene,
   key: string,
