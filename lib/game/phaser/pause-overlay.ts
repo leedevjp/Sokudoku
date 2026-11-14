@@ -41,6 +41,9 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
 .sokudoku-pause-main:active,.sokudoku-pause-quick button:active{transform:translateY(3px);box-shadow:none}
 .sokudoku-pause-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:0}
 .sokudoku-pause-quick button{width:100%;min-width:0;height:42px;padding:0 3px;background:var(--panel);border:1.5px solid var(--line);color:var(--ink);border-radius:12px;box-shadow:0 3px 0 var(--shade);font-size:12px;font-weight:700;transition:transform .08s,box-shadow .08s}
+.sokudoku-pause-quick button.pause-exit{background:#c94d5f;border-color:#a63a4d;color:#fff;box-shadow:0 3px 0 #943246}
+.sokudoku-pause-quick button.pause-exit:active{transform:translateY(3px);box-shadow:none}
+.sokudoku-pause-quick button.pause-exit:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .pause-sound-controls{display:grid;gap:9px;margin-top:14px;padding-top:12px;border-top:1.5px dashed var(--line);text-align:left}
 .pause-sound-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pause-sound-heading strong{font-size:14px;font-weight:800;color:var(--ink)}
@@ -128,13 +131,13 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   const quick = document.createElement("div");
   quick.className = "sokudoku-pause-quick";
   quick.append(
-    button(view.t("終了・保存", "종료·저장"), actions.finish, ""),
-    button(actions.preferences.lang === "jp" ? "JP ⇄ KR" : "KR ⇄ JP", () => {
-      actions.changePreferences({ ...actions.preferences, lang: actions.preferences.lang === "jp" ? "kr" : "jp" });
-    }, ""),
     button(actions.preferences.theme === "light" ? view.t("☾ ダーク", "☾ 다크") : view.t("☀ ライト", "☀ 라이트"), () => {
       actions.changePreferences({ ...actions.preferences, theme: actions.preferences.theme === "light" ? "dark" : "light" });
     }, ""),
+    button(actions.preferences.lang === "jp" ? "JP ⇄ KR" : "KR ⇄ JP", () => {
+      actions.changePreferences({ ...actions.preferences, lang: actions.preferences.lang === "jp" ? "kr" : "jp" });
+    }, ""),
+    button(view.t("終了・保存", "종료·저장"), actions.finish, "pause-exit"),
   );
   card.append(quick);
   if (actions.audio) {
