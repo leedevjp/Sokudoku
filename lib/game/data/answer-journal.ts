@@ -6,6 +6,7 @@ export class AnswerJournal {
   private answers: Answer[] = [];
   private writes: Promise<unknown>[] = [];
   private syncTail: Promise<unknown> = Promise.resolve();
+  private localTail: Promise<void> = Promise.resolve();
   private sources = new Map<string, Word["source"]>();
   constructor(
     private owner: string,
@@ -21,7 +22,9 @@ export class AnswerJournal {
   }
   async recover(): Promise<Answer[]> {
     if (this.preview) return [];
-    const pending = await this.storage.pendingAnswers(this.owner).catch(() => []);
+    // A failed IndexedDB read is not an empty learning history. Fail closed
+    // so we never start a session using an unknowingly stale state.
+    const pending = await this.storage.pendingAnswers(this.owner);
     // Replay the local queue immediately; a slow upload must not gate entry.
     // Share syncTail with later checkpoints so acknowledgement remains serialized.
     if (pending.length && !this.localFirst) void this.sync();
@@ -30,14 +33,13 @@ export class AnswerJournal {
   record(answer: Answer) {
     const entry: Answer = {
       ...answer,
-      source:
-        this.sources.get(answer.word_id) === "personal" ? "personal" : "word",
-      selected_source:
-        answer.selected_source === "extra" ? "extra" :
-        answer.selected_word_id &&
-        this.sources.get(answer.selected_word_id) === "personal"
-          ? "personal"
-          : "word",
+      // Preserve the source of the displayed question even if the catalog
+      // changes before its answer is recorded.
+      source: answer.source ?? (this.sources.get(answer.word_id) === "personal" ? "personal" : "word"),
+      selected_source: answer.selected_source ?? (
+        answer.selected_word_id && this.sources.get(answer.selected_word_id) === "personal"
+          ? "personal" : "word"
+      ),
     };
     this.answers.push(entry);
     if (!this.preview) {
@@ -54,9 +56,16 @@ export class AnswerJournal {
     this.syncTail = save;
     return save;
   }
-  /** Only durable local writes gate navigation; the root worker owns uploads. */
-  async saveLocal(): Promise<boolean> {
-    if (this.preview) return true;
+  /** Only durable local writes gate navigation; the root worker owns uploads.
+   * Serialize checkpoints and exit saves so a late duplicate local write
+   * cannot resurrect an answer the worker already acknowledged. */
+  saveLocal(): Promise<boolean> {
+    if (this.preview) return Promise.resolve(true);
+    const work = this.localTail.then(() => this.persistLocal());
+    this.localTail = work.then(() => {}, () => {});
+    return work;
+  }
+  private async persistLocal(): Promise<boolean> {
     const batch = this.answers.slice(), writes = this.writes.splice(0);
     try {
       await Promise.allSettled(writes);
