@@ -1,5 +1,6 @@
 import type { TrainingView } from "./board";
 import type { Question } from "../types";
+import { encounterLabel } from "../encounter";
 
 export function drawQuestionCard(view: TrainingView, question: Question) {
   const { scale: s, width: cw, left, top, extra } = view.boardLayout;
@@ -145,6 +146,33 @@ export function drawQuestionCard(view: TrainingView, question: Question) {
       true,
     ),
   );
+  if (question.encounterCount !== undefined) {
+    const first = question.encounterCount === 1;
+    const color = first
+      ? view.prefs.theme === "dark" ? 0x8be0c8 : 0x217665
+      : view.c.muted;
+    const label = view.designText(
+      0, badgeY, encounterLabel(question.encounterCount, view.prefs.lang),
+      20 * s, color, true,
+    );
+    const maxWidth = cw - badgeWidth * 2 - 24 * s;
+    if (label.width > maxWidth - 40 * s)
+      label.setFontSize(20 * s * (maxWidth - 40 * s) / label.width);
+    const width = Math.min(maxWidth, label.width + 40 * s);
+    const right = modeX - badgeWidth / 2 - 10 * s;
+    const center = right - width / 2;
+    badges.add(view.add.graphics()
+      .fillStyle(first ? color : view.c.muted, first ? 0.1 : 0.07)
+      .fillRoundedRect(right - width, badgeY - badgeHeight / 2, width, badgeHeight, badgeHeight / 2));
+    const dotX = right - width + 15 * s;
+    const mark = view.add.graphics().fillStyle(color, first ? 1 : 0.6);
+    if (first) {
+      mark.fillTriangle(dotX, badgeY - 6 * s, dotX + 4 * s, badgeY, dotX - 4 * s, badgeY)
+        .fillTriangle(dotX, badgeY + 6 * s, dotX + 4 * s, badgeY, dotX - 4 * s, badgeY);
+    } else mark.fillCircle(dotX, badgeY, 3 * s);
+    label.setX(center + 7 * s);
+    badges.add([mark, label]);
+  }
   // Keep the original large type for short words. For 5+ characters,
   // grow the card horizontally first and scale text only to fit its width.
   // Japanese full-width glyphs are roughly one em each, so reserve a little
