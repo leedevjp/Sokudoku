@@ -10,6 +10,8 @@ import { parseModes } from "@/lib/game/learning/types";
 import { parseKinds } from "@/lib/game/selection";
 import styles from "./game-host.module.css";
 import { TrainingRuntime } from "@/lib/game/data/training-runtime";
+import { homeTrainingPreloader } from "@/lib/game/data/home-preloader";
+import { getSyncOwner } from "@/lib/sync/client";
 
 /** Connects React lifecycle and preferences to the dynamically loaded game. */
 export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
@@ -35,10 +37,20 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
     const query = new URLSearchParams(search);
     const kinds = parseKinds(query.get("kinds"));
     const timeLimited = query.get("timeLimit") !== "off";
-    const runtime = new TrainingRuntime({
+    const modes = parseModes(query.get("modes"));
+    const currentOwner = getSyncOwner();
+    const warmed = !previewWords && currentOwner
+      ? homeTrainingPreloader.take({
+          owner: currentOwner,
+          levels: query.get("levels") ?? "",
+          kinds,
+          modes,
+        })
+      : null;
+    const runtimeOptions = {
       levels: query.get("levels"),
       kinds,
-      modes: parseModes(query.get("modes")),
+      modes,
       previewWords,
       onLoginRequired: () => router.replace("/"),
       onAnswersSaved: () => {
@@ -53,7 +65,9 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
             noticeTimer = setTimeout(() => setStoredChests(null), 5000);
           }).catch(() => {});
       },
-    });
+    };
+    let runtime = warmed?.runtime ?? new TrainingRuntime(runtimeOptions);
+    runtime.setHandlers(runtimeOptions.onLoginRequired, runtimeOptions.onAnswersSaved);
     const online = () => runtime.online();
     window.addEventListener("online", online);
     async function init() {
@@ -61,8 +75,16 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       if (cancelled) return;
       setLoaded(false);
       setError("");
+      const preparedData = warmed
+        ? warmed.data.catch(() => {
+            if (cancelled) throw Error("TRAINING_CLOSED");
+            runtime.dispose();
+            runtime = new TrainingRuntime(runtimeOptions);
+            return runtime.load();
+          })
+        : runtime.load();
       const [data, , { createTraining }] = await Promise.all([
-        runtime.load(),
+        preparedData,
         document.fonts.ready,
         import("@/lib/game/phaser/create-training"),
       ]);
