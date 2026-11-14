@@ -6,6 +6,7 @@ import { catalogVersion, datasets, versionsMatch, snapshotKey, type QueuedAnswer
 import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
 import { browserMediaDownloads } from "./media";
+import { readLocalSync, syncDataKey } from "./local-store";
 
 let owner: string | null = null;
 let engine: SyncEngine | undefined;
@@ -18,22 +19,10 @@ let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let syncFlight: { owner: string; work: Promise<SyncSnapshot> } | undefined;
 let wakeAgain = false;
 let localSnapshot: SyncSnapshot | undefined;
-const dataKey = (user: string, dataset: string) => `sync-data-v1:${user}:${dataset}`;
-
-async function readSnapshot(user: string): Promise<SyncSnapshot | undefined> {
-  const tx = (await database()).transaction("cache", "readonly");
-  const meta: SyncSnapshot | undefined = await tx.store.get(snapshotKey(user));
-  if (!meta) { await tx.done; return; }
-  const data = meta.data ?? {} as SyncSnapshot["data"];
-  for (const dataset of datasets) {
-    if (meta.data?.[dataset]) continue; // Upgrade an older monolithic snapshot safely.
-    data[dataset] = localSnapshot?.owner === user &&
-      (localSnapshot.versions[dataset] ?? "0") === (meta.versions[dataset] ?? "0")
-      ? localSnapshot.data[dataset] : await tx.store.get(dataKey(user, dataset)) ?? {};
-  }
-  await tx.done;
-  localSnapshot = { ...meta, data };
-  return localSnapshot;
+async function readSnapshot(user: string, includePending = false) {
+  const state = await readLocalSync(user, localSnapshot, includePending);
+  if (state.snapshot) localSnapshot = state.snapshot;
+  return state;
 }
 
 async function json(path: string, init?: RequestInit) {
@@ -82,7 +71,7 @@ async function pullPages(versions: Versions): Promise<SyncPacket> {
 }
 function makeEngine(user: string) {
   return new SyncEngine(user, {
-    read: () => readSnapshot(user),
+    read: async () => (await readSnapshot(user)).snapshot,
     pending: async () => ((await (await database()).getAll("answer")) as QueuedAnswer[]).filter(a => a.owner === user),
     commit: async (snapshot, ids) => {
       if (owner !== user) throw Error("OWNER_CHANGED");
@@ -95,7 +84,7 @@ function makeEngine(user: string) {
       // Common dictionaries/choice banks are not rewritten after each answer.
       for (const dataset of datasets) {
         if (!previous || previous.data || (previous.versions[dataset] ?? "0") !== (snapshot.versions[dataset] ?? "0"))
-          await tx.objectStore("cache").put(snapshot.data[dataset], dataKey(user, dataset));
+          await tx.objectStore("cache").put(snapshot.data[dataset], syncDataKey(user, dataset));
       }
       const { data: ignored, ...meta } = snapshot;
       void ignored;
@@ -171,16 +160,28 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
       return;
     }
     if (!owner) throw Error("LOGIN");
-    let snapshot = await readSnapshot(owner);
+    const playable = await readSnapshot(owner, data.type === "prepare");
+    let snapshot = playable.snapshot;
     const hadSnapshot = !!snapshot?.savedAt;
     if (data.type === "prepare" && !hadSnapshot) {
       const legacy = await readLegacyGame(owner, data.levels ?? null, data.kinds ?? []);
       if (legacy) { postMessage({ id: data.id, result: legacy }); return; }
     }
-    if (data.type === "sync" || !snapshot?.savedAt) snapshot = await synchronize();
-    // A complete local snapshot is playable even while uploads/catch-up continue.
-    // The game replays its durable local outbox onto this canonical snapshot.
+    if (data.type === "sync" || !snapshot?.savedAt) {
+      snapshot = await synchronize();
+      // Initial sync created a snapshot; capture its outbox atomically too.
+      if (data.type === "prepare") {
+        const updated = await readSnapshot(owner, true);
+        snapshot = updated.snapshot;
+        playable.pending = updated.pending;
+      }
+    }
+    // The root worker owns both snapshot and pending answers, so a refresh
+    // cannot remove the queue between separate page-level reads.
     if (!snapshot || snapshot.owner !== owner) throw Error("LOGIN");
-    postMessage({ id: data.id, result: data.type === "prepare" ? preparedGame(snapshot, data.levels ?? null, data.kinds ?? []) : true });
+    postMessage({ id: data.id, result: data.type === "prepare"
+      ? { ...preparedGame(snapshot, data.levels ?? null, data.kinds ?? []),
+          pendingAnswers: playable.pending }
+      : true });
   } catch (error) { postMessage({ id: data.id, error: (error as Error).message }); }
 };

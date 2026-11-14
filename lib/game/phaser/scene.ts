@@ -350,7 +350,9 @@ export class TrainingScene extends Phaser.Scene {
     );
     this.options.stats = stats;
     this.options.planner.record(a, this.question.word);
-    this.options.onAnswer(a);
+    // The displayed question remains valid even when a catalog refresh
+    // replaces the runtime's word map before this answer is recorded.
+    this.options.onAnswer({ ...a, source: this.question.word.source === "personal" ? "personal" : "word" });
     const result = a.result;
     this.battleProgress.record(result);
     const tier = comboTier(this.battleProgress.combo);

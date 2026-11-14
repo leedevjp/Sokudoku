@@ -1,4 +1,4 @@
-import type { Word, Stat } from "../types";
+import type { Word, Stat, Answer } from "../types";
 import {
   parseLevels,
   selectedDifficulty,
@@ -11,6 +11,8 @@ import { database, storageDeadline } from "./database";
 import { emptyLearning, type LearningSnapshot } from "../learning/types";
 import { loadMeaningBank, readMeaningBank } from "./meaning-bank";
 import { withMeaningBank } from "../meaning-bank";
+import { readLocalSync } from "@/lib/sync/local-store";
+import { preparedGame } from "@/lib/sync/prepared";
 
 export type Bootstrap = {
   words: Word[];
@@ -20,6 +22,8 @@ export type Bootstrap = {
   readingWords?: Word[];
   catalogVersion?: string;
   syncVersion?: number;
+  /** Canonical state and unacknowledged outbox captured in one worker transaction. */
+  pendingAnswers?: Answer[];
 };
 
 /** One loader per game route. Owns selected sources, incremental cache and offline fallback. */
@@ -167,6 +171,19 @@ export class GameDataLoader {
       data: { session },
     } = await createClient().auth.getSession();
     if (!session) throw Error("LOAD");
+    // The worker may be unavailable while its last committed snapshot remains
+    // perfectly usable. Restore that snapshot and the answer outbox atomically
+    // instead of falling back to a potentially stale legacy learning cache.
+    const local = await readLocalSync(session.user.id, undefined, true);
+    if (local.snapshot?.savedAt) {
+      return {
+        ...preparedGame(local.snapshot, this.levels.join(","), [
+          ...(this.needsReading ? ["reading" as const] : []),
+          ...(this.needsMeaning ? ["meaning" as const] : []),
+        ]),
+        pendingAnswers: local.pending,
+      };
+    }
     const [common, personal] = await Promise.all([
       this.difficulties.size || this.needsReading
         ? readWords().catch(() => undefined)
@@ -187,6 +204,7 @@ export class GameDataLoader {
       readingWords: this.needsReading ? [...common, ...personal] : undefined,
       stats: [],
       user_id: session.user.id,
+      pendingAnswers: local.pending,
       learning:
         (await storageDeadline(
           (await database()).get("cache", `learning-v1:${session.user.id}`),
