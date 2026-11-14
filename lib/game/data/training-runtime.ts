@@ -213,9 +213,13 @@ export class TrainingRuntime {
     return work;
   }
   record(answer: Answer) {
-    const word = this.data.words.find(item => item.id === answer.word_id);
-    this.playedAnswers.push({ ...answer, source: word?.source === "personal" ? "personal" : "word" });
-    this.journal.record(answer);
+    // Prefer the source captured from the visible card. The catalog may
+    // already have switched while that old card was still on screen.
+    const source = answer.source ?? (this.data.words.find(item => item.id === answer.word_id)?.source === "personal"
+      ? "personal" : "word");
+    const recorded = { ...answer, source };
+    this.playedAnswers.push(recorded);
+    this.journal.record(recorded);
     if (!this.options.previewWords && answer.result !== "timeout" && ++this.solvedSinceSave >= 5) {
       this.solvedSinceSave = 0;
       void this.save();
