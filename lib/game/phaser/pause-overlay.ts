@@ -3,7 +3,6 @@ import type { Preferences } from "../preferences";
 import type { TrainingView } from "./board";
 import type { BattleAudio } from "./battle-audio";
 import { createSoundControls } from "./sound-settings";
-import { pauseStyles } from "./pause-styles";
 
 type PauseActions = {
   resume: () => void;
@@ -27,8 +26,6 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   const root = document.createElement("div");
   root.className = "sokudoku-pause-root";
   root.setAttribute("role", "presentation");
-  const css = document.createElement("style");
-  css.textContent = pauseStyles;
   const hex = (value: number) => "#" + value.toString(16).padStart(6, "0");
   const theme = view.c;
   root.style.setProperty("--ink", hex(theme.ink));
@@ -148,7 +145,7 @@ export function drawPause(view: TrainingView, actions: PauseActions): Phaser.Gam
   });
   correctReviewSetting.append(correctReviewTitle, correctReviewSelect);
   card.append(correctReviewSetting, readingSetting);
-  root.append(css, card);
+  root.append(card);
   // PetMotion "rest" uses frames [19, 2] with a 1500ms step.
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const paintRest = (frame: number) => {
