@@ -125,7 +125,9 @@ export class TrainingRuntime {
     this.data = this.filter(data);
     const owner = this.data.user_id;
     this.journal = new AnswerJournal(owner, this.data.words, !!previewWords, undefined, true);
-    const pending = await this.journal.recover();
+    // The worker captures the learning snapshot and its pending outbox in
+    // one IndexedDB transaction. Do not re-read the queue after an ACK commit.
+    const pending = this.data.pendingAnswers ?? await this.journal.recover();
     if (!this.data.words.length) throw Error("WORDS");
     const engine = await recoverLearning(
       this.data.learning,
@@ -170,7 +172,7 @@ export class TrainingRuntime {
       const reading = catalogChanged ? await this.createReading(fresh) : this.reading;
       // Replay pending answers plus this run's answers (even if already ACKed),
       // so a late sync cannot wipe out locally played questions.
-      const pending = await this.journal.recover();
+      const pending = fresh.pendingAnswers ?? await this.journal.recover();
       const engine = await recoverLearning(
         fresh.learning ?? planner.engine.snapshot(),
         [...pending, ...this.playedAnswers],
@@ -248,7 +250,7 @@ export class TrainingRuntime {
       const reading = await this.createReading(fresh);
       let planner: TrainingPlanner;
       try {
-        planner = this.plan(await recoverLearning(fresh.learning, await this.journal.recover(), fresh.words), fresh, reading);
+        planner = this.plan(await recoverLearning(fresh.learning, fresh.pendingAnswers ?? await this.journal.recover(), fresh.words), fresh, reading);
         await planner.prepareSet();
       } catch (error) { reading?.close(); throw error; }
       this.reading?.close();
