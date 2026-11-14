@@ -6,6 +6,7 @@ import { catalogVersion, datasets, versionsMatch, snapshotKey, type QueuedAnswer
 import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
 import { browserMediaDownloads } from "./media";
+import { readLocalSync, syncDataKey } from "./local-store";
 
 let owner: string | null = null;
 let engine: SyncEngine | undefined;
@@ -18,34 +19,10 @@ let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let syncFlight: { owner: string; work: Promise<SyncSnapshot> } | undefined;
 let wakeAgain = false;
 let localSnapshot: SyncSnapshot | undefined;
-const dataKey = (user: string, dataset: string) => `sync-data-v1:${user}:${dataset}`;
-
-type PlayableState = { snapshot?: SyncSnapshot; pending: QueuedAnswer[] };
-
-/** A single IndexedDB read transaction captures both the canonical snapshot
- * and its outbox. If an ACK commits during game entry, the game sees either
- * old snapshot + queued answers or new snapshot + cleared outbox, never a
- * mismatched pair that silently hides a recently learned word. */
-async function readSnapshot(user: string, includePending = false): Promise<PlayableState> {
-  const tx = (await database()).transaction(["cache", "answer"], "readonly");
-  const cache = tx.objectStore("cache");
-  const meta: SyncSnapshot | undefined = await cache.get(snapshotKey(user));
-  const data = meta?.data ?? {} as SyncSnapshot["data"];
-  if (meta) {
-    for (const dataset of datasets) {
-      if (meta.data?.[dataset]) continue; // Upgrade an older monolithic snapshot safely.
-      data[dataset] = localSnapshot?.owner === user &&
-        (localSnapshot.versions[dataset] ?? "0") === (meta.versions[dataset] ?? "0")
-        ? localSnapshot.data[dataset] : await cache.get(dataKey(user, dataset)) ?? {};
-    }
-  }
-  const pending = includePending
-    ? ((await tx.objectStore("answer").getAll()) as QueuedAnswer[]).filter(a => a.owner === user)
-    : [];
-  await tx.done;
-  const snapshot = meta ? { ...meta, data } : undefined;
-  if (snapshot) localSnapshot = snapshot;
-  return { snapshot, pending };
+async function readSnapshot(user: string, includePending = false) {
+  const state = await readLocalSync(user, localSnapshot, includePending);
+  if (state.snapshot) localSnapshot = state.snapshot;
+  return state;
 }
 
 async function json(path: string, init?: RequestInit) {
@@ -107,7 +84,7 @@ function makeEngine(user: string) {
       // Common dictionaries/choice banks are not rewritten after each answer.
       for (const dataset of datasets) {
         if (!previous || previous.data || (previous.versions[dataset] ?? "0") !== (snapshot.versions[dataset] ?? "0"))
-          await tx.objectStore("cache").put(snapshot.data[dataset], dataKey(user, dataset));
+          await tx.objectStore("cache").put(snapshot.data[dataset], syncDataKey(user, dataset));
       }
       const { data: ignored, ...meta } = snapshot;
       void ignored;
