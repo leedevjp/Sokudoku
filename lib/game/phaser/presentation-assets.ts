@@ -13,4 +13,12 @@ export const laterImages = [
   ["battle-moon-ruins-v1", "/battle/moon-ruins-v1.webp"],
 ] as const;
 export const effectFiles = ["dash", "hybrid", "jelly", "hybrid-combo", "miss-combo"] as const;
-export const battleReady = (has: (key: string) => boolean) => battleImages.every(([key]) => has(key));
+// Only the arena and its two actors are required for the battle to appear.
+// Animation sheets, spells and combo effects can be streamed afterward.
+export const coreBattleImages = battleImages.filter(([key]) =>
+  key === "battle-meadow-original-v4" || key === "battle-mage-v5" || key === "battle-mandrakes-v5",
+);
+export const extraBattleImages = battleImages.filter(([key]) =>
+  !coreBattleImages.some(([coreKey]) => coreKey === key),
+);
+export const battleReady = (has: (key: string) => boolean) => coreBattleImages.every(([key]) => has(key));
