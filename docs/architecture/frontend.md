@@ -18,3 +18,12 @@ The App Router owns navigation and layout. Client components render UI, small ho
 - Never combine learning snapshots and unacknowledged answers from independent asynchronous reads. See `docs/architecture/learning-sync.md`.
 - Preserve the game-start preload handoff. Refactors must not add a fresh data load or discard the first prepared question.
 - CI runs `pnpm typecheck` and the full `pnpm test` suite on `dev`. `tests/frontend-refactor.test.ts` asserts the important module boundaries.
+
+## Training module boundaries
+
+- `learning/planner.ts` owns catalog adoption, asynchronous preparation, the question queue and encounter history. Its public API and `PlannedQuestion` export remain stable.
+- `learning/question-selection.ts` owns weighted draws and bounded choice-building retries. It yields preparation requests before constructing each question; callers must preserve that generator order.
+- `learning/auto-set.ts` owns auto-mode tickets, kana onboarding, review budgets and fallback selection. The planner retains the fractional review budget across sets and resets it for a new run.
+- `phaser/scene.ts` owns phases, answer recording, pause/resume, viewport restoration and persistence callbacks. Keep those coordinated transitions together.
+- `phaser/training-feedback.ts` owns speech cancellation/completion and the post-answer advance gate. The scene supplies its Phaser delay so global pause still freezes feedback. Cancelling speech does not itself advance; only the scene's feedback phase permits advancement.
+- `phaser/result-presentation.ts` draws the existing result overlay, saving spinner and companion. Saving, retry and exit decisions stay in the scene.

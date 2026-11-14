@@ -7,13 +7,13 @@ import { RunPersistence } from "./run-persistence";
 import { paintAnswerFeedback } from "./answer-feedback";
 import { TrainingInput } from "./training-input";
 import { drawPause } from "./pause-overlay";
-import { drawEnd } from "./result-overlay";
+import { drawTrainingResult } from "./result-presentation";
+import { TrainingFeedback } from "./training-feedback";
 import { TrainingSession } from "../session";
 import Phaser from "phaser";
 import {
   AnswerGate,
   limitFor,
-  CORRECT_FEEDBACK_MS,
   START_INPUT_DELAY_MS,
 } from "../rules";
 import type { Question } from "../types";
@@ -49,11 +49,14 @@ export class TrainingScene extends Phaser.Scene {
   private media?: SceneMedia;
   private questionHasBattle = false;
   private soundExpanded = false;
-  private speechActive = false;
-  private speechToken = 0;
-  private speechWatchdog?: ReturnType<typeof setTimeout>;
-  private feedbackReady = false;
-  private feedbackQueued = false;
+  private feedback = new TrainingFeedback({
+    canAdvance: () => this.phase === "feedback",
+    advance: () => {
+      if (this.hearts === 0) this.finish();
+      else void this.next();
+    },
+    delay: (milliseconds, callback) => { this.time.delayedCall(milliseconds, callback); },
+  });
   private get hearts() {
     return this.session.hearts;
   }
@@ -155,7 +158,7 @@ export class TrainingScene extends Phaser.Scene {
     this.scale.on("resize", this.resize, this);
     const cleanup = () => {
       this.overlay?.destroy(); this.overlay = undefined;
-      this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach();
+      this.feedback.stopSpeech(); this.nextGeneration++; this.trainingInput.detach();
       this.media?.close();
       this.events.off("shutdown", cleanup); this.events.off("destroy", cleanup);
     };
@@ -188,9 +191,7 @@ export class TrainingScene extends Phaser.Scene {
   }
   private startRun(usePreparedFirstSet = false) {
     if (this.persistence.saving) return;
-    this.stopPronunciation();
-    this.feedbackReady = false;
-    this.feedbackQueued = false;
+    this.feedback.reset();
     this.pauseRequested = false;
     this.reviewComplete = false;
     this.correction = undefined;
@@ -202,9 +203,7 @@ export class TrainingScene extends Phaser.Scene {
     this.next(true);
   }
   private async next(delayInput = false) {
-    this.stopPronunciation();
-    this.feedbackReady = false;
-    this.feedbackQueued = false;
+    this.feedback.reset();
     const request = ++this.nextGeneration;
     this.phase = "arming";
     this.gate.close();
@@ -300,7 +299,7 @@ export class TrainingScene extends Phaser.Scene {
       }
       this.time.paused = false;
       this.tweens.resumeAll();
-      if (this.phase === "feedback") this.maybeAdvance();
+      if (this.phase === "feedback") this.feedback.tryAdvance();
     }
     if (this.phase === "correction" && this.correction) {
       const expired = this.correction.tick(delta);
@@ -366,7 +365,7 @@ export class TrainingScene extends Phaser.Scene {
       else if (result === "incorrect") this.battleAudio?.play("jelly", .12);
       this.phase = "feedback";
       paintAnswerFeedback(this.view, a, this.hearts, this.correct);
-      this.speakWord(result);
+      this.feedback.speak(this.question.word, result, this.prefs, this.battleAudio?.enabled ?? false);
       this.petMotion.play(result === "correct" ? "happy" : "encourage");
       this.paintPet();
       if (this.correction) {
@@ -374,7 +373,7 @@ export class TrainingScene extends Phaser.Scene {
         this.renderCorrection(true);
         return;
       }
-      this.advanceAfterFeedback();
+      this.feedback.queue();
     };
     const impact = () =>
       answerImpact(this, this.view, index, result, hit, false);
@@ -409,7 +408,7 @@ export class TrainingScene extends Phaser.Scene {
     this.correctionView?.update(this.correction);
   }
   private finishCorrection(index?: number) {
-    if (this.phase !== "correction" || this.speechActive || !this.correction?.complete(index))
+    if (this.phase !== "correction" || this.feedback.speaking || !this.correction?.complete(index))
       return;
     this.phase = "feedback";
     this.correction = undefined;
@@ -419,7 +418,7 @@ export class TrainingScene extends Phaser.Scene {
       burst(this, card.x, card.y, this.c.blue);
       card.disableInteractive().setVisible(false);
     }
-    this.advanceAfterFeedback();
+    this.feedback.queue();
   }
   /** The HUD mute is a master switch for BGM, effects and speech synthesis. */
   private toggleAllSound() {
@@ -427,67 +426,21 @@ export class TrainingScene extends Phaser.Scene {
     this.battleAudio.toggle();
     if (!this.battleAudio.enabled) {
       // Cancel any ongoing reading and release the answer-advance gate.
-      this.stopPronunciation();
-      this.maybeAdvance();
+      this.feedback.stopSpeech();
+      this.feedback.tryAdvance();
     }
-  }
-  private stopPronunciation() {
-    this.speechToken++;
-    this.speechActive = false;
-    if (this.speechWatchdog) clearTimeout(this.speechWatchdog);
-    this.speechWatchdog = undefined;
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
-  }
-  private speakWord(result: "correct" | "incorrect" | "timeout") {
-    this.stopPronunciation();
-    if (!this.battleAudio?.enabled || this.prefs.pronunciation === "off" ||
-        (this.prefs.pronunciation === "wrong" && result === "correct") ||
-        !("speechSynthesis" in window)) return;
-    const value = this.prefs.pronunciationSource === "kana" ? this.question.word.kana : this.question.word.term;
-    if (!value?.trim()) return;
-    const token = ++this.speechToken;
-    this.speechActive = true;
-    const utterance = new SpeechSynthesisUtterance(value);
-    utterance.lang = "ja-JP";
-    utterance.rate = 0.95;
-    const done = () => {
-      if (token !== this.speechToken) return;
-      this.speechActive = false;
-      if (this.speechWatchdog) clearTimeout(this.speechWatchdog);
-      this.speechWatchdog = undefined;
-      this.maybeAdvance();
-    };
-    utterance.onend = done;
-    utterance.onerror = done;
-    // Browser voices can fail to emit completion events. Never trap the quiz.
-    this.speechWatchdog = setTimeout(() => { window.speechSynthesis.cancel(); done(); }, 8000);
-    try { window.speechSynthesis.speak(utterance); } catch { done(); }
-  }
-  private maybeAdvance() {
-    if (this.phase !== "feedback" || !this.feedbackReady || this.speechActive) return;
-    this.feedbackReady = false;
-    if (this.hearts === 0) this.finish();
-    else void this.next();
-  }
-  private advanceAfterFeedback() {
-    if (this.feedbackQueued) return;
-    this.feedbackQueued = true;
-    this.time.delayedCall(CORRECT_FEEDBACK_MS, () => {
-      this.feedbackReady = true;
-      this.maybeAdvance();
-    });
   }
   private hidden = () => {
     this.trainingInput.clear();
     if (this.timeLimited) this.pause();
     else {
       this.battleAudio?.stop();
-      this.stopPronunciation();
+      this.feedback.stopSpeech();
     }
   };
   private pause() {
     this.battleAudio?.stop();
-    this.stopPronunciation();
+    this.feedback.stopSpeech();
     if (this.preparingQuestion) { this.pauseRequested = true; return; }
     if (this.phase === "paused" || this.phase === "end") return;
     this.beforePause = this.phase;
@@ -670,7 +623,7 @@ export class TrainingScene extends Phaser.Scene {
     this.overlay?.destroy();
     this.overlay = undefined;
     this.battleAudio?.stop();
-    this.stopPronunciation();
+    this.feedback.stopSpeech();
     this.nextGeneration++;
     this.preparingQuestion = false;
     this.pauseRequested = false;
@@ -712,16 +665,8 @@ export class TrainingScene extends Phaser.Scene {
     this.tweens.killAll();
     this.notifyReady();
     this.clear();
-    this.game.canvas.setAttribute(
-      "aria-label",
-      [
-        this.t("結果", "결과"),
-        this.t("正答", "정답") + " " + this.correct,
-        this.t("回答", "답변") + " " + this.logs.length,
-      ].join(" / "),
-    );
-    const resultLayout = drawEnd(
-      this.view,
+    this.pet = drawTrainingResult(
+      this, this.view, this.correct,
       {
         reviewComplete: this.reviewComplete,
         progress: this.options.planner.progress(),
@@ -736,41 +681,6 @@ export class TrainingScene extends Phaser.Scene {
         exit: () => this.options.onExit(),
         exam: () => this.options.onExam(),
       },
-    );
-    const s = Math.min(1, (this.h - 32) / 680);
-    if (this.persistence.saving && !this.options.preview) {
-      // Indeterminate spinner: saving has no measurable percentage.
-      // The busy indicator belongs after the saving label, never on its left.
-      const spinner = this.add.container(
-        Math.min(this.w - 20 * s, resultLayout.statusRight + 18 * s),
-        resultLayout.statusY,
-      );
-      for (let i = 0; i < 8; i++) {
-        const angle = (Math.PI * 2 * i) / 8;
-        spinner.add(
-          this.add.circle(
-            Math.cos(angle) * 11 * s,
-            Math.sin(angle) * 11 * s,
-            2.8 * s,
-            this.view.c.blue,
-            0.25 + (i / 7) * 0.75,
-          ),
-        );
-      }
-      this.tweens.add({
-        targets: spinner,
-        angle: 360,
-        duration: 900,
-        repeat: -1,
-        ease: "Linear",
-      });
-    }
-    const width = Math.min(this.w - 32, 500);
-    this.pet = new RabbitCompanion(
-      this,
-      this.w / 2 + width / 2 - 65 * s,
-      this.h / 2 - 225 * s,
-      100 * s,
     );
     this.paintPet();
   }

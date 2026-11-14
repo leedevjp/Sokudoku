@@ -2,7 +2,7 @@ import type { Answer } from "../types";
 import type { TrainingView } from "./board";
 import type { TrainingPlanner } from "../learning/planner";
 
-type ResultData = {
+export type ResultData = {
   progress: ReturnType<TrainingPlanner["progress"]>;
   reviewComplete?: boolean;
   answers: Answer[];
@@ -10,7 +10,7 @@ type ResultData = {
   syncing: boolean;
   syncOK: boolean | null;
 };
-type ResultActions = { retry: () => void; sync: () => void; exit: () => void; exam: () => void };
+export type ResultActions = { retry: () => void; sync: () => void; exit: () => void; exam: () => void };
 
 export function drawEnd(
   view: TrainingView,
