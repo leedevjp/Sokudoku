@@ -85,38 +85,38 @@ export default function HomeScreen() {
     // The server cannot read localStorage. Restore before revealing the mode
     // controls, so the saved folder never flashes the fallback blue style.
     if (new URLSearchParams(window.location.search).get("login") === "1") {
-        setModal("auth");
-      }
-      try {
-        const savedTimeLimit = localStorage.getItem("sokudoku-time-limit-v1");
-        if (savedTimeLimit !== null) setTimeLimited(savedTimeLimit !== "off");
-        const savedModes = localStorage.getItem("sokudoku-modes-v1");
-        const restoredModes = parseModes(savedModes);
-        const activeFamily = modeFamily(restoredModes);
-        const rawScopes = localStorage.getItem(MODE_SCOPES_KEY);
-        const scopes = freshScopes();
-        if (rawScopes !== null) {
-          const raw = JSON.parse(rawScopes) as Partial<Record<ModeFamily, unknown>>;
-          for (const family of ["auto", "manual", "exam"] as const) {
-            scopes[family] = restoreScope(raw?.[family]);
-          }
-        } else {
-          // One-time migration: honor the previous shared selection in the
-          // last active mode. Other modes start with everything selected.
-          const savedLevels = localStorage.getItem("sokudoku-levels-v1");
-          const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
-          if (savedLevels !== null || savedKinds !== null) {
-            scopes[activeFamily] = {
-              levels: savedLevels === null ? [...trainingLevels] : parseLevels(savedLevels),
-              kinds: savedKinds === null ? [...trainingKinds] : parseKinds(savedKinds),
-            };
-          }
-          localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(scopes));
+      setModal("auth");
+    }
+    try {
+      const savedTimeLimit = localStorage.getItem("sokudoku-time-limit-v1");
+      if (savedTimeLimit !== null) setTimeLimited(savedTimeLimit !== "off");
+      const savedModes = localStorage.getItem("sokudoku-modes-v1");
+      const restoredModes = parseModes(savedModes);
+      const activeFamily = modeFamily(restoredModes);
+      const rawScopes = localStorage.getItem(MODE_SCOPES_KEY);
+      const scopes = freshScopes();
+      if (rawScopes !== null) {
+        const raw = JSON.parse(rawScopes) as Partial<Record<ModeFamily, unknown>>;
+        for (const family of ["auto", "manual", "exam"] as const) {
+          scopes[family] = restoreScope(raw?.[family]);
         }
-        modeScopesRef.current = scopes;
-        setModes(restoredModes);
-        setLevels([...scopes[activeFamily].levels]);
-        setKinds([...scopes[activeFamily].kinds]);
+      } else {
+        // One-time migration: honor the previous shared selection in the
+        // last active mode. Other modes start with everything selected.
+        const savedLevels = localStorage.getItem("sokudoku-levels-v1");
+        const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
+        if (savedLevels !== null || savedKinds !== null) {
+          scopes[activeFamily] = {
+            levels: savedLevels === null ? [...trainingLevels] : parseLevels(savedLevels),
+            kinds: savedKinds === null ? [...trainingKinds] : parseKinds(savedKinds),
+          };
+        }
+        localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(scopes));
+      }
+      modeScopesRef.current = scopes;
+      setModes(restoredModes);
+      setLevels([...scopes[activeFamily].levels]);
+      setKinds([...scopes[activeFamily].kinds]);
     } catch {
       /* Optional preference. */
     } finally {
