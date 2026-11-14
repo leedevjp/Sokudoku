@@ -3,7 +3,7 @@ import type { LearningSnapshot, LearningWord, Learner } from "../game/learning/t
 import { withMeaningBank, type MeaningBank } from "../game/meaning-bank";
 import { parseLevels, selectedDifficulty, wordMatchesLevels } from "../game/selection";
 import { entryType, type Kind, type Word } from "../game/types";
-import type { SyncSnapshot } from "./types";
+import { catalogVersion, type SyncSnapshot } from "./types";
 
 /** Compose the whole catalog locally; no selected-stage API calls are needed. */
 export function preparedGame(snapshot: SyncSnapshot, levelsValue: string | null, kinds: Kind[]): Bootstrap {
@@ -30,5 +30,5 @@ export function preparedGame(snapshot: SyncSnapshot, levelsValue: string | null,
     words: Object.values(snapshot.data.learning_states) as unknown as LearningWord[],
   };
   return { user_id: snapshot.owner, words: [...selected, ...(levels.includes("P") ? personal : [])],
-    stats: [], learning, readingWords: [...common, ...personal] };
+    stats: [], learning, readingWords: [...common, ...personal], catalogVersion: catalogVersion(snapshot.versions) };
 }

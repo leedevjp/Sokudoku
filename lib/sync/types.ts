@@ -3,6 +3,9 @@ import type { Answer } from "../game/types";
 export const datasets = ["words", "personal_words", "distractors", "extra_choices", "answers", "learning_states", "learner"] as const;
 export type Dataset = typeof datasets[number];
 export type Versions = Partial<Record<Dataset, string>>;
+export const catalogVersion = (versions: Versions) => JSON.stringify(
+  ["words", "personal_words", "distractors", "extra_choices"].map(d => versions[d as Dataset] ?? "0"),
+);
 export type SyncRow = Record<string, unknown>;
 export type SyncSnapshot = {
   owner: string; protocol: 1; versions: Versions;
