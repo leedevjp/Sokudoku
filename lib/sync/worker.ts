@@ -20,20 +20,32 @@ let wakeAgain = false;
 let localSnapshot: SyncSnapshot | undefined;
 const dataKey = (user: string, dataset: string) => `sync-data-v1:${user}:${dataset}`;
 
-async function readSnapshot(user: string): Promise<SyncSnapshot | undefined> {
-  const tx = (await database()).transaction("cache", "readonly");
-  const meta: SyncSnapshot | undefined = await tx.store.get(snapshotKey(user));
-  if (!meta) { await tx.done; return; }
-  const data = meta.data ?? {} as SyncSnapshot["data"];
-  for (const dataset of datasets) {
-    if (meta.data?.[dataset]) continue; // Upgrade an older monolithic snapshot safely.
-    data[dataset] = localSnapshot?.owner === user &&
-      (localSnapshot.versions[dataset] ?? "0") === (meta.versions[dataset] ?? "0")
-      ? localSnapshot.data[dataset] : await tx.store.get(dataKey(user, dataset)) ?? {};
+type PlayableState = { snapshot?: SyncSnapshot; pending: QueuedAnswer[] };
+
+/** A single IndexedDB read transaction captures both the canonical snapshot
+ * and its outbox. If an ACK commits during game entry, the game sees either
+ * old snapshot + queued answers or new snapshot + cleared outbox, never a
+ * mismatched pair that silently hides a recently learned word. */
+async function readSnapshot(user: string, includePending = false): Promise<PlayableState> {
+  const tx = (await database()).transaction(["cache", "answer"], "readonly");
+  const cache = tx.objectStore("cache");
+  const meta: SyncSnapshot | undefined = await cache.get(snapshotKey(user));
+  const data = meta?.data ?? {} as SyncSnapshot["data"];
+  if (meta) {
+    for (const dataset of datasets) {
+      if (meta.data?.[dataset]) continue; // Upgrade an older monolithic snapshot safely.
+      data[dataset] = localSnapshot?.owner === user &&
+        (localSnapshot.versions[dataset] ?? "0") === (meta.versions[dataset] ?? "0")
+        ? localSnapshot.data[dataset] : await cache.get(dataKey(user, dataset)) ?? {};
+    }
   }
+  const pending = includePending
+    ? ((await tx.objectStore("answer").getAll()) as QueuedAnswer[]).filter(a => a.owner === user)
+    : [];
   await tx.done;
-  localSnapshot = { ...meta, data };
-  return localSnapshot;
+  const snapshot = meta ? { ...meta, data } : undefined;
+  if (snapshot) localSnapshot = snapshot;
+  return { snapshot, pending };
 }
 
 async function json(path: string, init?: RequestInit) {
@@ -82,7 +94,7 @@ async function pullPages(versions: Versions): Promise<SyncPacket> {
 }
 function makeEngine(user: string) {
   return new SyncEngine(user, {
-    read: () => readSnapshot(user),
+    read: async () => (await readSnapshot(user)).snapshot,
     pending: async () => ((await (await database()).getAll("answer")) as QueuedAnswer[]).filter(a => a.owner === user),
     commit: async (snapshot, ids) => {
       if (owner !== user) throw Error("OWNER_CHANGED");
@@ -171,16 +183,28 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
       return;
     }
     if (!owner) throw Error("LOGIN");
-    let snapshot = await readSnapshot(owner);
+    const playable = await readSnapshot(owner, data.type === "prepare");
+    let snapshot = playable.snapshot;
     const hadSnapshot = !!snapshot?.savedAt;
     if (data.type === "prepare" && !hadSnapshot) {
       const legacy = await readLegacyGame(owner, data.levels ?? null, data.kinds ?? []);
       if (legacy) { postMessage({ id: data.id, result: legacy }); return; }
     }
-    if (data.type === "sync" || !snapshot?.savedAt) snapshot = await synchronize();
-    // A complete local snapshot is playable even while uploads/catch-up continue.
-    // The game replays its durable local outbox onto this canonical snapshot.
+    if (data.type === "sync" || !snapshot?.savedAt) {
+      snapshot = await synchronize();
+      // Initial sync created a snapshot; capture its outbox atomically too.
+      if (data.type === "prepare") {
+        const updated = await readSnapshot(owner, true);
+        snapshot = updated.snapshot;
+        playable.pending = updated.pending;
+      }
+    }
+    // The root worker owns both snapshot and pending answers, so a refresh
+    // cannot remove the queue between separate page-level reads.
     if (!snapshot || snapshot.owner !== owner) throw Error("LOGIN");
-    postMessage({ id: data.id, result: data.type === "prepare" ? preparedGame(snapshot, data.levels ?? null, data.kinds ?? []) : true });
+    postMessage({ id: data.id, result: data.type === "prepare"
+      ? { ...preparedGame(snapshot, data.levels ?? null, data.kinds ?? []),
+          pendingAnswers: playable.pending }
+      : true });
   } catch (error) { postMessage({ id: data.id, error: (error as Error).message }); }
 };
