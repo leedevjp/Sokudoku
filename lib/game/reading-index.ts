@@ -48,7 +48,8 @@ export function buildReadingIndex(readings: string[]): ReadingIndex {
   return index;
 }
 /** Compare the complete normalized content, not a collision-prone short hash. */
-export const readingSignature = (readings: string[]) => JSON.stringify([...new Set(readings.map(normalizedReading).filter(Boolean))].sort());
+export const sortedReadings = (readings: string[]) => [...new Set(readings.map(normalizedReading).filter(Boolean))].sort();
+export const readingSignature = (readings: string[]) => JSON.stringify(sortedReadings(readings));
 
 function within(index: ReadingIndex, target: string, radius: number, found: Map<string, number>) {
   for (let length = Math.max(1, target.length - radius); length <= Math.min(index.maxLength, target.length + radius); length++) {

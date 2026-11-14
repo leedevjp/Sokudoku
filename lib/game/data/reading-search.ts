@@ -11,8 +11,18 @@ export class ReadingSearch {
   private fallbackReady?: Promise<void>;
   private closed = false;
   async initialize(words: Word[], owner: string) {
+    if (this.closed) throw Error("READING_CLOSED");
     const common: string[] = [], personal: string[] = [];
-    for (const word of words) {
+    let sliceStarted = performance.now();
+    for (let i = 0; i < words.length; i++) {
+      // Normalizing the worker input also runs on the UI thread. Let input and
+      // paint proceed during large catalogs, without changing candidate order.
+      if (i && i % 256 === 0 && performance.now() - sliceStarted >= 8) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        if (this.closed) throw Error("READING_CLOSED");
+        sliceStarted = performance.now();
+      }
+      const word = words[i];
       if (word.deleted_at || entryType(word) !== "word") continue;
       const reading = normalizedReading(word.kana);
       if (!reading) continue;

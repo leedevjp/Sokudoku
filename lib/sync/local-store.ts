@@ -1,4 +1,4 @@
-import { database } from "../game/data/database";
+import { database, storageDeadline } from "../game/data/database";
 import { datasets, snapshotKey, type QueuedAnswer, type SyncSnapshot } from "./types";
 
 export const syncDataKey = (owner: string, dataset: string) =>
@@ -23,22 +23,56 @@ export async function readLocalSync(
 ): Promise<PlayableSyncState> {
   const tx = (await database()).transaction(["cache", "answer"], "readonly");
   const cache = tx.objectStore("cache");
-  const meta: SyncSnapshot | undefined = await cache.get(snapshotKey(owner));
+  void tx.done.catch(() => {});
+  const [meta, pendingRows]: [SyncSnapshot | undefined, QueuedAnswer[]] = await Promise.all([
+    cache.get(snapshotKey(owner)),
+    includePending ? tx.objectStore("answer").getAll() : Promise.resolve([]),
+  ]);
   const data = meta?.data ?? {} as SyncSnapshot["data"];
   if (meta) {
     if (meta.owner !== owner) throw Error("OWNER_CHANGED");
-    for (const dataset of datasets) {
-      if (meta.data?.[dataset]) continue; // Legacy monolithic snapshot.
+    await Promise.all(datasets.map(async dataset => {
+      if (meta.data?.[dataset]) return; // Legacy monolithic snapshot.
       data[dataset] = cached?.owner === owner &&
         (cached.versions[dataset] ?? "0") === (meta.versions[dataset] ?? "0")
         ? cached.data[dataset]
         : await cache.get(syncDataKey(owner, dataset)) ?? {};
-    }
+    }));
   }
-  const pending = includePending
-    ? ((await tx.objectStore("answer").getAll()) as QueuedAnswer[])
-        .filter(a => a.owner === owner)
-    : [];
+  const pending = pendingRows.filter(a => a.owner === owner);
   await tx.done;
   return { snapshot: meta ? { ...meta, data } : undefined, pending };
+}
+
+/** Dataset writes, metadata and ACK removal are still one atomic transaction.
+ * Queue independent requests together instead of paying a round trip per row. */
+export async function commitLocalSync(owner: string, snapshot: SyncSnapshot, ids: string[]): Promise<void> {
+  if (snapshot.owner !== owner) throw Error("OWNER_CHANGED");
+  const tx = (await database()).transaction(["cache", "answer"], "readwrite");
+  void tx.done.catch(() => {});
+  const writes: Promise<unknown>[] = [];
+  try {
+    const cache = tx.objectStore("cache"), answers = tx.objectStore("answer");
+    const previous: SyncSnapshot | undefined = await cache.get(snapshotKey(owner));
+    if (previous && datasets.some(dataset =>
+      BigInt(previous.versions[dataset] ?? "0") > BigInt(snapshot.versions[dataset] ?? "0")))
+      throw Error("STALE_SYNC");
+    for (const dataset of datasets) {
+      // Reuse unchanged dictionaries even when answers/learning change.
+      if (!previous || previous.data || (previous.versions[dataset] ?? "0") !== (snapshot.versions[dataset] ?? "0"))
+        writes.push(cache.put(snapshot.data[dataset], syncDataKey(owner, dataset)));
+    }
+    const { data: ignored, ...meta } = snapshot;
+    void ignored;
+    writes.push(cache.put(meta, snapshotKey(owner)));
+    writes.push(...ids.map(async id => {
+      const answer: QueuedAnswer | undefined = await answers.get(id);
+      if (answer?.owner === owner) await answers.delete(id);
+    }));
+    await storageDeadline(Promise.all([...writes, tx.done]));
+  } catch (error) {
+    try { tx.abort(); } catch { /* Transaction already finished. */ }
+    await Promise.allSettled([...writes, tx.done]);
+    throw error;
+  }
 }

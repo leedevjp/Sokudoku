@@ -27,5 +27,5 @@ export async function readLegacyGame(owner: string, levelsValue: string | null, 
   }
   const own = (personal?.words ?? []).filter(w => !w.deleted_at).map(w => ({ ...w, source: "personal" as const }));
   return { user_id: owner, words: [...selected, ...(levels.includes("P") ? own : [])], stats: [],
-    learning: learning ?? emptyLearning(), readingWords: [...(common?.words ?? []).filter(w => !w.deleted_at), ...own] };
+    learning: learning ?? emptyLearning(), readingWords: kinds.includes("reading") ? [...(common?.words ?? []).filter(w => !w.deleted_at), ...own] : undefined };
 }

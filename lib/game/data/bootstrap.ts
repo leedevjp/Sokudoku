@@ -22,6 +22,9 @@ export type Bootstrap = {
   readingWords?: Word[];
   catalogVersion?: string;
   syncVersion?: number;
+  /** Worker catalog token; matched replies may omit an unchanged catalog. */
+  catalogKey?: string;
+  catalogUnchanged?: true;
   /** Canonical state and unacknowledged outbox captured in one worker transaction. */
   pendingAnswers?: Answer[];
 };

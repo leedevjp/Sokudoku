@@ -1,12 +1,12 @@
-import { database, storageDeadline } from "../game/data/database";
+import { database } from "../game/data/database";
 import { gameAssetUrls } from "../game/asset-url";
 import { preparedGame } from "./prepared";
 import { SyncEngine } from "./engine";
-import { catalogVersion, datasets, versionsMatch, snapshotKey, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
+import { catalogVersion, datasets, versionsMatch, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
 import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
 import { browserMediaDownloads } from "./media";
-import { readLocalSync, syncDataKey } from "./local-store";
+import { readLocalSync, commitLocalSync } from "./local-store";
 
 let owner: string | null = null;
 let engine: SyncEngine | undefined;
@@ -75,25 +75,7 @@ function makeEngine(user: string) {
     pending: async () => ((await (await database()).getAll("answer")) as QueuedAnswer[]).filter(a => a.owner === user),
     commit: async (snapshot, ids) => {
       if (owner !== user) throw Error("OWNER_CHANGED");
-      const db = await database(), tx = db.transaction(["cache", "answer"], "readwrite");
-      void tx.done.catch(() => {});
-      const previous: SyncSnapshot | undefined = await tx.objectStore("cache").get(snapshotKey(user));
-      if (previous && Object.entries(previous.versions).some(([d, v]) => BigInt(v!) > BigInt(snapshot.versions[d as keyof Versions] ?? "0"))) {
-        tx.abort(); throw Error("STALE_SYNC");
-      }
-      // Common dictionaries/choice banks are not rewritten after each answer.
-      for (const dataset of datasets) {
-        if (!previous || previous.data || (previous.versions[dataset] ?? "0") !== (snapshot.versions[dataset] ?? "0"))
-          await tx.objectStore("cache").put(snapshot.data[dataset], syncDataKey(user, dataset));
-      }
-      const { data: ignored, ...meta } = snapshot;
-      void ignored;
-      await tx.objectStore("cache").put(meta, snapshotKey(user));
-      for (const id of ids) {
-        const entry: QueuedAnswer | undefined = await tx.objectStore("answer").get(id);
-        if (entry?.owner === user) await tx.objectStore("answer").delete(id);
-      }
-      await storageDeadline(tx.done);
+      await commitLocalSync(user, snapshot, ids);
       localSnapshot = snapshot;
     },
   }, {
@@ -137,7 +119,7 @@ function background() {
     }
   });
 }
-self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owner?: string | null; levels?: string | null; kinds?: Kind[]; url?: string; priority?: boolean }>) => {
+self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owner?: string | null; levels?: string | null; kinds?: Kind[]; knownCatalogKey?: string; url?: string; priority?: boolean }>) => {
   try {
     if (data.type === "media") {
       if (!data.url || !gameAssetUrls().includes(data.url)) throw Error("INVALID_MEDIA");
@@ -180,7 +162,7 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
     // cannot remove the queue between separate page-level reads.
     if (!snapshot || snapshot.owner !== owner) throw Error("LOGIN");
     postMessage({ id: data.id, result: data.type === "prepare"
-      ? { ...preparedGame(snapshot, data.levels ?? null, data.kinds ?? []),
+      ? { ...preparedGame(snapshot, data.levels ?? null, data.kinds ?? [], data.knownCatalogKey),
           pendingAnswers: playable.pending }
       : true });
   } catch (error) { postMessage({ id: data.id, error: (error as Error).message }); }

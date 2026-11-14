@@ -51,6 +51,9 @@ export function useTrainingSelection(owner: string | undefined, loading: boolean
     kinds.length > 0 &&
     modes.length > 0 &&
     (!kanaOnly || kinds.includes("meaning"));
+  // One mount-only hydration from browser storage; layout updates are batched
+  // before the hidden controls are revealed. This is intentional restoration.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useLayoutEffect(() => {
     // The server cannot read localStorage. Restore before revealing the mode
     // controls, so the saved folder never flashes the fallback blue style.
@@ -90,6 +93,7 @@ export function useTrainingSelection(owner: string | undefined, loading: boolean
       setSelectionReady(true);
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   const levelsKey = levels.join(",");
   const kindsKey = kinds.join(",");
   const modesKey = modes.join(",");

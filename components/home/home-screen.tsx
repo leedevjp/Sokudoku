@@ -35,6 +35,8 @@ export default function HomeScreen() {
   useHomeSheen(homeActionsRef, sheenRef, modes, levels, kinds, loading, user?.id);
   useLayoutEffect(() => {
     if (new URLSearchParams(window.location.search).get("login") === "1") {
+      // Restore an explicit URL request before paint, once on mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setModal("auth");
     }
   }, []);
