@@ -93,17 +93,6 @@ export class TrainingRuntime {
     const owner = this.data.user_id;
     this.journal = new AnswerJournal(owner, this.data.words, !!previewWords);
     const pending = await this.journal.recover();
-    if (pending.length && !previewWords) {
-      try {
-        const fresh = this.filter(await this.loader.fetchData());
-        if (fresh.user_id !== owner) throw Error("LOGIN");
-        this.data = fresh;
-        this.journal.setWords(fresh.words);
-      } catch (error) {
-        if ((error as Error).message === "LOGIN") throw error;
-        // Replay the durable local queue when the canonical snapshot is unavailable.
-      }
-    }
     if (!this.data.words.length) throw Error("WORDS");
     const engine = await recoverLearning(
       this.data.learning,
@@ -111,17 +100,13 @@ export class TrainingRuntime {
       this.data.words,
     );
     if (pending.length) {
-      try {
-        await storageDeadline(
-          (await database()).put(
+      void Promise.resolve().then(() => database()).then(db => storageDeadline(
+          db.put(
             "cache",
             engine.snapshot(),
             "learning-v1:" + owner,
           ),
-        );
-      } catch {
-        /* The durable answer queue remains the fallback. */
-      }
+        )).catch(() => { /* The durable answer queue remains the fallback. */ });
     }
     this.reading = await this.createReading(this.data);
     this.planner = this.plan(engine);

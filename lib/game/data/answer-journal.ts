@@ -21,7 +21,9 @@ export class AnswerJournal {
   async recover(): Promise<Answer[]> {
     if (this.preview) return [];
     const pending = await this.storage.pendingAnswers(this.owner).catch(() => []);
-    if (pending.length) await this.storage.flushAnswers(this.owner).catch(() => {});
+    // Replay the local queue immediately; a slow upload must not gate entry.
+    // Share syncTail with later checkpoints so acknowledgement remains serialized.
+    if (pending.length) void this.sync();
     return pending;
   }
   record(answer: Answer) {

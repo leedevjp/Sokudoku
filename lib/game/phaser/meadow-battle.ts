@@ -1,5 +1,6 @@
 import { EmotionEffect, preloadEmotions } from "./emotion-effects";
 import Phaser from "phaser";
+import { gameAssetUrl } from "../asset-url";
 import type { Result } from "../types";
 import {
   magicEncounter,
@@ -34,13 +35,13 @@ export function preloadBattle(scene: Phaser.Scene) {
     [MAGIC, "magic-v5.webp"],
     [COMBO, "combo-burst-v1.webp"],
   ]) {
-    if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
+    if (!scene.textures.exists(key)) scene.load.image(key, gameAssetUrl("/battle/" + file));
   }
 }
 /** Later regions are not needed until ten/twenty answers into the run. */
 export function preloadLaterRegions(scene: Phaser.Scene) {
   for (const [key, file] of [[REGIONS[1], "forest-v1.webp"], [REGIONS[2], "moon-ruins-v1.webp"]])
-    if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
+    if (!scene.textures.exists(key)) scene.load.image(key, gameAssetUrl("/battle/" + file));
 }
 function frames(
   scene: Phaser.Scene,

@@ -1,12 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { readIdentity } from "@/lib/supabase/read-identity";
 import { synchronizeLearning } from "@/lib/game/learning/server";
 
 export async function GET() {
   const headers = { "Cache-Control": "private, no-store" };
   const client = await createClient();
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  const user = await readIdentity(client);
   if (!user)
     return Response.json({ error: "unauthorized" }, { status: 401, headers });
   try {

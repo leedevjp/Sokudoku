@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { readIdentity } from "@/lib/supabase/read-identity";
 export async function GET(request: Request) {
   const headers = { "Cache-Control": "private, no-store" };
   const client = await createClient();
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  const user = await readIdentity(client);
   if (!user)
     return Response.json({ error: "unauthorized" }, { status: 401, headers });
   const since = new URL(request.url).searchParams.get("since");
