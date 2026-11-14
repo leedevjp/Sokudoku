@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
 import {
@@ -67,6 +67,7 @@ export default function HomeScreen() {
   const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
   const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
   const [timeLimited, setTimeLimited] = useState(false);
+  const [selectionReady, setSelectionReady] = useState(false);
   const homeActionsRef = useRef<HTMLDivElement>(null);
   const sheenRef = useRef<HTMLDivElement>(null);
   const { folderRef, folderOutline } = useFolderOutline(modes, prefs.lang);
@@ -80,10 +81,10 @@ export default function HomeScreen() {
     kinds.length > 0 &&
     modes.length > 0 &&
     (!kanaOnly || kinds.includes("meaning"));
-  useEffect(() => {
-    // Restore after hydration so the first server/client render stays identical.
-    const timer = setTimeout(() => {
-      if (new URLSearchParams(window.location.search).get("login") === "1") {
+  useLayoutEffect(() => {
+    // The server cannot read localStorage. Restore before revealing the mode
+    // controls, so the saved folder never flashes the fallback blue style.
+    if (new URLSearchParams(window.location.search).get("login") === "1") {
         setModal("auth");
       }
       try {
@@ -116,11 +117,11 @@ export default function HomeScreen() {
         setModes(restoredModes);
         setLevels([...scopes[activeFamily].levels]);
         setKinds([...scopes[activeFamily].kinds]);
-      } catch {
-        /* Optional preference. */
-      }
-    }, 0);
-    return () => clearTimeout(timer);
+    } catch {
+      /* Optional preference. */
+    } finally {
+      setSelectionReady(true);
+    }
   }, []);
   useEffect(() => {
     const home = homeActionsRef.current;
@@ -276,6 +277,7 @@ export default function HomeScreen() {
         <section
           ref={folderRef}
           className={`home-mode-folder folder-${activeFolder}${folderOutline ? " outline-ready" : ""}`}
+          style={{ visibility: selectionReady ? "visible" : "hidden" }}
           aria-label={t("学習設定", "학습 설정")}
         >
           {folderOutline && (
