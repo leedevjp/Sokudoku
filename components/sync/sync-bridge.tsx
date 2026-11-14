@@ -33,6 +33,12 @@ export function SyncBridge() {
   useEffect(() => {
     if (pathname === "/" || pathname === "/dashboard") kickSync();
     if (pathname === "/") void import("@/lib/game/phaser/create-training").catch(() => {});
+    // A prebuilt quiz is useful only while the user is on home or entering
+    // the game. Discard its reading worker when navigating elsewhere.
+    if (pathname !== "/" && pathname !== "/game")
+      void import("@/lib/game/data/home-preloader")
+        .then(({ homeTrainingPreloader }) => homeTrainingPreloader.clear())
+        .catch(() => {});
   }, [pathname]);
   return null;
 }
