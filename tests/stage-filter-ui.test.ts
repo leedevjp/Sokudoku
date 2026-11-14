@@ -21,10 +21,10 @@ test("stage filter displays difficulty beside stage, not underneath it", () => {
   assert.match(component, /className=\{styles\.optionLabel\}/);
   assert.match(component, /className=\{styles\.optionTrailing\}/);
   assert.match(component, /className=\{styles\.optionDetail\}/);
-  assert.match(css, /\.option\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/s);
-  assert.match(css, /\.optionTrailing\s*\{[^}]*display:\s*inline-flex/s);
-  assert.match(css, /\.optionDetail\s*\{[^}]*white-space:\s*nowrap/s);
-  assert.match(css, /\.optionCheck\s*\{[^}]*width:\s*20px/s);
+  assert.match(css, /\.option\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+  assert.match(css, /\.optionTrailing\s*\{[^}]*display:\s*inline-flex/);
+  assert.match(css, /\.optionDetail\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(css, /\.optionCheck\s*\{[^}]*width:\s*20px/);
   assert.match(css, /@media \(max-width:\s*360px\)/);
 });
 
