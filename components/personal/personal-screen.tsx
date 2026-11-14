@@ -1,4 +1,5 @@
 "use client";
+import { FilterSelect } from "@/components/ui/filter-select";
 import { StageFilter } from "@/components/ui/stage-filter";
 import type { PersonalStage, PersonalSort } from "@/lib/personal/filters";
 import Link from "next/link";
@@ -60,9 +61,14 @@ export default function PersonalScreen() {
       />
       <div className={styles.filters}>
         <StageFilter personal value={words.stage} onChange={stage => words.setStage(stage as PersonalStage)} t={t} />
-        <select aria-label={t("並び順", "정렬 순서")} value={words.sort} onChange={e => words.setSort(e.target.value as PersonalSort)}>
-          <option value="recent">{t("追加が新しい順", "최근 추가순")}</option><option value="oldest">{t("追加が古い順", "오래된순")}</option><option value="reading">{t("五十音順", "읽기순")}</option><option value="easy">{t("易しい順", "쉬운순")}</option><option value="hard">{t("難しい順", "어려운순")}</option>
-        </select>
+        <FilterSelect<PersonalSort> title={t("並び順", "정렬 순서")} hint={t("ひとつ選ぶと、すぐに反映されます。", "한 가지를 선택하면 바로 적용돼요.")}
+          value={words.sort} onChange={words.setSort} options={[
+            { value: "recent", label: t("追加が新しい順", "최근 추가순") },
+            { value: "oldest", label: t("追加が古い順", "오래된순") },
+            { value: "reading", label: t("五十音順", "읽기순") },
+            { value: "easy", label: t("易しい順", "쉬운순") },
+            { value: "hard", label: t("難しい順", "어려운순") },
+          ]} />
       </div>
       {notice && (
         <p className={styles.notice} role="status">

@@ -1,3 +1,4 @@
+import { FilterSelect } from "@/components/ui/filter-select";
 import { StageFilter } from "@/components/ui/stage-filter";
 import type { NotebookQuery } from "@/lib/notebook/query";
 import styles from "./personal-actions.module.css";
@@ -12,13 +13,23 @@ export function NotebookControls({ query, onChange, count, total, disabled, t }:
       <output aria-label={t("検索結果", "검색 결과")} aria-live="polite">{count}<span>/{total}</span></output>
     </div>
     <div className={styles.filters}>
-      <select disabled={disabled} aria-label={t("Pへの追加状況", "P 추가 여부")} value={query.membership} onChange={e => onChange({ membership: e.target.value as NotebookQuery["membership"] })}>
-        <option value="all">{t("すべての単語", "모든 단어")}</option><option value="registered">{t("Pに追加済み", "P에 추가함")}</option><option value="unregistered">{t("Pに未追加", "P에 미추가")}</option>
-      </select>
+      <FilterSelect<NotebookQuery["membership"]> disabled={disabled} title={t("Pへの追加状況", "내 단어장 추가 여부")}
+        hint={t("ひとつ選ぶと、すぐに反映されます。", "한 가지를 선택하면 바로 적용돼요.")}
+        value={query.membership} onChange={membership => onChange({ membership })} options={[
+          { value: "all", label: t("すべての単語", "모든 단어") },
+          { value: "registered", label: t("Pに追加済み", "P에 추가함"), detail: t("マイ単語帳にある単語", "내 단어장에 담은 단어") },
+          { value: "unregistered", label: t("Pに未追加", "P에 미추가"), detail: t("まだマイ単語帳にない単語", "아직 내 단어장에 담지 않은 단어") },
+        ]} />
       <StageFilter value={query.stage} onChange={stage => onChange({ stage: stage as NotebookQuery["stage"] })} disabled={disabled} t={t} />
-      <select disabled={disabled} aria-label={t("並び順", "정렬 순서")} value={query.sort} onChange={e => onChange({ sort: e.target.value as NotebookQuery["sort"] })}>
-        <option value="recent">{t("新しい順", "최근 오답순")}</option><option value="oldest">{t("古い順", "오래된순")}</option><option value="reading">{t("五十音順", "읽기순")}</option><option value="easy">{t("易しい順", "쉬운순")}</option><option value="hard">{t("難しい順", "어려운순")}</option>
-      </select>
+      <FilterSelect<NotebookQuery["sort"]> disabled={disabled} title={t("並び順", "정렬 순서")}
+        hint={t("ひとつ選ぶと、すぐに反映されます。", "한 가지를 선택하면 바로 적용돼요.")}
+        value={query.sort} onChange={sort => onChange({ sort })} options={[
+          { value: "recent", label: t("新しい順", "최근 오답순") },
+          { value: "oldest", label: t("古い順", "오래된순") },
+          { value: "reading", label: t("五十音順", "읽기순") },
+          { value: "easy", label: t("易しい順", "쉬운순") },
+          { value: "hard", label: t("難しい順", "어려운순") },
+        ]} />
     </div>
   </div>;
 }

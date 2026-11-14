@@ -7,12 +7,16 @@ export function Modal({
   children,
   titleId,
   dismissDisabled = false,
+  title,
+  className = "",
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   titleId: string;
   dismissDisabled?: boolean;
+  title?: string;
+  className?: string;
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -33,7 +37,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="home-dialog"
+      className={`home-dialog ${className}`}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -52,9 +56,10 @@ export function Modal({
       }}
     >
       <div className="dialog-content">
+        {title && <header className="dialog-header"><h2 id={titleId}>{title}</h2></header>}
         <button
           className="dialog-close"
-          autoFocus
+          autoFocus={!title}
           disabled={dismissDisabled}
           aria-label={t("閉じる", "닫기")}
           onClick={() => onClose()}
