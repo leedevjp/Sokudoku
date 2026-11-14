@@ -24,9 +24,11 @@ The App Router owns navigation and layout. Client components render UI, small ho
 - `learning/planner.ts` owns catalog adoption, asynchronous preparation, the question queue and encounter history. Its public API and `PlannedQuestion` export remain stable.
 - `learning/question-selection.ts` owns weighted draws and bounded choice-building retries. It yields preparation requests before constructing each question; callers must preserve that generator order.
 - `learning/auto-set.ts` owns auto-mode tickets, kana onboarding, review budgets and fallback selection. The planner retains the fractional review budget across sets and resets it for a new run.
-- `phaser/scene.ts` composes the controllers, starts each question and owns run completion/retry and persistence callbacks.
+- `phaser/scene.ts` is the Phaser adapter: it forwards create/update/render-density calls and wires resize/shutdown/destroy events.
+- `phaser/training-run.ts` composes input/answer/viewport/feedback controllers and owns question preparation, phase progression, completion/retry and persistence callbacks.
+- `phaser/training-presentation.ts` owns the view, camera, current preferences, battle/companion/media lifetimes and pause/result screen construction. It renders from shared state and delegates user decisions to the run.
 - `phaser/training-state.ts` holds one shared run state: current question, phase, clock offsets and preparation/render generations. Never copy that state across asynchronous work.
-- `phaser/training-viewport.ts` owns pause/resume, input grace periods and viewport restoration. It reads the same shared state as the scene so late preparation and post-render callbacks still obey the existing generation guards.
+- `phaser/training-viewport.ts` owns pause/resume, input grace periods and viewport restoration. It reads the same shared state as the run so late preparation and post-render callbacks still obey the existing generation guards.
 - `phaser/training-answers.ts` records each answer once, updates learning and presents impacts/correction. It owns correction state; a board redraw clears its view without discarding the correction or its local pause.
-- `phaser/training-feedback.ts` owns speech cancellation/completion and the post-answer advance gate. The scene supplies its Phaser delay so global pause still freezes feedback. Cancelling speech does not itself advance; only the scene's feedback phase permits advancement.
-- `phaser/result-presentation.ts` draws the existing result overlay, saving spinner and companion. Saving, retry and exit decisions stay in the scene.
+- `phaser/training-feedback.ts` owns speech cancellation/completion and the post-answer advance gate. The run supplies the scene’s Phaser delay so global pause still freezes feedback. Cancelling speech does not itself advance; only the run's feedback phase permits advancement.
+- `phaser/result-presentation.ts` draws the existing result overlay, saving spinner and companion. Saving, retry and exit decisions stay in the run.
