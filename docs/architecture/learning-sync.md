@@ -53,3 +53,12 @@ flowchart TD
 `pnpm typecheck` and `pnpm test` are run by `.github/workflows/regression.yml` on the `dev` branch and pull requests to `main`. The crash/re-entry coverage is in `tests/offline-restart.test.ts`; core push/pull idempotence is in `tests/sync.test.ts`; checkpoint and failure handling are in `tests/answer-checkpoint.test.ts`; live catalog transitions are in `tests/catalog-refresh.test.ts`.
 
 These are deterministic automated tests, not a substitute for reproducing Android browser force-kill, OS storage eviction, or real network failure on a physical device. Browser storage can still be lost if the user clears site data, the OS evicts it, or private-mode storage is destroyed before upload. The application must not claim to protect answers that were never durably written.
+
+
+## Catalog preparation and local I/O
+
+- `prepared.ts` indexes immutable word/distractor dataset maps with WeakMaps. Unchanged dataset identities survive learning-only syncs; word edits, deletions and approval changes replace the relevant maps and invalidate their indexes.
+- Build meaning choices only for selected words. Meaning-only responses omit the unused full reading catalog; reading modes still receive unselected common/personal words for distractor search.
+- Worker preparation returns a catalog token covering owner, catalog revisions, levels and question kinds. A matching request returns fresh canonical learning and the atomically read pending answers without retransmitting vocabulary. The client holds at most one selected catalog, validates its token/owner and clears it on identity changes. Legacy responses without tokens remain full responses.
+- `readLocalSync` queues independent reads in the same readonly transaction. `commitLocalSync` queues independent writes/ACK lookups in one readwrite transaction, preserves unchanged dictionary keys and rejects stale revisions. Errors abort all writes and retain the pending queue.
+- Main-thread reading normalization yields after an 8ms slice (checked every 256 rows). Closing a run during a yield cannot start a late worker. Reading index signatures keep the same normalized/sorted JSON representation while initial builds reuse that array instead of parsing it back.

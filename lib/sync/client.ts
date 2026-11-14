@@ -1,8 +1,10 @@
 import { createClient } from "../supabase/client";
 import type { Bootstrap } from "../game/data/bootstrap";
+import { restorePreparedCatalog, type PreparedCatalog } from "./prepared-catalog";
 import type { Kind } from "../game/types";
 
 let worker: Worker | undefined;
+let catalog: { selection: string; data: PreparedCatalog } | undefined;
 let owner: string | null | undefined;
 export const getSyncOwner = () => owner;
 let nextId = 0;
@@ -31,7 +33,7 @@ function getWorker() {
 export function setSyncOwner(value: string | null) {
   if (value === owner && worker) return;
   for (const request of pending.values()) { clearTimeout(request.timer); request.reject(Error("OWNER_CHANGED")); }
-  pending.clear(); owner = value; savedAt = 0;
+  pending.clear(); owner = value; savedAt = 0; catalog = undefined;
   if (value || worker) getWorker().postMessage({ type: "owner", owner: value });
 }
 async function identify() {
@@ -53,7 +55,16 @@ async function request(type: string, args: object = {}): Promise<unknown> {
   });
 }
 export async function prepareSharedGame(levels: string | null, kinds: Kind[]): Promise<Bootstrap> {
-  return await request("prepare", { levels, kinds }) as Bootstrap;
+  const selection = JSON.stringify([levels, kinds]);
+  const cached = catalog?.selection === selection ? catalog.data : undefined;
+  const reply = await request("prepare", { levels, kinds, knownCatalogKey: cached?.catalogKey }) as Bootstrap;
+  if (reply.user_id !== owner) throw Error("OWNER_CHANGED");
+  const prepared = restorePreparedCatalog(reply, cached);
+  catalog = prepared.catalogKey ? { selection, data: {
+    user_id: prepared.user_id, words: prepared.words,
+    readingWords: prepared.readingWords, catalogKey: prepared.catalogKey,
+  } } : undefined;
+  return prepared;
 }
 export async function settleSync() { await request("sync"); }
 export async function prepareMedia(url: string, priority = true): Promise<Blob> {

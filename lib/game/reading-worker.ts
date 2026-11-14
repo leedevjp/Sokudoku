@@ -1,4 +1,4 @@
-import { addReading, emptyReadingIndex, normalizedReading, readingSignature, READING_INDEX_VERSION, searchReadings, type ReadingIndex } from "./reading-index";
+import { addReading, emptyReadingIndex, normalizedReading, sortedReadings, READING_INDEX_VERSION, searchReadings, type ReadingIndex } from "./reading-index";
 import { database, storageDeadline } from "./data/database";
 
 export type ReadingRequest = { id: number } & (
@@ -10,12 +10,13 @@ const scope = globalThis as unknown as { onmessage: ((event: MessageEvent<Readin
 let indexes: ReadingIndex[] = [];
 const results = new Map<string, string[]>();
 async function loadIndex(key: string, readings: string[]) {
-  const signature = readingSignature(readings);
+  const values = sortedReadings(readings);
+  const signature = JSON.stringify(values);
   const cached = await database().then((db) => storageDeadline(db.get("cache", key))).catch(() => undefined) as { signature: string; index: ReadingIndex } | undefined;
   if (cached?.signature === signature && cached.index?.version === READING_INDEX_VERSION)
     return { index: cached.index, reused: true };
   const index = emptyReadingIndex();
-  for (const reading of JSON.parse(signature) as string[]) addReading(index, reading);
+  for (const reading of values) addReading(index, reading);
   // Optional persistence must not delay the ready response or break online play.
   void database().then((db) => storageDeadline(db.put("cache", { signature, index }, key))).catch(() => {});
   return { index, reused: false };
