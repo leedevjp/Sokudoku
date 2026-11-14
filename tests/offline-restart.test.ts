@@ -225,3 +225,79 @@ test("source and selected_source remain those of the displayed card even after c
   assert.equal(persisted?.source, "personal");
   assert.equal(persisted?.selected_source, "personal");
 });
+
+test("no network before ACK preserves the entire outbox and a later worker retries", async () => {
+  const outbox = new Map<string, QueuedAnswer>([["offline", {
+    ...makeAnswer("offline"), owner: "owner",
+  }]]);
+  let snapshot: SyncSnapshot = emptySnapshot("owner");
+  let connected = false, accepted = 0;
+  const store: SyncStore = {
+    async read() { return snapshot; },
+    async pending() { return [...outbox.values()]; },
+    async commit(next, ids) {
+      snapshot = next;
+      for (const id of ids) outbox.delete(id);
+    },
+  };
+  const transport: SyncTransport = {
+    async push(batch) {
+      if (!connected) throw Error("NETWORK_OFFLINE");
+      accepted += batch.length;
+      return { user_id: "owner", ids: batch.map(a => a.id) };
+    },
+    async manifest() { return { owner: "owner", protocol: 1, versions: { answers: String(accepted) } }; },
+    async pull() { return { owner: "owner", protocol: 1, versions: { answers: String(accepted) }, changes: [] }; },
+  };
+  await assert.rejects(new SyncEngine("owner", store, transport).run(), /NETWORK_OFFLINE/);
+  assert.equal(outbox.size, 1);
+  connected = true;
+  await new SyncEngine("owner", store, transport).run();
+  assert.equal(outbox.size, 0);
+  assert.equal(accepted, 1);
+});
+
+test("answers added during an active upload are never deleted by its older ACK", async () => {
+  const outbox = new Map<string, QueuedAnswer>([["first", { ...makeAnswer("first"), owner: "owner" }]]);
+  let snapshot: SyncSnapshot = emptySnapshot("owner");
+  let release!: () => void, entered!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const began = new Promise<void>(resolve => { entered = resolve; });
+  const acknowledged = new Set<string>();
+  let firstPush = true;
+  const store: SyncStore = {
+    async read() { return snapshot; },
+    async pending() { return [...outbox.values()]; },
+    async commit(next, ids) {
+      snapshot = next;
+      for (const id of ids) outbox.delete(id);
+    },
+  };
+  const transport: SyncTransport = {
+    async push(batch) {
+      if (firstPush) {
+        firstPush = false;
+        entered();
+        await gate;
+      }
+      for (const answer of batch) acknowledged.add(answer.id);
+      return { user_id: "owner", ids: batch.map(answer => answer.id) };
+    },
+    async manifest() {
+      return { owner: "owner", protocol: 1, versions: { answers: String(acknowledged.size) } };
+    },
+    async pull() {
+      return { owner: "owner", protocol: 1, versions: { answers: String(acknowledged.size) }, changes: [] };
+    },
+  };
+  const engine = new SyncEngine("owner", store, transport);
+  const running = engine.run();
+  await began;
+  outbox.set("second", { ...makeAnswer("second", "1"), owner: "owner" });
+  release();
+  await running;
+  assert.deepEqual([...outbox.keys()], ["second"], "first run must only acknowledge its initial batch");
+  await engine.run();
+  assert.equal(outbox.size, 0);
+  assert.deepEqual([...acknowledged].sort(), ["first", "second"]);
+});
