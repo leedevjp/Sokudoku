@@ -4,7 +4,8 @@ import { flushAnswers, queueAnswer, pendingAnswers } from "./answer-queue";
 /** Keeps an in-memory fallback while each answer is durably queued in IndexedDB. */
 export class AnswerJournal {
   private answers: Answer[] = [];
-  private writes: Promise<unknown>[] = [];
+  private writes = new Map<string, Promise<void>>();
+  private durable = new Set<string>();
   private syncTail: Promise<unknown> = Promise.resolve();
   private localTail: Promise<void> = Promise.resolve();
   private sources = new Map<string, Word["source"]>();
@@ -43,9 +44,11 @@ export class AnswerJournal {
     };
     this.answers.push(entry);
     if (!this.preview) {
-      const write = this.storage.queueAnswer(this.owner, entry);
-      this.writes.push(write);
-      void write.catch(() => {});
+      // Persist immediately, then remember which UUID is already durable.
+      // A later checkpoint must not re-insert it after an ACK clears the queue.
+      const write = this.storage.queueAnswer(this.owner, entry)
+        .then(() => { this.durable.add(entry.id); }, () => {});
+      this.writes.set(entry.id, write);
     }
   }
   sync(): Promise<boolean> {
@@ -65,25 +68,37 @@ export class AnswerJournal {
     this.localTail = work.then(() => {}, () => {});
     return work;
   }
+  private async ensureDurable(batch: Answer[]): Promise<void> {
+    await Promise.all(batch.map(answer => this.writes.get(answer.id)));
+    // Retry only failed or missing initial writes. Rewriting already-saved
+    // UUIDs can resurrect them if the root worker ACKed in the meantime.
+    await Promise.all(batch.filter(answer => !this.durable.has(answer.id)).map(async answer => {
+      await this.storage.queueAnswer(this.owner, answer);
+      this.durable.add(answer.id);
+    }));
+  }
+  private forget(batch: Answer[]) {
+    const saved = new Set(batch.map(answer => answer.id));
+    this.answers = this.answers.filter(answer => !saved.has(answer.id));
+    for (const id of saved) {
+      this.writes.delete(id);
+      this.durable.delete(id);
+    }
+  }
   private async persistLocal(): Promise<boolean> {
-    const batch = this.answers.slice(), writes = this.writes.splice(0);
+    const batch = this.answers.slice();
     try {
-      await Promise.allSettled(writes);
-      await Promise.all(batch.map(answer => this.storage.queueAnswer(this.owner, answer)));
-      const durable = new Set(batch.map(a => a.id));
-      this.answers = this.answers.filter(a => !durable.has(a.id));
+      await this.ensureDurable(batch);
+      this.forget(batch);
       return true;
     } catch { return false; }
   }
   private async save(): Promise<boolean> {
     const batch = this.answers.slice();
-    const writes = this.writes.splice(0);
     try {
-      await Promise.allSettled(writes);
-      await Promise.all(batch.map((answer) => this.storage.queueAnswer(this.owner, answer)));
+      await this.ensureDurable(batch);
       await this.storage.flushAnswers(this.owner);
-      const saved = new Set(batch.map((answer) => answer.id));
-      this.answers = this.answers.filter((answer) => !saved.has(answer.id));
+      this.forget(batch);
       return true;
     } catch {
       return false;
