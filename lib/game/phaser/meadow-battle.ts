@@ -266,7 +266,7 @@ export class MeadowBattle {
     if (age < SPELL_HIT_STOP_MS) this.mage?.setFrame("6");
     const punch = Math.max(0, 1 - age / 110);
     this.monster?.setDisplaySize((112 - 13 * punch) * this.s, (112 + 9 * punch) * this.s);
-    if (age < 32) this.monster?.setTint(0xfff3cb).setTintFill();
+    if (age < 32) this.monster?.setTint(0xfff3cb).setTintMode(Phaser.TintModes.FILL);
     else this.monster?.clearTint();
     if (tier && age < 280) this.comboEffect?.setFrame(String((tier - 1) * 4 + Math.min(3, Math.floor(age / 70))))
       .setDisplaySize((92 + tier * 12) * this.s, (92 + tier * 12) * this.s).setVisible(true);

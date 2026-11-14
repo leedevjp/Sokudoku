@@ -45,6 +45,18 @@ export class GameDataLoader {
     return this.levels.filter((level) => /^[1-5]$/.test(level)).join(",");
   }
   async fetchData(): Promise<Bootstrap> {
+    if (typeof window !== "undefined") {
+      const { prepareSharedGame } = await import("@/lib/sync/client");
+      try { return await prepareSharedGame(this.levels.join(","), [
+        ...(this.needsReading ? ["reading" as const] : []),
+        ...(this.needsMeaning ? ["meaning" as const] : []),
+      ]); } catch (error) {
+        if (["LOGIN", "OWNER_CHANGED"].includes((error as Error).message)) {
+          this.onLoginRequired(); throw Error("LOGIN");
+        }
+        throw error;
+      }
+    }
     const [sets, state] = await Promise.all([
       Promise.all([
         this.difficulties.size || this.needsReading ? this.fetchCommon() : Promise.resolve(null),

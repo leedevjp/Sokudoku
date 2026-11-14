@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { DashboardData } from "@/lib/dashboard/types";
+import { settleSync } from "@/lib/sync/client";
 
 type DashboardError = "login" | "load" | null;
 type SavedDashboard = { savedAt: number; data: DashboardData };
@@ -69,6 +70,8 @@ export function useDashboardData() {
           if (saved) setData(saved);
           else setData(null);
         }
+        // Keep showing the cached screen while the shared worker reconciles both directions.
+        void settleSync().catch(() => { /* Keep the existing online refresh independent. */ });
         const response = await fetch("/api/dashboard?timezone=" + encodeURIComponent(timezone), {
           cache: "no-store",
           signal: controller.signal,
@@ -103,6 +106,11 @@ export function useDashboardData() {
       clearTimeout(timer);
     };
   }, [reload]);
+  useEffect(() => {
+    const refresh = () => setReload(n => n + 1);
+    window.addEventListener("sokudoku-sync-updated", refresh);
+    return () => window.removeEventListener("sokudoku-sync-updated", refresh);
+  }, []);
 
   function retry() {
     setError(null);
