@@ -23,7 +23,7 @@ function draw<T extends Candidate>(candidates: T[], rng: () => number): T {
   return candidates[candidates.length - 1];
 }
 
-/** A set is frozen: answers update memory now, but affect only the next set. */
+/** Frozen questions stay stable until displayed; a fresh sync replaces queued questions at the next transition. */
 export class TrainingPlanner {
   private queue: PlannedQuestion[] = [];
   private readonly byKey: Map<string, Word>;
@@ -35,22 +35,34 @@ export class TrainingPlanner {
   private preparing?: Promise<void>;
   private generation = 0;
   private readonly encounters = new Map<string, number>();
-  private stagedCatalog?: { words: Word[]; prepare?: (word: Word, kind: Kind) => Promise<void>; applied?: () => void };
-  stageCatalog(words: Word[], prepare?: (word: Word, kind: Kind) => Promise<void>, applied?: () => void) {
-    this.stagedCatalog = { words, prepare, applied };
+  private stagedCatalog?: { words: Word[]; prepare?: (word: Word, kind: Kind) => Promise<void>; applied?: () => void; engine?: LearningEngine };
+  stageCatalog(words: Word[], prepare?: (word: Word, kind: Kind) => Promise<void>, applied?: () => void, engine?: LearningEngine) {
+    this.stagedCatalog = { words, prepare, applied, engine };
   }
   private adoptCatalog() {
-    if (!this.stagedCatalog || this.queue.length || this.prepared || this.preparing) return;
+    // The current question has already left the queue. Discard only the
+    // undisplayed questions, regardless of how many remain in the old set.
+    if (!this.stagedCatalog || this.preparing) return;
     const next = this.stagedCatalog;
     this.stagedCatalog = undefined;
+    this.generation++;
+    this.queue = [];
+    this.prepared = false;
     this.words = next.words;
     this.byKey.clear();
     for (const word of this.words) this.byKey.set(wordKey(word.source, word.id), word);
     this.prepareQuestion = next.prepare;
+    if (next.engine) {
+      this.engine = next.engine;
+      for (const state of next.engine.words.values()) {
+        const key = wordKey(state.source, state.word_ref);
+        this.encounters.set(key, Math.max(this.encounters.get(key) ?? 0, state.card.reps));
+      }
+    }
     next.applied?.();
   }
   constructor(
-    readonly engine: LearningEngine,
+    public engine: LearningEngine,
     private words: Word[],
     private kinds: Kind[] = trainingKinds,
     private modes: TrainingMode[] = ["exploration", "review"],
@@ -96,21 +108,22 @@ export class TrainingPlanner {
     return this.queue.length > 0;
   }
   private ensureSet() {
-    if (this.queue.length || this.prepared) return;
     this.adoptCatalog();
+    if (this.queue.length || this.prepared) return;
     if (this.prepareQuestion) throw Error("SET_NOT_PREPARED");
     for (const request of this.makeSet()) void request;
     this.prepared = true;
   }
   /** Select first, then prepare only those questions. Never precompute the catalog. */
   async prepareSet(): Promise<void> {
-    this.adoptCatalog();
-    if (!this.prepareQuestion) { this.ensureSet(); return; }
+    // Finish an in-flight old preparation before replacing it. Never return
+    // an undisplayed old question after a newer snapshot is already staged.
     if (this.preparing) {
       await this.preparing;
-      if (!this.queue.length && !this.prepared) await this.prepareSet();
-      return;
+      return this.prepareSet();
     }
+    this.adoptCatalog();
+    if (!this.prepareQuestion) { this.ensureSet(); return; }
     if (this.queue.length || this.prepared) return;
     const generation = this.generation;
     const work = (async () => {
@@ -128,11 +141,12 @@ export class TrainingPlanner {
     if (generation !== this.generation) await this.prepareSet();
   }
   record(answer: Answer, word: Word) {
-    this.engine.apply({
-      ...answer,
-      source: word.source ?? "word",
-      difficulty: word.difficulty,
-    });
+    const event = { ...answer, source: word.source ?? "word", difficulty: word.difficulty };
+    this.engine.apply(event);
+    // Answering the visible old question must also update the incoming engine.
+    // Otherwise switching at the next question would erase that answer.
+    if (this.stagedCatalog?.engine && this.stagedCatalog.engine !== this.engine)
+      this.stagedCatalog.engine.apply(event);
   }
   progress(now = Date.now()) {
     const known = new Set(this.seen);
