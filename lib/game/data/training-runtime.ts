@@ -20,6 +20,7 @@ type RuntimeOptions = {
   kinds: Kind[];
   modes: TrainingMode[];
   previewWords?: Word[];
+  expectedOwner?: string;
   onLoginRequired: () => void;
   onAnswersSaved?: () => void;
 };
@@ -55,8 +56,12 @@ export class TrainingRuntime {
   };
 
   constructor(private options: RuntimeOptions) {
-    this.loader = new GameDataLoader(options.levels, options.onLoginRequired, options.kinds.includes("meaning"), options.kinds.includes("reading"));
+    this.loader = new GameDataLoader(options.levels, () => this.options.onLoginRequired(), options.kinds.includes("meaning"), options.kinds.includes("reading"));
     if (typeof window !== "undefined") window.addEventListener("sokudoku-sync-updated", this.synced);
+  }
+  setHandlers(onLoginRequired: () => void, onAnswersSaved?: () => void) {
+    this.options.onLoginRequired = onLoginRequired;
+    this.options.onAnswersSaved = onAnswersSaved;
   }
   private filter(data: Bootstrap): Bootstrap {
     return { ...data, words: wordsForKinds(data.words, this.options.kinds) };
@@ -114,6 +119,9 @@ export class TrainingRuntime {
         data = await this.loader.loadOffline();
       }
     }
+    if (this.disposed) throw Error("TRAINING_CLOSED");
+    if (this.options.expectedOwner && data.user_id !== this.options.expectedOwner)
+      throw Error("OWNER_CHANGED");
     this.data = this.filter(data);
     const owner = this.data.user_id;
     this.journal = new AnswerJournal(owner, this.data.words, !!previewWords, undefined, true);
