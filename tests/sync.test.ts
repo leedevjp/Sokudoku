@@ -38,6 +38,13 @@ test("unchanged manifests do not download; new local answers upload even when se
   h.add(answer("two")); await engine.run();
   assert.equal(h.stored.size, 2); assert.equal(h.snapshot?.versions.answers, "2");
 });
+test("a failed server-side derivation is repaired even after the answer cursor is already current", async () => {
+  const h = harness(), engine = new SyncEngine("a", h.store, h.transport);
+  await engine.run(); const before = h.pulls;
+  h.transport.manifest = async () => ({ owner: "a", protocol: 1, versions: { answers: "1" }, pending_learning: true });
+  await engine.run();
+  assert.equal(h.pulls, before + 1);
+});
 test("simultaneous wakeups share a run and never acknowledge another account", async () => {
   const h = harness(), engine = new SyncEngine("a", h.store, h.transport);
   assert.deepEqual(await Promise.all([engine.run(), engine.run()]), [h.snapshot, h.snapshot]);

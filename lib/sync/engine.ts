@@ -6,7 +6,7 @@ export type SyncStore = {
   commit: (snapshot: SyncSnapshot, acknowledged: string[]) => Promise<void>;
 };
 export type SyncTransport = {
-  manifest: () => Promise<{ owner: string; versions: Versions; protocol: number }>;
+  manifest: () => Promise<{ owner: string; versions: Versions; protocol: number; pending_learning?: boolean }>;
   pull: (versions: Versions) => Promise<SyncPacket>;
   push: (answers: QueuedAnswer[]) => Promise<{ user_id: string; ids: string[]; discarded_ids?: string[] }>;
 };
@@ -37,7 +37,7 @@ export class SyncEngine {
     }
     const manifest = await this.transport.manifest();
     if (manifest.owner !== this.owner || manifest.protocol !== 1) throw Error("OWNER_CHANGED");
-    if (!snapshot.savedAt || acknowledged.length || !versionsMatch(snapshot.versions, manifest.versions)) {
+    if (!snapshot.savedAt || acknowledged.length || manifest.pending_learning || !versionsMatch(snapshot.versions, manifest.versions)) {
       snapshot = applyPacket(snapshot, await this.transport.pull(snapshot.versions));
       // Cursor, downloaded state and acknowledged queue removal commit together.
       // A crash between server ACK and this commit simply replays the same UUIDs.

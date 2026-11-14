@@ -28,8 +28,8 @@ export async function POST(request: Request) {
   try {
     const { data: manifest, error } = await client.rpc("sync_manifest");
     if (error) throw error;
-    const latest = manifest as { versions: Record<string, string> };
-    if (!parsed.data.through && (parsed.data.versions.answers ?? "0") !== (latest.versions.answers ?? "0"))
+    const latest = manifest as { versions: Record<string, string>; pending_learning?: boolean };
+    if (!parsed.data.through && (latest.pending_learning || (parsed.data.versions.answers ?? "0") !== (latest.versions.answers ?? "0")))
       await synchronizeLearning(client);
     const result = await client.rpc("sync_pull", { p_versions: { ...parsed.data.versions,
       $dataset: parsed.data.dataset, ...(parsed.data.through ? { $through: parsed.data.through } : {}),

@@ -72,7 +72,7 @@ async function pullPages(versions: Versions): Promise<SyncPacket> {
     base = through ?? base;
     const latest = await json("/api/sync");
     if (latest.owner !== owner) throw Error("OWNER_CHANGED");
-    if (versionsMatch(base, latest.versions)) return { owner: owner!, protocol: 1, versions: base, changes };
+    if (!latest.pending_learning && versionsMatch(base, latest.versions)) return { owner: owner!, protocol: 1, versions: base, changes };
   }
   throw Error("SYNC_BUSY");
 }

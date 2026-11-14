@@ -36,6 +36,8 @@ crash after server commit but before local acknowledgement replays the same UUID
 The server's existing idempotent answer insert, chronological FSRS replay and
 revision-checked commit merge late answers from different devices. Clients never
 upload their calculated final FSRS state over another device's state.
+The manifest also checks the indexed set of unprocessed answers, so a failed
+server background calculation is retried even when download cursors match.
 
 The dashboard keeps its existing account/timezone-scoped cached display and
 network refresh. It also wakes the shared sync worker and refreshes again on
