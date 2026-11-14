@@ -65,6 +65,49 @@ test("failed checkpoint retains the complete batch for a later retry", async () 
   assert.deepEqual([...received], ["one", "two"]);
 });
 
+test("recover exposes durable answers before a slow upload and serializes the next save", async () => {
+  let release!: () => void;
+  const upload = new Promise<void>(resolve => { release = resolve; });
+  const pending = [answer("offline")];
+  let uploads = 0;
+  const journal = new AnswerJournal("owner", [], false, {
+    async queueAnswer() {},
+    async pendingAnswers() { return pending; },
+    async flushAnswers() { uploads++; await upload; },
+  });
+  assert.deepEqual(await journal.recover(), pending);
+  await tick();
+  assert.equal(uploads, 1);
+  journal.record(answer("new"));
+  const checkpoint = journal.sync();
+  await tick();
+  assert.equal(uploads, 1, "a new save must not race recovery acknowledgement");
+  release();
+  assert.equal(await checkpoint, true);
+  assert.equal(uploads, 2);
+});
+
+test("runtime replays pending answers without refetching the catalog on entry", async t => {
+  const words: Word[] = Array.from({ length: 8 }, (_, i) => ({
+    id: "word" + i, term: "word" + i, kana: "かな" + i,
+    meaning_ko: "meaning" + i, has_kanji: true, hanja_reading: null,
+    difficulty: 0, deleted_at: null,
+  }));
+  let fetches = 0;
+  t.mock.method(GameDataLoader.prototype, "fetchData", async () => {
+    fetches++;
+    return { words, stats: [], user_id: "owner" };
+  });
+  t.mock.method(AnswerJournal.prototype, "recover", async () => [{ ...answer("pending"), word_id: "word0" }]);
+  t.mock.method(AnswerJournal.prototype, "sync", async () => true);
+  const runtime = new TrainingRuntime({ levels: "1", kinds: ["meaning"], modes: ["exam"], onLoginRequired() {} });
+  const data = await runtime.load();
+  assert.equal(fetches, 1);
+  assert.equal(data.planner.engine.words.size, 1);
+  assert.equal(data.planner.progress().unseen, 7);
+  runtime.dispose();
+});
+
 test("live training saves each five answered questions, reconnects and partial exits", async t => {
   const words: Word[] = Array.from({ length: 8 }, (_, i) => ({
     id: "word" + i, term: "word" + i, kana: "かな" + i,

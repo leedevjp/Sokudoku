@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { after } from "next/server";
 import { answerSchema } from "@/lib/game/answer-schema";
 import { createClient } from "@/lib/supabase/server";
 import { synchronizeLearning } from "@/lib/game/learning/server";
@@ -85,15 +86,6 @@ export async function POST(request: Request) {
   }
   if (!saved)
     return Response.json({ error: "save_failed" }, { status: 503, headers });
-  // Acknowledge only after canonical processing commits; retrying a UUID is safe.
-  try {
-    if (accepted.length) await synchronizeLearning(client);
-  } catch {
-    return Response.json(
-      { error: "learning_sync_failed" },
-      { status: 503, headers },
-    );
-  }
   // A conflicting UUID owned by somebody else must never acknowledge this user's queue.
   const { data: stored, error: checkError } = accepted.length
     ? await client
@@ -106,6 +98,12 @@ export async function POST(request: Request) {
     : { data: [], error: null };
   if (checkError)
     return Response.json({ error: "verify_failed" }, { status: 503, headers });
+  // The answer log is durable before acknowledgement. Derived FSRS state must
+  // not hold the save response; the next learning read also repairs pending work.
+  if (stored.length) after(async () => {
+    try { await synchronizeLearning(client); }
+    catch (error) { console.error("Deferred learning synchronization failed", error); }
+  });
   return Response.json(
     {
       user_id: user.id,

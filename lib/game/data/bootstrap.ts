@@ -57,17 +57,13 @@ export class GameDataLoader {
     if (present.some((set) => set.user_id !== present[0].user_id))
       throw Error("LOGIN");
     if (state.user_id !== present[0].user_id) throw Error("LOGIN");
-    try {
-      await storageDeadline(
-        (await database()).put(
+    void Promise.resolve().then(() => database()).then(db => storageDeadline(
+        db.put(
           "cache",
           state.learning,
           `learning-v1:${state.user_id}`,
         ),
-      );
-    } catch {
-      /* Optional offline snapshot. */
-    }
+      )).catch(() => { /* Optional offline snapshot. */ });
     return {
       user_id: present[0].user_id,
       learning: state.learning,

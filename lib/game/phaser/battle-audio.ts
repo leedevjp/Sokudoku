@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { gameAssetUrl } from "../asset-url";
 
 const MUSIC_GAIN = 0.5;
 const EFFECTS_GAIN = 3;
@@ -7,7 +8,7 @@ const files = ["dash", "hybrid", "jelly", "hybrid-combo", "miss-combo"] as const
 type Cue = typeof files[number];
 export function preloadBattleAudio(scene: Phaser.Scene) {
   for (const file of files) if (!scene.cache.audio.exists("battle-" + file))
-    scene.load.audio("battle-" + file, "/audio/audition-v1/" + file + ".wav");
+    scene.load.audio("battle-" + file, gameAssetUrl("/audio/audition-v1/" + file + ".wav"));
 }
 
 export class BattleAudio {
@@ -68,7 +69,7 @@ export class BattleAudio {
       this.generation++;
       this.music = new Audio();
       this.music.preload = "none";
-      this.music.src = "/audio/study-lobby-night-v1.mp3";
+      this.music.src = gameAssetUrl("/audio/study-lobby-night-v1.mp3");
       this.music.loop = true;
       this.music.volume = 0;
       this.playing = false;
