@@ -39,6 +39,9 @@ export class TrainingPlanner {
   stageCatalog(words: Word[], prepare?: (word: Word, kind: Kind) => Promise<void>, applied?: () => void, engine?: LearningEngine) {
     this.stagedCatalog = { words, prepare, applied, engine };
   }
+  discardStagedCatalog() {
+    this.stagedCatalog = undefined;
+  }
   private adoptCatalog() {
     // The current question has already left the queue. Discard only the
     // undisplayed questions, regardless of how many remain in the old set.
