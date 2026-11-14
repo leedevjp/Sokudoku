@@ -225,6 +225,7 @@ export class TrainingRuntime {
   }
   async retry(): Promise<TrainingData> {
     this.catalogGeneration++;
+    this.planner?.discardStagedCatalog();
     this.stagedReading?.close(); this.stagedReading = undefined; this.stagedVersion = undefined; this.stagedSyncVersion = undefined;
     this.solvedSinceSave = 0;
     if (this.options.previewWords) return { ...this.current(), stats: [] };
