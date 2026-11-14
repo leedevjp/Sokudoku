@@ -161,7 +161,7 @@ export class TrainingScene extends Phaser.Scene {
     };
     this.events.once("shutdown", cleanup);
     this.events.once("destroy", cleanup);
-    this.startRun();
+    this.startRun(true);
     // Render and enable the quiz before any presentation downloads/decoding.
     this.game.events.once("postrender", () => {
       if (!this.sys.isActive()) return;
@@ -186,7 +186,7 @@ export class TrainingScene extends Phaser.Scene {
       this.drawPause();
     }
   }
-  private startRun() {
+  private startRun(usePreparedFirstSet = false) {
     if (this.persistence.saving) return;
     this.stopPronunciation();
     this.feedbackReady = false;
@@ -197,7 +197,7 @@ export class TrainingScene extends Phaser.Scene {
     this.session.reset();
     this.battleProgress.reset();
     this.petMotion.play("hop");
-    this.options.planner.resetSet();
+    if (!usePreparedFirstSet) this.options.planner.resetSet();
     this.persistence.reset();
     this.next(true);
   }

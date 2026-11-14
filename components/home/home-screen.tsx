@@ -26,6 +26,7 @@ import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
 import { useFolderOutline } from "./use-folder-outline";
+import { homeTrainingPreloader } from "@/lib/game/data/home-preloader";
 
 type ModeFamily = "auto" | "manual" | "exam";
 type ModeScope = { levels: TrainingLevel[]; kinds: Kind[] };
@@ -123,6 +124,25 @@ export default function HomeScreen() {
       setSelectionReady(true);
     }
   }, []);
+  const levelsKey = levels.join(",");
+  const kindsKey = kinds.join(",");
+  const modesKey = modes.join(",");
+  useEffect(() => {
+    if (!selectionReady || loading) return;
+    if (!user || !canStart) {
+      homeTrainingPreloader.clear();
+      return;
+    }
+    // Reuse the last saved selections immediately on home load. Changing any
+    // filter invalidates the old preloaded quiz and prepares the new one.
+    homeTrainingPreloader.warm({
+      owner: user.id,
+      levels: levelsKey,
+      kinds: parseKinds(kindsKey),
+      modes: parseModes(modesKey),
+    });
+  }, [selectionReady, loading, user?.id, canStart, levelsKey, kindsKey, modesKey]);
+
   useEffect(() => {
     const home = homeActionsRef.current;
     const sheen = sheenRef.current;
