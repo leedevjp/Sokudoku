@@ -12,6 +12,7 @@ export class AnswerJournal {
     words: Word[],
     private preview = false,
     private storage = { queueAnswer, flushAnswers, pendingAnswers },
+    private localFirst = false,
   ) {
     this.setWords(words);
   }
@@ -23,7 +24,7 @@ export class AnswerJournal {
     const pending = await this.storage.pendingAnswers(this.owner).catch(() => []);
     // Replay the local queue immediately; a slow upload must not gate entry.
     // Share syncTail with later checkpoints so acknowledgement remains serialized.
-    if (pending.length) void this.sync();
+    if (pending.length && !this.localFirst) void this.sync();
     return pending;
   }
   record(answer: Answer) {
@@ -52,6 +53,18 @@ export class AnswerJournal {
     const save = this.syncTail.then(() => this.save());
     this.syncTail = save;
     return save;
+  }
+  /** Only durable local writes gate navigation; the root worker owns uploads. */
+  async saveLocal(): Promise<boolean> {
+    if (this.preview) return true;
+    const batch = this.answers.slice(), writes = this.writes.splice(0);
+    try {
+      await Promise.allSettled(writes);
+      await Promise.all(batch.map(answer => this.storage.queueAnswer(this.owner, answer)));
+      const durable = new Set(batch.map(a => a.id));
+      this.answers = this.answers.filter(a => !durable.has(a.id));
+      return true;
+    } catch { return false; }
   }
   private async save(): Promise<boolean> {
     const batch = this.answers.slice();

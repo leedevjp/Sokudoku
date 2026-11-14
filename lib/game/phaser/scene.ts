@@ -152,7 +152,13 @@ export class TrainingScene extends Phaser.Scene {
     this.trainingInput.attach();
     this.battleAudio = new BattleAudio(this);
     this.scale.on("resize", this.resize, this);
-    this.events.once("shutdown", () => { this.overlay?.destroy(); this.overlay = undefined; this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach(); });
+    const cleanup = () => {
+      this.overlay?.destroy(); this.overlay = undefined;
+      this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach();
+      this.events.off("shutdown", cleanup); this.events.off("destroy", cleanup);
+    };
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
     this.startRun();
     // The first board must not wait for later maps or optional sound decoding.
     this.game.events.once("postrender", () => {
@@ -490,7 +496,7 @@ export class TrainingScene extends Phaser.Scene {
         this.overlay = undefined;
         this.time.paused = false;
         this.tweens.resumeAll();
-        this.finish();
+        this.finish(false, true);
       },
       preferences: this.prefs,
       audio: this.battleAudio,
@@ -646,7 +652,7 @@ export class TrainingScene extends Phaser.Scene {
       }
     });
   }
-  private finish(reviewComplete = false) {
+  private finish(reviewComplete = false, exitAfterSave = false) {
     this.overlay?.destroy();
     this.overlay = undefined;
     this.battleAudio?.stop();
@@ -663,7 +669,11 @@ export class TrainingScene extends Phaser.Scene {
     this.tweens.killAll();
     this.time.paused = false;
     this.persistence.save(
-      this.options.onFinish,
+      async () => {
+        const saved = await this.options.onFinish();
+        if (saved && exitAfterSave) this.options.onExit();
+        return saved;
+      },
       () => this.sys.isActive(),
       () => this.drawEnd(),
     );

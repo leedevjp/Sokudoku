@@ -149,7 +149,7 @@ export function drawEnd(
     );
     view.button(
       view.t("ホームへ", "홈으로"),
-      x, y + 212 * s, buttonWidth, actions.exit, false, undefined, data.syncing,
+      x, y + 212 * s, buttonWidth, actions.exit, false, undefined, data.syncing || (!data.preview && !data.syncOK),
     );
   }
   if (!data.syncOK && !data.syncing && !data.preview)

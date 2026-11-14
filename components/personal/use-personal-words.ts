@@ -1,6 +1,7 @@
 import type { PersonalStage, PersonalSort } from "@/lib/personal/filters";
 import { useEffect, useState } from "react";
 import type { PersonalWordList } from "@/lib/personal/types";
+import { kickSync } from "@/lib/sync/client";
 
 export function usePersonalWords() {
   const [query, setQuery] = useState("");
@@ -59,6 +60,7 @@ export function usePersonalWords() {
     };
   }, [key, request.q, request.page, request.stage, request.sort]);
   function refresh(reset = false) {
+    kickSync();
     if (reset) setQuery("");
     setRequest((old) => ({
       ...old,

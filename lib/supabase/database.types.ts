@@ -547,6 +547,8 @@ export type Database = {
       }
     }
     Functions: {
+      sync_manifest: { Args: never; Returns: Json }
+      sync_pull: { Args: { p_versions?: Json }; Returns: Json }
       commit_learning: {
         Args: {
           expected_revision: number

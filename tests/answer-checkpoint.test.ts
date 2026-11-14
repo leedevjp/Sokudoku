@@ -65,6 +65,22 @@ test("failed checkpoint retains the complete batch for a later retry", async () 
   assert.deepEqual([...received], ["one", "two"]);
 });
 
+test("local-first exit persists answers without any network wait and retries denied local writes", async () => {
+  const durable = new Map<string, Answer>();
+  let denied = true, uploads = 0;
+  const journal = new AnswerJournal("owner", [], false, {
+    async queueAnswer(_owner, a) { if (denied) throw Error("quota"); durable.set(a.id, a); },
+    async pendingAnswers() { return [...durable.values()]; },
+    async flushAnswers() { uploads++; throw Error("network must not gate exit"); },
+  }, true);
+  journal.record(answer("local"));
+  assert.equal(await journal.saveLocal(), false);
+  denied = false;
+  assert.equal(await journal.saveLocal(), true);
+  assert.equal((await journal.recover()).length, 1);
+  assert.equal(durable.size, 1); assert.equal(uploads, 0);
+});
+
 test("recover exposes durable answers before a slow upload and serializes the next save", async () => {
   let release!: () => void;
   const upload = new Promise<void>(resolve => { release = resolve; });
@@ -99,7 +115,7 @@ test("runtime replays pending answers without refetching the catalog on entry", 
     return { words, stats: [], user_id: "owner" };
   });
   t.mock.method(AnswerJournal.prototype, "recover", async () => [{ ...answer("pending"), word_id: "word0" }]);
-  t.mock.method(AnswerJournal.prototype, "sync", async () => true);
+  t.mock.method(AnswerJournal.prototype, "saveLocal", async () => true);
   const runtime = new TrainingRuntime({ levels: "1", kinds: ["meaning"], modes: ["exam"], onLoginRequired() {} });
   const data = await runtime.load();
   assert.equal(fetches, 1);
@@ -108,7 +124,7 @@ test("runtime replays pending answers without refetching the catalog on entry", 
   runtime.dispose();
 });
 
-test("live training saves each five answered questions, reconnects and partial exits", async t => {
+test("live training persists local checkpoints, reconnects and partial exits without waiting for uploads", async t => {
   const words: Word[] = Array.from({ length: 8 }, (_, i) => ({
     id: "word" + i, term: "word" + i, kana: "かな" + i,
     meaning_ko: "meaning" + i, has_kanji: true, hanja_reading: null,
@@ -119,7 +135,7 @@ test("live training saves each five answered questions, reconnects and partial e
   const recorded: Answer[] = [];
   t.mock.method(AnswerJournal.prototype, "record", (a: Answer) => { recorded.push(a); });
   let saves = 0, notices = 0, success = true;
-  t.mock.method(AnswerJournal.prototype, "sync", async () => { saves++; return success; });
+  t.mock.method(AnswerJournal.prototype, "saveLocal", async () => { saves++; return success; });
   const runtime = new TrainingRuntime({ levels: "1", kinds: ["meaning"], modes: ["exploration"],
     onLoginRequired: () => assert.fail("unexpected login"), onAnswersSaved: () => { notices++; } });
   await runtime.load();
@@ -130,19 +146,19 @@ test("live training saves each five answered questions, reconnects and partial e
   runtime.record(answer("fifth", "incorrect"));
   await tick();
   assert.equal(saves, 1);
-  assert.equal(notices, 1);
+  assert.equal(notices, 0, "durable local writes do not claim server acknowledgement");
   assert.equal(recorded.length, 6, "timeouts remain learning history but do not count toward rewards");
   success = false;
   for (let i = 0; i < 5; i++) runtime.record(answer("next" + i));
   await tick();
-  assert.equal(notices, 1, "failed uploads never claim a saved reward");
+  assert.equal(notices, 0, "failed local writes never claim a saved reward");
   success = true;
   runtime.online();
   await tick();
-  assert.equal(notices, 2);
+  assert.equal(notices, 0);
   runtime.record(answer("partial"));
   runtime.dispose();
   await tick();
   assert.equal(saves, 4);
-  assert.equal(notices, 2, "unmounted games do not display notices");
+  assert.equal(notices, 0, "unmounted games do not display notices");
 });

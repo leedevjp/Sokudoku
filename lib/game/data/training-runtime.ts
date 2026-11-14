@@ -8,6 +8,7 @@ import { AnswerJournal } from "./answer-journal";
 import { GameDataLoader, type Bootstrap } from "./bootstrap";
 import { database, storageDeadline } from "./database";
 import { ReadingSearch } from "./reading-search";
+import { kickSync } from "@/lib/sync/client";
 
 export type TrainingData = {
   words: Word[];
@@ -32,9 +33,13 @@ export class TrainingRuntime {
   private solvedSinceSave = 0;
   private reading?: ReadingSearch;
   private disposed = false;
+  private synced = () => {
+    if (!this.disposed && !this.options.previewWords) this.options.onAnswersSaved?.();
+  };
 
   constructor(private options: RuntimeOptions) {
     this.loader = new GameDataLoader(options.levels, options.onLoginRequired, options.kinds.includes("meaning"), options.kinds.includes("reading"));
+    if (typeof window !== "undefined") window.addEventListener("sokudoku-sync-updated", this.synced);
   }
   private filter(data: Bootstrap): Bootstrap {
     return { ...data, words: wordsForKinds(data.words, this.options.kinds) };
@@ -70,9 +75,10 @@ export class TrainingRuntime {
   }
   dispose() {
     this.disposed = true;
+    if (typeof window !== "undefined") window.removeEventListener("sokudoku-sync-updated", this.synced);
     this.reading?.close();
     // Navigation must also save a partial group of fewer than five answers.
-    if (this.journal) void this.journal.sync();
+    if (this.journal) void this.journal.saveLocal().then(() => kickSync());
   }
   async load(): Promise<TrainingData> {
     const { previewWords, kinds, modes } = this.options;
@@ -91,7 +97,7 @@ export class TrainingRuntime {
     }
     this.data = this.filter(data);
     const owner = this.data.user_id;
-    this.journal = new AnswerJournal(owner, this.data.words, !!previewWords);
+    this.journal = new AnswerJournal(owner, this.data.words, !!previewWords, undefined, true);
     const pending = await this.journal.recover();
     if (!this.data.words.length) throw Error("WORDS");
     const engine = await recoverLearning(
@@ -122,8 +128,8 @@ export class TrainingRuntime {
     }
   }
   private async save(): Promise<boolean> {
-    const saved = await this.journal.sync();
-    if (saved && !this.disposed && !this.options.previewWords) this.options.onAnswersSaved?.();
+    const saved = await this.journal.saveLocal();
+    if (saved) kickSync();
     return saved;
   }
   finish(): Promise<boolean> {
@@ -136,7 +142,8 @@ export class TrainingRuntime {
   async retry(): Promise<TrainingData> {
     this.solvedSinceSave = 0;
     if (this.options.previewWords) return { ...this.current(), stats: [] };
-    if (!(await this.journal.sync())) return { ...this.current(), stats: [] };
+    if (!(await this.journal.saveLocal())) return { ...this.current(), stats: [] };
+    kickSync();
     try {
       const fresh = this.filter(await this.loader.fetchData());
       if (fresh.user_id !== this.data.user_id) {
@@ -146,7 +153,7 @@ export class TrainingRuntime {
       const reading = await this.createReading(fresh);
       let planner: TrainingPlanner;
       try {
-        planner = this.plan(await LearningEngine.create(fresh.learning), fresh, reading);
+        planner = this.plan(await recoverLearning(fresh.learning, await this.journal.recover(), fresh.words), fresh, reading);
         await planner.prepareSet();
       } catch (error) { reading?.close(); throw error; }
       this.reading?.close();

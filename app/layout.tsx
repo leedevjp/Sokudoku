@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Outfit } from "next/font/google";
 import { SettingsProvider } from "@/components/settings/settings-provider";
 import { DeploymentWatcher } from "@/components/deployment/deployment-watcher";
+import { SyncBridge } from "@/components/sync/sync-bridge";
 import "./globals.css";
 const outfit = Outfit({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
         <SettingsProvider>
           <Suspense fallback={null}>
             <DeploymentWatcher />
+            <SyncBridge />
           </Suspense>
           {children}
         </SettingsProvider>
