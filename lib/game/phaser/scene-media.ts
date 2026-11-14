@@ -1,7 +1,7 @@
 import type Phaser from "phaser";
 import { prepareMedia } from "@/lib/sync/client";
 import { gameAssetUrl } from "../asset-url";
-import { battleImages, laterImages, effectFiles } from "./presentation-assets";
+import { coreBattleImages, extraBattleImages, laterImages, effectFiles } from "./presentation-assets";
 
 /** Never awaited by the question path. Network work belongs to the root worker. */
 export class SceneMedia {
@@ -59,13 +59,14 @@ export class SceneMedia {
     // Make the battle visible as soon as its required images are uploaded.
     // Audio and later stages must not delay the characters appearing.
     const battle = Promise.allSettled(
-      battleImages.map(([key, source]) => this.image(key, source)),
+      coreBattleImages.map(([key, source]) => this.image(key, source)),
     ).then(results => {
       const ready = results.every(result => result.status === "fulfilled");
       if (ready && !this.closed) this.onBattleReady?.();
       return ready;
     });
     const optional = Promise.allSettled([
+      ...extraBattleImages.map(([key, source]) => this.image(key, source, false)),
       ...laterImages.map(([key, source]) => this.image(key, source, false)),
       ...effectFiles.map(file => this.audio(file)),
     ]);
