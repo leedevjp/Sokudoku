@@ -151,7 +151,7 @@ export class TrainingScene extends Phaser.Scene {
     this.game.canvas.setAttribute("tabindex", "0");
     this.trainingInput.attach();
     this.battleAudio = new BattleAudio(this);
-    this.media = new SceneMedia(this);
+    this.media = new SceneMedia(this, () => this.attachBattleWhenReady());
     this.scale.on("resize", this.resize, this);
     const cleanup = () => {
       this.overlay?.destroy(); this.overlay = undefined;
@@ -254,9 +254,18 @@ export class TrainingScene extends Phaser.Scene {
   private drawBoard() {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime, this.timeLimited);
-    if (this.questionHasBattle)
-      this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
+    this.attachBattleWhenReady();
     this.notifyReady();
+  }
+  private attachBattleWhenReady() {
+    // The quiz is intentionally shown before its artwork loads. Attach the
+    // actors to the already visible question once every battle texture exists,
+    // without rebuilding the board, resetting input or restarting the timer.
+    if (!battleReady(key => this.textures.exists(key))) return;
+    this.questionHasBattle = true;
+    if (this.preparingQuestion || !this.question || this.battle ||
+        !["arming", "play", "settling"].includes(this.phase)) return;
+    this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
   }
   private notifyReady() {
     if (this.readyNotified) return;
