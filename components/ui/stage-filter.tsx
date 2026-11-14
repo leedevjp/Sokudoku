@@ -19,10 +19,29 @@ export function StageFilter({ value, onChange, personal = false, disabled = fals
       <span>{options.find(option => option.value === value)?.label}</span><span aria-hidden="true">⌄</span>
     </button>
     {open && <Modal open titleId={title} onClose={() => setOpen(false)}>
-      <div className={styles.panel}><h2 id={title}>{t("ステージ", "단계 필터")}</h2>
-        <div className={styles.options}>{options.map(option => <button key={option.value} className={styles.option} aria-pressed={value === option.value} onClick={() => { onChange(option.value); setOpen(false); }}>
-          <span>{option.label}{option.detail && <small>{option.detail}</small>}</span><span aria-hidden="true">{value === option.value ? "✓" : ""}</span>
-        </button>)}</div>
+      <div className={styles.panel}>
+        {/* A dialog still needs an accessible name, not a redundant visible heading. */}
+        <h2 id={title} className={styles.srOnly}>{t("ステージ", "단계 필터")}</h2>
+        <div className={styles.options}>
+          {options.map(option => {
+            const selected = value === option.value;
+            return (
+              <button
+                type="button"
+                key={option.value}
+                className={styles.option}
+                aria-pressed={selected}
+                onClick={() => { onChange(option.value); setOpen(false); }}
+              >
+                <span className={styles.optionLabel}>{option.label}</span>
+                <span className={styles.optionTrailing}>
+                  {option.detail && <span className={styles.optionDetail}>{option.detail}</span>}
+                  <span className={styles.optionCheck} aria-hidden="true">{selected ? "✓" : ""}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </Modal>}
   </>;
