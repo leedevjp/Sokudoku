@@ -79,7 +79,7 @@ export function useHomeSheen(
       observer.disconnect();
       window.removeEventListener("resize", updateSheenMask);
     };
-  }, [modes, levels, kinds, loading, owner]);
+  }, [homeActionsRef, sheenRef, modes, levels, kinds, loading, owner]);
 
 
 }

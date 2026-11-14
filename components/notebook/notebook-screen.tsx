@@ -14,7 +14,7 @@ export default function NotebookScreen() {
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
   const {
     words, setWords, error, setError, setReload, setPage, selected, setSelected,
-    selecting, setSelecting, checked, setChecked, busy, query, message, setMessage,
+    selecting, setSelecting, setChecked, busy, query, message, setMessage,
     filtered, eligible, activeChecked, changeQuery, removePersonal, addPersonal,
     pages, currentPage, visible,
   } = useNotebookState(t);
