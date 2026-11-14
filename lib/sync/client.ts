@@ -4,6 +4,7 @@ import type { Kind } from "../game/types";
 
 let worker: Worker | undefined;
 let owner: string | null | undefined;
+export const getSyncOwner = () => owner;
 let nextId = 0;
 let savedAt = 0;
 const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
