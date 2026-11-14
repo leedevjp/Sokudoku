@@ -1,58 +1,19 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { SettingsBar } from "@/components/settings/settings-bar";
 import { useSettings } from "@/components/settings/settings-provider";
-import {
-  trainingKinds,
-  parseKinds,
-  trainingLevels,
-  parseLevels,
-  type TrainingLevel,
-} from "@/lib/game/selection";
 import { useAccount } from "@/components/auth/use-account";
 import { AuthForm } from "@/components/auth/auth-form";
 import { HomeHero } from "./home-hero";
 import { Modal } from "@/components/ui/modal";
-import type { Kind } from "@/lib/game/types";
 import { ModeSelector } from "./mode-selector";
-import {
-  parseModes,
-  defaultTrainingModes,
-  toggleTrainingMode,
-  type TrainingMode,
-} from "@/lib/game/learning/types";
 import { KindSelector } from "./kind-selector";
 import { LevelSelector } from "./level-selector";
 import { DeploymentLabel } from "@/components/deployment/deployment-watcher";
 import { useFolderOutline } from "./use-folder-outline";
-import { homeTrainingPreloader } from "@/lib/game/data/home-preloader";
-
-type ModeFamily = "auto" | "manual" | "exam";
-type ModeScope = { levels: TrainingLevel[]; kinds: Kind[] };
-type ModeScopes = Record<ModeFamily, ModeScope>;
-const MODE_SCOPES_KEY = "sokudoku-mode-scopes-v1";
-const freshScope = (): ModeScope => ({ levels: [...trainingLevels], kinds: [...trainingKinds] });
-const freshScopes = (): ModeScopes => ({
-  auto: freshScope(),
-  manual: freshScope(),
-  exam: freshScope(),
-});
-const modeFamily = (modes: TrainingMode[]): ModeFamily =>
-  modes.includes("auto") ? "auto" : modes.includes("exam") ? "exam" : "manual";
-
-function restoreScope(value: unknown): ModeScope {
-  if (!value || typeof value !== "object") return freshScope();
-  const data = value as Partial<ModeScope>;
-  return {
-    levels: Array.isArray(data.levels)
-      ? parseLevels(data.levels.filter((level): level is TrainingLevel => typeof level === "string").join(","))
-      : [...trainingLevels],
-    kinds: Array.isArray(data.kinds)
-      ? parseKinds(data.kinds.filter((kind): kind is Kind => typeof kind === "string").join(","))
-      : [...trainingKinds],
-  };
-}
+import { useTrainingSelection } from "./use-training-selection";
+import { useHomeSheen } from "./use-home-sheen";
 
 export default function HomeScreen() {
   const { prefs } = useSettings();
@@ -64,192 +25,20 @@ export default function HomeScreen() {
   );
   const account = useAccount(authenticated);
   const { user, loading, notice } = account;
-  const [levels, setLevels] = useState<TrainingLevel[]>([...trainingLevels]);
-  const [kinds, setKinds] = useState<Kind[]>(trainingKinds);
-  const [modes, setModes] = useState<TrainingMode[]>(defaultTrainingModes);
-  const [timeLimited, setTimeLimited] = useState(false);
-  const [selectionReady, setSelectionReady] = useState(false);
+  const {
+    levels, kinds, modes, timeLimited, selectionReady, activeFolder, kanaOnly,
+    canStart, toggleLevel, toggleKind, toggleMode, changeTimeLimit,
+  } = useTrainingSelection(user?.id, loading);
   const homeActionsRef = useRef<HTMLDivElement>(null);
   const sheenRef = useRef<HTMLDivElement>(null);
   const { folderRef, folderOutline } = useFolderOutline(modes, prefs.lang);
-  const modeScopesRef = useRef<ModeScopes>(freshScopes());
-  const activeFolder = modeFamily(modes);
-  const kanaOnly =
-    levels.length > 0 &&
-    levels.every((level) => level === "H" || level === "K");
-  const canStart =
-    levels.length > 0 &&
-    kinds.length > 0 &&
-    modes.length > 0 &&
-    (!kanaOnly || kinds.includes("meaning"));
+  useHomeSheen(homeActionsRef, sheenRef, modes, levels, kinds, loading, user?.id);
   useLayoutEffect(() => {
-    // The server cannot read localStorage. Restore before revealing the mode
-    // controls, so the saved folder never flashes the fallback blue style.
     if (new URLSearchParams(window.location.search).get("login") === "1") {
       setModal("auth");
     }
-    try {
-      const savedTimeLimit = localStorage.getItem("sokudoku-time-limit-v1");
-      if (savedTimeLimit !== null) setTimeLimited(savedTimeLimit !== "off");
-      const savedModes = localStorage.getItem("sokudoku-modes-v1");
-      const restoredModes = parseModes(savedModes);
-      const activeFamily = modeFamily(restoredModes);
-      const rawScopes = localStorage.getItem(MODE_SCOPES_KEY);
-      const scopes = freshScopes();
-      if (rawScopes !== null) {
-        const raw = JSON.parse(rawScopes) as Partial<Record<ModeFamily, unknown>>;
-        for (const family of ["auto", "manual", "exam"] as const) {
-          scopes[family] = restoreScope(raw?.[family]);
-        }
-      } else {
-        // One-time migration: honor the previous shared selection in the
-        // last active mode. Other modes start with everything selected.
-        const savedLevels = localStorage.getItem("sokudoku-levels-v1");
-        const savedKinds = localStorage.getItem("sokudoku-kinds-v1");
-        if (savedLevels !== null || savedKinds !== null) {
-          scopes[activeFamily] = {
-            levels: savedLevels === null ? [...trainingLevels] : parseLevels(savedLevels),
-            kinds: savedKinds === null ? [...trainingKinds] : parseKinds(savedKinds),
-          };
-        }
-        localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(scopes));
-      }
-      modeScopesRef.current = scopes;
-      setModes(restoredModes);
-      setLevels([...scopes[activeFamily].levels]);
-      setKinds([...scopes[activeFamily].kinds]);
-    } catch {
-      /* Optional preference. */
-    } finally {
-      setSelectionReady(true);
-    }
   }, []);
-  const levelsKey = levels.join(",");
-  const kindsKey = kinds.join(",");
-  const modesKey = modes.join(",");
-  useEffect(() => {
-    if (!selectionReady || loading) return;
-    if (!user || !canStart) {
-      homeTrainingPreloader.clear();
-      return;
-    }
-    // Reuse the last saved selections immediately on home load. Changing any
-    // filter invalidates the old preloaded quiz and prepares the new one.
-    homeTrainingPreloader.warm({
-      owner: user.id,
-      levels: levelsKey,
-      kinds: parseKinds(kindsKey),
-      modes: parseModes(modesKey),
-    });
-  }, [selectionReady, loading, user?.id, canStart, levelsKey, kindsKey, modesKey]);
 
-  useEffect(() => {
-    const home = homeActionsRef.current;
-    const sheen = sheenRef.current;
-    if (!home || !sheen) return;
-
-    // All selected buttons reveal the same animated light beam. Their rounded
-    // rectangles form one clip-path in home-relative coordinates, so the beam
-    // moves across the whole UI at precisely the same speed and phase.
-    const round = (value: number) => Math.round(value * 10) / 10;
-    const updateSheenMask = () => {
-      const area = home.getBoundingClientRect();
-      home.style.setProperty("--home-sheen-stage-width", `${round(area.width)}px`);
-      const selected = home.querySelectorAll<HTMLElement>(
-        '.training-levels button[aria-pressed="true"], .home-launch-group .primary:not(:disabled):not([aria-disabled="true"])',
-      );
-      const selectedButtons = Array.from(selected);
-      const joinedTabs = selectedButtons.filter((button) =>
-        button.closest(".training-modes.tab-manual-both"),
-      );
-      const rectangles = selectedButtons.flatMap((button) => {
-        if (joinedTabs.length === 2 && button === joinedTabs[1]) return [];
-        if (joinedTabs.length === 2 && button === joinedTabs[0]) {
-          const first = joinedTabs[0].getBoundingClientRect();
-          const second = joinedTabs[1].getBoundingClientRect();
-          return [{
-            left: first.left,
-            top: Math.min(first.top, second.top),
-            width: second.right - first.left,
-            height: Math.max(first.bottom, second.bottom) - Math.min(first.top, second.top),
-          }];
-        }
-        return [button.getBoundingClientRect()];
-      });
-      const paths = rectangles.map((rect) => {
-        const x = round(rect.left - area.left);
-        const y = round(rect.top - area.top);
-        const w = round(rect.width);
-        const h = round(rect.height);
-        const r = round(Math.min(13, w / 2, h / 2));
-        return [
-          `M ${round(x + r)} ${y}`,
-          `H ${round(x + w - r)}`,
-          `Q ${round(x + w)} ${y} ${round(x + w)} ${round(y + r)}`,
-          `V ${round(y + h - r)}`,
-          `Q ${round(x + w)} ${round(y + h)} ${round(x + w - r)} ${round(y + h)}`,
-          `H ${round(x + r)}`,
-          `Q ${x} ${round(y + h)} ${x} ${round(y + h - r)}`,
-          `V ${round(y + r)}`,
-          `Q ${x} ${y} ${round(x + r)} ${y} Z`,
-        ].join(" ");
-      });
-      sheen.style.clipPath = paths.length ? `path("${paths.join(" ")}")` : "inset(100%)";
-    };
-
-    const observer = new ResizeObserver(updateSheenMask);
-    observer.observe(home);
-    for (const button of home.querySelectorAll<HTMLElement>(
-      ".training-levels button, .home-launch-group .primary",
-    )) observer.observe(button);
-    window.addEventListener("resize", updateSheenMask);
-    updateSheenMask();
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateSheenMask);
-    };
-  }, [modes, levels, kinds, loading, user]);
-
-  function persistScopes() {
-    try {
-      localStorage.setItem(MODE_SCOPES_KEY, JSON.stringify(modeScopesRef.current));
-    } catch { /* Optional preference. */ }
-  }
-  function toggleLevel(level: TrainingLevel) {
-    const next = trainingLevels.filter((item) =>
-      item === level ? !levels.includes(item) : levels.includes(item),
-    );
-    setLevels(next);
-    modeScopesRef.current[activeFolder] = { levels: next, kinds: [...kinds] };
-    persistScopes();
-  }
-  function toggleKind(kind: Kind) {
-    const next = trainingKinds.filter((item) =>
-      item === kind ? !kinds.includes(item) : kinds.includes(item),
-    );
-    setKinds(next);
-    modeScopesRef.current[activeFolder] = { levels: [...levels], kinds: next };
-    persistScopes();
-  }
-  function toggleMode(mode: TrainingMode) {
-    const next = toggleTrainingMode(modes, mode);
-    const nextFolder = modeFamily(next);
-    // Save the current selections before switching folders. Each folder gets
-    // full defaults only on its first visit, then remembers every adjustment.
-    modeScopesRef.current[activeFolder] = { levels: [...levels], kinds: [...kinds] };
-    if (nextFolder !== activeFolder) {
-      const restored = modeScopesRef.current[nextFolder];
-      setLevels([...restored.levels]);
-      setKinds([...restored.kinds]);
-    }
-    setModes(next);
-    persistScopes();
-    try {
-      localStorage.setItem("sokudoku-modes-v1", next.join(","));
-    } catch {
-      /* Optional preference. */
-    }
-  }
   const notices = {
     sent: t(
       "確認メールを送信しました。どのブラウザーでリンクを開いても認証できます。認証後、メールアドレスとパスワードでログインしてください。",
@@ -316,12 +105,7 @@ export default function HomeScreen() {
               modes={modes}
               onToggle={toggleMode}
               timeLimited={timeLimited}
-              onTimeLimitChange={(value) => {
-                setTimeLimited(value);
-                try {
-                  localStorage.setItem("sokudoku-time-limit-v1", value ? "on" : "off");
-                } catch { /* Optional preference. */ }
-              }}
+              onTimeLimitChange={changeTimeLimit}
             />
           </div>
           <div className="home-folder-body">
