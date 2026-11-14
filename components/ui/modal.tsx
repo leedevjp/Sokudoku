@@ -7,12 +7,16 @@ export function Modal({
   children,
   titleId,
   dismissDisabled = false,
+  hideClose = false,
+  className = "",
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   titleId: string;
   dismissDisabled?: boolean;
+  hideClose?: boolean;
+  className?: string;
 }) {
   const { prefs } = useSettings();
   const t = (jp: string, kr: string) => (prefs.lang === "jp" ? jp : kr);
@@ -21,11 +25,15 @@ export function Modal({
     const element = dialog.current;
     if (!element) return;
     if (open) {
+      const previousFocus = document.activeElement;
       if (!element.open) element.showModal();
       const previous = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
+        if (element.open) element.close();
         document.body.style.overflow = previous;
+        if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+          previousFocus.focus({ preventScroll: true });
       };
     }
     if (element.open) element.close();
@@ -33,7 +41,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="home-dialog"
+      className={`home-dialog ${className}`}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -52,7 +60,7 @@ export function Modal({
       }}
     >
       <div className="dialog-content">
-        <button
+        {!hideClose && <button
           className="dialog-close"
           autoFocus
           disabled={dismissDisabled}
@@ -60,7 +68,7 @@ export function Modal({
           onClick={() => onClose()}
         >
           ×
-        </button>
+        </button>}
         {children}
       </div>
     </dialog>
