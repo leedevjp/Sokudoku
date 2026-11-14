@@ -6,6 +6,7 @@ import type { PersonalWord } from "@/lib/personal/types";
 import { personalMessage } from "@/lib/personal/messages";
 import { choiceLabel } from "@/lib/game/rules";
 import styles from "./personal-styles";
+import { WordReading } from "./word-reading";
 export function WordDialog({
   word,
   mode,
@@ -71,7 +72,7 @@ export function WordDialog({
             </h2>
             <div className={styles.deleteWord}>
               <strong lang="ja">{word.term}</strong>
-              <span lang="ja">{word.kana}</span>
+              <span><WordReading {...word} /></span>
             </div>
             <p className={styles.description}>
               {t(
@@ -110,8 +111,8 @@ export function WordDialog({
             >
               {word.term}
             </h2>
-            <p className={styles.reading} lang="ja">
-              {word.kana}
+            <p className={styles.reading}>
+              <WordReading {...word} />
             </p>
             <div className={styles.preview}>
               <span>{t("韓国語の意味", "한국어 뜻")}</span>
@@ -122,12 +123,6 @@ export function WordDialog({
                 <dt>{t("難易度", "난이도")}</dt>
                 <dd>{word.difficulty}</dd>
               </div>
-              {word.pronunciation_ko && (
-                <div>
-                  <dt>{t("韓国語の発音表記", "한글 발음")}</dt>
-                  <dd lang="ko">{word.pronunciation_ko}</dd>
-                </div>
-              )}
               {word.hanja_reading && (
                 <div>
                   <dt>{t("韓国漢字音", "한국 한자음")}</dt>
