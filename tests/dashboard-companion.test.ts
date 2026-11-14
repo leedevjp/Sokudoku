@@ -16,7 +16,7 @@ const data: DashboardData = {
 const summary = dashboardSummary(data, "word", "meaning");
 
 test("encouragement follows selected scope, day, memory band and stage", () => {
-  assert.match(companionMessage(summary, { section: "overview" }, "kr"), /12개/);
+  assert.match(companionMessage(summary, { section: "overview" }, "kr"), /80번/);
   assert.match(companionMessage(summary, { section: "memory" }, "kr"), /5개/);
   assert.match(companionMessage(summary, { section: "memory", band: 0 }, "kr"), /7개/);
   assert.match(companionMessage(summary, { section: "stages", level: "P" }, "kr"), /내 단어에서 12개/);
@@ -106,4 +106,16 @@ test("historical day counts never borrow current-day or weekly achievements", ()
 test("total vocabulary and learned counts remain distinct", () => {
   assert.match(companionMessage(summary, { section: "overview", topic: "total" }, "kr"), /전체 30개/);
   assert.match(companionMessage(summary, { section: "overview", topic: "learned" }, "kr"), /12개/);
+});
+
+test("overview celebrates repeated answers in the selected scope rather than distinct words", () => {
+  const repeated = dashboardSummary({ ...data, groups: [
+    { ...data.groups[0], learned: 2261, attempts: 4020 }, data.groups[1],
+  ] }, "word", "meaning");
+  for (const topic of [undefined, "attempts"]) {
+    assert.equal(companionMessage(repeated, { section: "overview", topic }, "kr"), "벌써 4,020번이나 답했네! 굉장해!");
+    assert.match(companionMessage(repeated, { section: "overview", topic }, "jp"), /4,020回/);
+  }
+  const reading = dashboardSummary(data, "word", "reading");
+  assert.match(companionMessage(reading, { section: "overview" }, "kr"), /900번/);
 });
