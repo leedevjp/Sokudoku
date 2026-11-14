@@ -61,7 +61,7 @@ export default function PersonalScreen() {
       />
       <div className={styles.filters}>
         <StageFilter personal value={words.stage} onChange={stage => words.setStage(stage as PersonalStage)} t={t} />
-        <FilterSelect<PersonalSort> title={t("並び順", "정렬 순서")} hint={t("ひとつ選ぶと、すぐに反映されます。", "한 가지를 선택하면 바로 적용돼요.")}
+        <FilterSelect<PersonalSort> title={t("並び順", "정렬 순서")}
           value={words.sort} onChange={words.setSort} options={[
             { value: "recent", label: t("追加が新しい順", "최근 추가순") },
             { value: "oldest", label: t("追加が古い順", "오래된순") },

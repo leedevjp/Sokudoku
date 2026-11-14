@@ -14,15 +14,15 @@ export function NotebookControls({ query, onChange, count, total, disabled, t }:
     </div>
     <div className={styles.filters}>
       <FilterSelect<NotebookQuery["membership"]> disabled={disabled} title={t("Pへの追加状況", "내 단어장 추가 여부")}
-        hint={t("ひとつ選ぶと、すぐに反映されます。", "한 가지를 선택하면 바로 적용돼요.")}
+
         value={query.membership} onChange={membership => onChange({ membership })} options={[
           { value: "all", label: t("すべての単語", "모든 단어") },
-          { value: "registered", label: t("Pに追加済み", "P에 추가함"), detail: t("マイ単語帳にある単語", "내 단어장에 담은 단어") },
-          { value: "unregistered", label: t("Pに未追加", "P에 미추가"), detail: t("まだマイ単語帳にない単語", "아직 내 단어장에 담지 않은 단어") },
+          { value: "registered", label: t("Pに追加済み", "P에 추가함") },
+          { value: "unregistered", label: t("Pに未追加", "P에 미추가") },
         ]} />
       <StageFilter value={query.stage} onChange={stage => onChange({ stage: stage as NotebookQuery["stage"] })} disabled={disabled} t={t} />
       <FilterSelect<NotebookQuery["sort"]> disabled={disabled} title={t("並び順", "정렬 순서")}
-        hint={t("ひとつ選ぶと、すぐに反映されます。", "한 가지를 선택하면 바로 적용돼요.")}
+
         value={query.sort} onChange={sort => onChange({ sort })} options={[
           { value: "recent", label: t("新しい順", "최근 오답순") },
           { value: "oldest", label: t("古い順", "오래된순") },

@@ -7,7 +7,7 @@ export function Modal({
   children,
   titleId,
   dismissDisabled = false,
-  title,
+  hideClose = false,
   className = "",
 }: {
   open: boolean;
@@ -15,7 +15,7 @@ export function Modal({
   children: ReactNode;
   titleId: string;
   dismissDisabled?: boolean;
-  title?: string;
+  hideClose?: boolean;
   className?: string;
 }) {
   const { prefs } = useSettings();
@@ -25,11 +25,15 @@ export function Modal({
     const element = dialog.current;
     if (!element) return;
     if (open) {
+      const previousFocus = document.activeElement;
       if (!element.open) element.showModal();
       const previous = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
+        if (element.open) element.close();
         document.body.style.overflow = previous;
+        if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+          previousFocus.focus({ preventScroll: true });
       };
     }
     if (element.open) element.close();
@@ -56,16 +60,15 @@ export function Modal({
       }}
     >
       <div className="dialog-content">
-        {title && <header className="dialog-header"><h2 id={titleId}>{title}</h2></header>}
-        <button
+        {!hideClose && <button
           className="dialog-close"
-          autoFocus={!title}
+          autoFocus
           disabled={dismissDisabled}
           aria-label={t("閉じる", "닫기")}
           onClick={() => onClose()}
         >
           ×
-        </button>
+        </button>}
         {children}
       </div>
     </dialog>
