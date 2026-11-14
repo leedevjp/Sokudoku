@@ -1,4 +1,4 @@
-import { MeadowBattle, preloadBattle } from "./meadow-battle";
+import { MeadowBattle, preloadBattle, preloadLaterRegions } from "./meadow-battle";
 import { RabbitCompanion, preloadRabbit } from "./rabbit-companion";
 import { PetMotionState } from "../pet-motion";
 import { RunPersistence } from "./run-persistence";
@@ -128,7 +128,6 @@ export class TrainingScene extends Phaser.Scene {
   preload() {
     preloadRabbit(this);
     preloadBattle(this);
-    preloadBattleAudio(this);
   }
   create() {
     try {
@@ -155,6 +154,13 @@ export class TrainingScene extends Phaser.Scene {
     this.scale.on("resize", this.resize, this);
     this.events.once("shutdown", () => { this.overlay?.destroy(); this.overlay = undefined; this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach(); });
     this.startRun();
+    // The first board must not wait for later maps or optional sound decoding.
+    this.game.events.once("postrender", () => {
+      if (!this.sys.isActive()) return;
+      preloadLaterRegions(this);
+      preloadBattleAudio(this);
+      this.load.start();
+    });
   }
   private clear() {
     this.pet = undefined;

@@ -61,11 +61,11 @@ export default function GameHost({ previewWords }: { previewWords?: Word[] }) {
       if (cancelled) return;
       setLoaded(false);
       setError("");
-      const data = await runtime.load();
-      await document.fonts.ready;
-      const { createTraining } = await import(
-        "@/lib/game/phaser/create-training"
-      );
+      const [data, , { createTraining }] = await Promise.all([
+        runtime.load(),
+        document.fonts.ready,
+        import("@/lib/game/phaser/create-training"),
+      ]);
       if (cancelled || !parent.current) return;
       readyTimer = setTimeout(() => {
         if (!cancelled) setError("START");
