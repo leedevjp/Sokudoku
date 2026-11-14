@@ -10,7 +10,7 @@ const CLIPS = {
 
 export function preloadEmotions(scene: Phaser.Scene) {
   if (!scene.textures.exists(TEXTURE))
-    scene.load.image(TEXTURE, "/battle/emotion-v1.png");
+    scene.load.image(TEXTURE, "/battle/emotion-v1.webp");
 }
 
 /** Fixed 64px cells preserve the authored rise and flutter; never trim frames. */

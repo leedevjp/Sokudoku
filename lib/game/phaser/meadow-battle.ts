@@ -26,18 +26,21 @@ const COMBO = "battle-combo-burst-v1";
 export function preloadBattle(scene: Phaser.Scene) {
   preloadEmotions(scene);
   for (const [key, file] of [
-    [MEADOW, "meadow-original-v4.png"],
-    [MAGE, "mage-v5.png"],
-    [IDLE, "mage-idle-v1.png"],
-    [LOCOMOTION, "mage-locomotion-v1.png"],
-    [MONSTERS, "mandrakes-v5.png"],
-    [MAGIC, "magic-v5.png"],
-    [REGIONS[1], "forest-v1.png"],
-    [REGIONS[2], "moon-ruins-v1.png"],
-    [COMBO, "combo-burst-v1.png"],
+    [MEADOW, "meadow-original-v4.webp"],
+    [MAGE, "mage-v5.webp"],
+    [IDLE, "mage-idle-v1.webp"],
+    [LOCOMOTION, "mage-locomotion-v1.webp"],
+    [MONSTERS, "mandrakes-v5.webp"],
+    [MAGIC, "magic-v5.webp"],
+    [COMBO, "combo-burst-v1.webp"],
   ]) {
     if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
   }
+}
+/** Later regions are not needed until ten/twenty answers into the run. */
+export function preloadLaterRegions(scene: Phaser.Scene) {
+  for (const [key, file] of [[REGIONS[1], "forest-v1.webp"], [REGIONS[2], "moon-ruins-v1.webp"]])
+    if (!scene.textures.exists(key)) scene.load.image(key, "/battle/" + file);
 }
 function frames(
   scene: Phaser.Scene,
@@ -94,7 +97,9 @@ export class MeadowBattle {
     this.monsterRow = encounter.monster * 6;
     this.element = encounter.element * 6;
     this.combo = combo;
-    const region = battleRegion(correct), map = REGIONS[region];
+    const targetRegion = battleRegion(correct);
+    const region = scene.textures.exists(REGIONS[targetRegion]) ? targetRegion : 0;
+    const map = REGIONS[region];
     if (scene.textures.exists(map)) {
       scene.textures.get(map).setFilter(Phaser.Textures.FilterMode.NEAREST);
       scene.add

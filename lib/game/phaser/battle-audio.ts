@@ -64,9 +64,11 @@ export class BattleAudio {
     active ||= this.preview;
     this.active = active;
     // One continuous study track for the whole run, including question/map changes.
-    if (!this.music) {
+    if (!this.music && active && this.enabled && this.musicVolume > 0 && !document.hidden) {
       this.generation++;
-      this.music = new Audio("/audio/study-lobby-night-v1.mp3");
+      this.music = new Audio();
+      this.music.preload = "none";
+      this.music.src = "/audio/study-lobby-night-v1.mp3";
       this.music.loop = true;
       this.music.volume = 0;
       this.playing = false;

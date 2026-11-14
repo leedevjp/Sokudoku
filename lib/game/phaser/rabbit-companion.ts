@@ -5,7 +5,7 @@ const TEXTURE = "battle-mage-v5";
 export function preloadRabbit(scene: Phaser.Scene) {
   preloadEmotions(scene);
   if (!scene.textures.exists(TEXTURE))
-    scene.load.image(TEXTURE, "/battle/mage-v5.png");
+    scene.load.image(TEXTURE, "/battle/mage-v5.webp");
 }
 /** The same low-resolution atlas supplies combat, results and pause poses. */
 export class RabbitCompanion {
