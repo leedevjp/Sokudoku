@@ -33,8 +33,18 @@ export class TrainingRuntime {
   private solvedSinceSave = 0;
   private reading?: ReadingSearch;
   private disposed = false;
-  private synced = () => {
-    if (!this.disposed && !this.options.previewWords) this.options.onAnswersSaved?.();
+  private catalogGeneration = 0;
+  private catalogFlight?: Promise<void>;
+  private wantedCatalog?: string;
+  private stagedVersion?: string;
+  private stagedReading?: ReadingSearch;
+  private synced = (event: Event) => {
+    if (this.disposed || this.options.previewWords) return;
+    this.options.onAnswersSaved?.();
+    const version = (event as CustomEvent<{ catalogVersion?: string }>).detail?.catalogVersion;
+    if (version) this.wantedCatalog = version;
+    if (version && version !== this.data?.catalogVersion && version !== this.stagedVersion)
+      void this.refreshCatalog();
   };
 
   constructor(private options: RuntimeOptions) {
@@ -75,8 +85,10 @@ export class TrainingRuntime {
   }
   dispose() {
     this.disposed = true;
+    this.catalogGeneration++;
     if (typeof window !== "undefined") window.removeEventListener("sokudoku-sync-updated", this.synced);
     this.reading?.close();
+    this.stagedReading?.close();
     // Navigation must also save a partial group of fewer than five answers.
     if (this.journal) void this.journal.saveLocal().then(() => kickSync());
   }
@@ -118,7 +130,43 @@ export class TrainingRuntime {
     this.planner = this.plan(engine);
     await this.planner.prepareSet();
     this.planner.hasQuestions();
+    if (this.wantedCatalog && this.wantedCatalog !== this.data.catalogVersion) void this.refreshCatalog();
     return this.current();
+  }
+  /** Fetch/prepare away from the question path; adopt only at a frozen-set boundary. */
+  refreshCatalog(): Promise<void> {
+    if (this.disposed || this.options.previewWords || !this.planner) return Promise.resolve();
+    if (this.catalogFlight) return this.catalogFlight;
+    const generation = this.catalogGeneration, planner = this.planner;
+    const requested = this.wantedCatalog;
+    const work = (async () => {
+      const fresh = this.filter(await this.loader.fetchData());
+      if (fresh.user_id !== this.data.user_id || this.disposed || generation !== this.catalogGeneration || planner !== this.planner) return;
+      if (fresh.catalogVersion && (fresh.catalogVersion === this.data.catalogVersion || fresh.catalogVersion === this.stagedVersion)) return;
+      const reading = await this.createReading(fresh);
+      if (this.disposed || generation !== this.catalogGeneration || planner !== this.planner) { reading?.close(); return; }
+      this.stagedReading?.close();
+      this.stagedReading = reading;
+      this.stagedVersion = fresh.catalogVersion;
+      planner.stageCatalog(fresh.words, reading ? async (word, kind) => {
+        if (kind === "reading") await reading.prepare(word);
+      } : undefined, () => {
+        this.reading?.close();
+        this.reading = reading;
+        this.stagedReading = undefined;
+        this.stagedVersion = undefined;
+        this.data = fresh;
+        this.journal.setWords(fresh.words);
+      });
+    })().catch(() => { /* Keep the current usable catalog if background preparation fails. */ });
+    this.catalogFlight = work;
+    void work.finally(() => {
+      if (this.catalogFlight === work) this.catalogFlight = undefined;
+      if (!this.disposed && generation === this.catalogGeneration && this.wantedCatalog &&
+        this.wantedCatalog !== requested && this.wantedCatalog !== this.data.catalogVersion && this.wantedCatalog !== this.stagedVersion)
+        void this.refreshCatalog();
+    });
+    return work;
   }
   record(answer: Answer) {
     this.journal.record(answer);
@@ -140,6 +188,8 @@ export class TrainingRuntime {
     if (this.journal) void this.save();
   }
   async retry(): Promise<TrainingData> {
+    this.catalogGeneration++;
+    this.stagedReading?.close(); this.stagedReading = undefined; this.stagedVersion = undefined;
     this.solvedSinceSave = 0;
     if (this.options.previewWords) return { ...this.current(), stats: [] };
     if (!(await this.journal.saveLocal())) return { ...this.current(), stats: [] };

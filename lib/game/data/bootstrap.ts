@@ -18,6 +18,7 @@ export type Bootstrap = {
   user_id: string;
   learning?: LearningSnapshot;
   readingWords?: Word[];
+  catalogVersion?: string;
 };
 
 /** One loader per game route. Owns selected sources, incremental cache and offline fallback. */

@@ -12,6 +12,15 @@ cards and learner state are prepared, regardless of the selected training scope.
 Images/effects/music are warmed through their content-addressed HTTP cache URLs.
 The game filters its scope locally. A complete snapshot starts immediately even
 while an upload is outstanding; only first preparation waits for missing data.
+Existing installations can also start from their previous vocabulary/choice
+cache while the first full snapshot downloads. Cached entry never waits for
+background media warming or the latest server revision.
+
+Completed syncs publish a catalog revision covering common/personal vocabulary
+and choice banks. An active game prepares changed vocabulary and reading indexes
+in the background, then adopts them after its frozen question set is consumed.
+The displayed question and queued choices remain stable. The same planner and
+learning engine retain answers, encounter counts and session progress throughout.
 
 Postgres `sync_versions` counters are advanced in the original mutation's
 transaction. Updates to the same head serialize until commit. `sync_changes`

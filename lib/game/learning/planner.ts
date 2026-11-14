@@ -35,6 +35,20 @@ export class TrainingPlanner {
   private preparing?: Promise<void>;
   private generation = 0;
   private readonly encounters = new Map<string, number>();
+  private stagedCatalog?: { words: Word[]; prepare?: (word: Word, kind: Kind) => Promise<void>; applied?: () => void };
+  stageCatalog(words: Word[], prepare?: (word: Word, kind: Kind) => Promise<void>, applied?: () => void) {
+    this.stagedCatalog = { words, prepare, applied };
+  }
+  private adoptCatalog() {
+    if (!this.stagedCatalog || this.queue.length || this.prepared || this.preparing) return;
+    const next = this.stagedCatalog;
+    this.stagedCatalog = undefined;
+    this.words = next.words;
+    this.byKey.clear();
+    for (const word of this.words) this.byKey.set(wordKey(word.source, word.id), word);
+    this.prepareQuestion = next.prepare;
+    next.applied?.();
+  }
   constructor(
     readonly engine: LearningEngine,
     private words: Word[],
@@ -83,12 +97,14 @@ export class TrainingPlanner {
   }
   private ensureSet() {
     if (this.queue.length || this.prepared) return;
+    this.adoptCatalog();
     if (this.prepareQuestion) throw Error("SET_NOT_PREPARED");
     for (const request of this.makeSet()) void request;
     this.prepared = true;
   }
   /** Select first, then prepare only those questions. Never precompute the catalog. */
   async prepareSet(): Promise<void> {
+    this.adoptCatalog();
     if (!this.prepareQuestion) { this.ensureSet(); return; }
     if (this.preparing) {
       await this.preparing;

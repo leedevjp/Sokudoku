@@ -2,7 +2,8 @@ import { database, storageDeadline } from "../game/data/database";
 import { gameAssetUrls } from "../game/asset-url";
 import { preparedGame } from "./prepared";
 import { SyncEngine } from "./engine";
-import { datasets, versionsMatch, snapshotKey, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
+import { catalogVersion, datasets, versionsMatch, snapshotKey, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
+import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
 
 let owner: string | null = null;
@@ -123,7 +124,7 @@ async function synchronize() {
   const snapshot = typeof navigator.locks?.request === "function"
     ? await navigator.locks.request(`sokudoku-sync:${user}`, run) : await run();
   if (owner !== user) throw Error("OWNER_CHANGED");
-  postMessage({ type: "updated", owner: user, savedAt: snapshot.savedAt });
+  postMessage({ type: "updated", owner: user, savedAt: snapshot.savedAt, catalogVersion: catalogVersion(snapshot.versions) });
   return snapshot;
   })();
   syncFlight = { owner: user, work };
@@ -159,10 +160,15 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
     }
     if (!owner) throw Error("LOGIN");
     let snapshot = await readSnapshot(owner);
+    const hadSnapshot = !!snapshot?.savedAt;
+    if (data.type === "prepare" && !hadSnapshot) {
+      const legacy = await readLegacyGame(owner, data.levels ?? null, data.kinds ?? []);
+      if (legacy) { postMessage({ id: data.id, result: legacy }); return; }
+    }
     if (data.type === "sync" || !snapshot?.savedAt) snapshot = await synchronize();
     // A complete local snapshot is playable even while uploads/catch-up continue.
     // The game replays its durable local outbox onto this canonical snapshot.
-    if (data.type === "prepare") await warmMedia();
+    if (data.type === "prepare" && !hadSnapshot) await warmMedia();
     if (!snapshot || snapshot.owner !== owner) throw Error("LOGIN");
     postMessage({ id: data.id, result: data.type === "prepare" ? preparedGame(snapshot, data.levels ?? null, data.kinds ?? []) : true });
   } catch (error) { postMessage({ id: data.id, error: (error as Error).message }); }

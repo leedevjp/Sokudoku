@@ -13,7 +13,7 @@ function getWorker() {
   worker.onmessage = ({ data }) => {
     if (data.type === "updated" && data.owner === owner && data.savedAt !== savedAt) {
       savedAt = data.savedAt;
-      window.dispatchEvent(new Event("sokudoku-sync-updated"));
+      window.dispatchEvent(new CustomEvent("sokudoku-sync-updated", { detail: { catalogVersion: data.catalogVersion } }));
     }
     const request = pending.get(data.id);
     if (!request) return;
