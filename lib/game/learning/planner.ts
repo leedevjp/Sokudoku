@@ -144,7 +144,7 @@ export class TrainingPlanner {
     if (generation !== this.generation) await this.prepareSet();
   }
   record(answer: Answer, word: Word) {
-    const event = { ...answer, source: word.source ?? "word", difficulty: word.difficulty };
+    const event = { ...answer, source: word.source ?? ("word" as const), difficulty: word.difficulty };
     this.engine.apply(event);
     // Answering the visible old question must also update the incoming engine.
     // Otherwise switching at the next question would erase that answer.
