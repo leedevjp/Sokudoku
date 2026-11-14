@@ -30,5 +30,5 @@ export function preparedGame(snapshot: SyncSnapshot, levelsValue: string | null,
     words: Object.values(snapshot.data.learning_states) as unknown as LearningWord[],
   };
   return { user_id: snapshot.owner, words: [...selected, ...(levels.includes("P") ? personal : [])],
-    stats: [], learning, readingWords: [...common, ...personal], catalogVersion: catalogVersion(snapshot.versions) };
+    stats: [], learning, readingWords: [...common, ...personal], catalogVersion: catalogVersion(snapshot.versions), syncVersion: snapshot.savedAt };
 }

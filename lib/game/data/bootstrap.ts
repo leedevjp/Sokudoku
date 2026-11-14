@@ -19,6 +19,7 @@ export type Bootstrap = {
   learning?: LearningSnapshot;
   readingWords?: Word[];
   catalogVersion?: string;
+  syncVersion?: number;
 };
 
 /** One loader per game route. Owns selected sources, incremental cache and offline fallback. */
