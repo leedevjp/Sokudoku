@@ -1,4 +1,4 @@
-import type { Word, Stat } from "../types";
+import type { Word, Stat, Answer } from "../types";
 import {
   parseLevels,
   selectedDifficulty,
@@ -20,6 +20,8 @@ export type Bootstrap = {
   readingWords?: Word[];
   catalogVersion?: string;
   syncVersion?: number;
+  /** Canonical state and unacknowledged outbox captured in one worker transaction. */
+  pendingAnswers?: Answer[];
 };
 
 /** One loader per game route. Owns selected sources, incremental cache and offline fallback. */
