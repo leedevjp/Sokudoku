@@ -33,7 +33,7 @@ function AccordionPanel({
   const panelId = "dashboard-panel-" + section;
   return (
     <section className={companionCss.accordion} data-companion-section={section} data-expanded={open}>
-      <button type="button" className={companionCss.accordionButton} data-companion-topic={section === "overview" ? "learned" : undefined}
+      <button type="button" className={companionCss.accordionButton} data-companion-topic={section === "overview" ? "attempts" : undefined}
         onClick={onToggle} aria-expanded={open} aria-controls={panelId}>
         <span className={companionCss.accordionHeading}>
           <strong>{title}</strong>

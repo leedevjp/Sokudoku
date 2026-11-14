@@ -13,11 +13,11 @@ function recordMessage(summary: DashboardSummary, focus: CompanionFocus, lang: s
   const jp = lang === "jp", n = (value: number) => value.toLocaleString(jp ? "ja-JP" : "ko-KR");
   const say = (ja: string, ko: string) => jp ? ja : ko;
   if (focus.section === "overview") {
-    if (!summary.learned) return say("最初のひとつから、一緒に始めよう。", "첫 번째 하나부터, 같이 시작해볼까?");
+    if (!summary.attempts) return say("最初のひとつから、一緒に始めよう。", "첫 번째 하나부터, 같이 시작해볼까?");
     const today = summary.days[6].attempts;
     return today > 0
       ? say(`今日は${n(today)}問。ひとつずつ、一緒に進んでるね！`, `오늘 ${n(today)}문제! 하나씩 같이 나아가고 있네.`)
-      : say(`もう${n(summary.learned)}個と出会ったね。今日も自分のペースで。`, `벌써 ${n(summary.learned)}개를 만났네. 오늘도 네 속도로 가자.`);
+      : say(`もう${n(summary.attempts)}回答えたんだね。今日も自分のペースで。`, `벌써 ${n(summary.attempts)}번 답했네. 오늘도 네 속도로 가자.`);
   }
   if (focus.section === "memory") {
     if (focus.band !== undefined && focus.band >= 0 && focus.band <= 2) {
@@ -92,7 +92,7 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
   ];
   if (topic === "attempts" && summary.attempts === 0) return zero;
   if (topic === "attempts") return [
-    [`なんと${fmt(summary.attempts)}回も挑戦したんだね！`, `무려 ${fmt(summary.attempts)}번이나 도전했네!`],
+    [`もう${fmt(summary.attempts)}回も答えたんだね！すごい！`, `벌써 ${fmt(summary.attempts)}번이나 답했네! 굉장해!`],
     ["間違えた日も含めて、全部君が進んだ足跡だよ。", "틀린 날까지 전부 네가 걸어온 발자국이야."],
   ];
   if (topic === "memoryHelp" || topic === "activityNote" || topic === "stageNote") return [
@@ -165,8 +165,8 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
       ["ここからが楽しみだね。私も応援してる！", "이제부터가 기대돼. 나도 응원할게!"],
     ];
   }
-  if (focus.section === "overview" && learned > 0) return [
-    [`もう${fmt(learned)}個も学んだんだね！私、びっくりしちゃった。`, `벌써 ${fmt(learned)}개나 배웠네! 나 깜짝 놀랐어.`],
+  if (focus.section === "overview" && summary.attempts > 0) return [
+    [`もう${fmt(summary.attempts)}回も答えたんだね！すごい！`, `벌써 ${fmt(summary.attempts)}번이나 답했네! 굉장해!`],
     [`${fmt(summary.attempts)}回も挑戦してきたんだね。ちゃんと見てるよ。`, `${fmt(summary.attempts)}번이나 도전했구나. 나 다 보고 있었어.`],
     ["昨日の自分には見えなかった言葉が、今日は読めるかもね。", "어제는 낯설던 단어가 오늘은 읽힐지도 모르지."],
   ];
@@ -184,7 +184,7 @@ function progressLines(summary: DashboardSummary, focus: CompanionFocus): readon
 /** A full cycle is exhausted before repeating; extra lines match the current context. */
 export function companionMessage(summary: DashboardSummary, focus: CompanionFocus, lang: string, variant = 0, hour?: number) {
   let specific: readonly CompanionLine[] = [];
-  if (focus.section === "overview" && summary.learned === 0) specific = companionLines.first;
+  if (focus.section === "overview" && summary.attempts === 0) specific = companionLines.first;
   if (focus.section === "memory" && focus.band !== undefined && summary.memory[focus.band] > 0) {
     specific = [companionLines.band0, companionLines.band1, companionLines.band2][focus.band] ?? [];
   }
