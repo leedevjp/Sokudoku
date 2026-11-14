@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type Phaser from "phaser";
 import { SceneMedia } from "../lib/game/phaser/scene-media";
-import { battleImages } from "../lib/game/phaser/presentation-assets";
+import { coreBattleImages, extraBattleImages, battleReady } from "../lib/game/phaser/presentation-assets";
 
 test("late battle textures notify the visible quiz without waiting for audio", async t => {
   let release!: () => void;
@@ -17,7 +17,8 @@ test("late battle textures notify the visible quiz without waiting for audio", a
     audio: (file: string) => Promise<void>;
   };
   t.mock.method(internal, "image", async (key: string) => {
-    if (key === battleImages[0][0]) await imageGate;
+    if (key === coreBattleImages[0][0]) await imageGate;
+    if (extraBattleImages.some(([extraKey]) => extraKey === key)) return new Promise<void>(() => {});
   });
   // Optional audio may hang or decode slowly; it must not block the actors.
   t.mock.method(internal, "audio", () => new Promise<void>(() => {}));
@@ -27,5 +28,6 @@ test("late battle textures notify the visible quiz without waiting for audio", a
   release();
   await new Promise<void>(resolve => setImmediate(resolve));
   assert.equal(readyCalls, 1);
+  assert.equal(battleReady(key => coreBattleImages.some(([coreKey]) => coreKey === key)), true);
   media.close();
 });
