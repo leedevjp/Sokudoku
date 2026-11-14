@@ -37,13 +37,20 @@ export class TrainingRuntime {
   private catalogFlight?: Promise<void>;
   private wantedCatalog?: string;
   private stagedVersion?: string;
+  private stagedSyncVersion?: number;
+  private wantedSyncVersion?: number;
+  private playedAnswers: Answer[] = [];
   private stagedReading?: ReadingSearch;
   private synced = (event: Event) => {
     if (this.disposed || this.options.previewWords) return;
     this.options.onAnswersSaved?.();
-    const version = (event as CustomEvent<{ catalogVersion?: string }>).detail?.catalogVersion;
+    const detail = (event as CustomEvent<{ catalogVersion?: string; syncVersion?: number }>).detail;
+    const version = detail?.catalogVersion;
+    const syncVersion = detail?.syncVersion;
     if (version) this.wantedCatalog = version;
-    if (version && version !== this.data?.catalogVersion && version !== this.stagedVersion)
+    if (syncVersion) this.wantedSyncVersion = syncVersion;
+    if ((version && version !== this.data?.catalogVersion && version !== this.stagedVersion) ||
+        (syncVersion && syncVersion !== this.data?.syncVersion && syncVersion !== this.stagedSyncVersion))
       void this.refreshCatalog();
   };
 
@@ -130,45 +137,73 @@ export class TrainingRuntime {
     this.planner = this.plan(engine);
     await this.planner.prepareSet();
     this.planner.hasQuestions();
-    if (this.wantedCatalog && this.wantedCatalog !== this.data.catalogVersion) void this.refreshCatalog();
+    if ((this.wantedCatalog && this.wantedCatalog !== this.data.catalogVersion) ||
+        (this.wantedSyncVersion && this.wantedSyncVersion !== this.data.syncVersion))
+      void this.refreshCatalog();
     return this.current();
   }
-  /** Fetch/prepare away from the question path; adopt only at a frozen-set boundary. */
+  /** Refresh canonical learning and catalog away from the question path; switch at the next question. */
   refreshCatalog(): Promise<void> {
     if (this.disposed || this.options.previewWords || !this.planner) return Promise.resolve();
     if (this.catalogFlight) return this.catalogFlight;
     const generation = this.catalogGeneration, planner = this.planner;
-    const requested = this.wantedCatalog;
+    const requested = this.wantedCatalog, requestedSync = this.wantedSyncVersion;
     const work = (async () => {
       const fresh = this.filter(await this.loader.fetchData());
       if (fresh.user_id !== this.data.user_id || this.disposed || generation !== this.catalogGeneration || planner !== this.planner) return;
-      if (fresh.catalogVersion && (fresh.catalogVersion === this.data.catalogVersion || fresh.catalogVersion === this.stagedVersion)) return;
-      const reading = await this.createReading(fresh);
-      if (this.disposed || generation !== this.catalogGeneration || planner !== this.planner) { reading?.close(); return; }
-      this.stagedReading?.close();
-      this.stagedReading = reading;
+      if (fresh.syncVersion !== undefined
+        ? fresh.syncVersion === this.data.syncVersion || fresh.syncVersion === this.stagedSyncVersion
+        : fresh.catalogVersion !== undefined &&
+          (fresh.catalogVersion === this.data.catalogVersion || fresh.catalogVersion === this.stagedVersion)) return;
+      const catalogChanged = fresh.catalogVersion !== this.data.catalogVersion;
+      const reading = catalogChanged ? await this.createReading(fresh) : this.reading;
+      // Replay pending answers plus this run's answers (even if already ACKed),
+      // so a late sync cannot wipe out locally played questions.
+      const pending = await this.journal.recover();
+      const engine = await recoverLearning(
+        fresh.learning ?? planner.engine.snapshot(),
+        [...pending, ...this.playedAnswers],
+        fresh.words,
+      );
+      if (this.disposed || generation !== this.catalogGeneration || planner !== this.planner) {
+        if (catalogChanged) reading?.close();
+        return;
+      }
+      if (catalogChanged) {
+        this.stagedReading?.close();
+        this.stagedReading = reading;
+      }
       this.stagedVersion = fresh.catalogVersion;
+      this.stagedSyncVersion = fresh.syncVersion;
       planner.stageCatalog(fresh.words, reading ? async (word, kind) => {
         if (kind === "reading") await reading.prepare(word);
       } : undefined, () => {
-        this.reading?.close();
-        this.reading = reading;
-        this.stagedReading = undefined;
+        if (catalogChanged) {
+          this.reading?.close();
+          this.reading = reading;
+          this.stagedReading = undefined;
+        }
         this.stagedVersion = undefined;
+        this.stagedSyncVersion = undefined;
         this.data = fresh;
         this.journal.setWords(fresh.words);
-      });
+      }, engine);
     })().catch(() => { /* Keep the current usable catalog if background preparation fails. */ });
     this.catalogFlight = work;
     void work.finally(() => {
       if (this.catalogFlight === work) this.catalogFlight = undefined;
-      if (!this.disposed && generation === this.catalogGeneration && this.wantedCatalog &&
-        this.wantedCatalog !== requested && this.wantedCatalog !== this.data.catalogVersion && this.wantedCatalog !== this.stagedVersion)
+      if (!this.disposed && generation === this.catalogGeneration &&
+        ((this.wantedCatalog && this.wantedCatalog !== requested &&
+          this.wantedCatalog !== this.data.catalogVersion && this.wantedCatalog !== this.stagedVersion) ||
+         (this.wantedSyncVersion && this.wantedSyncVersion !== requestedSync &&
+          this.wantedSyncVersion !== this.data.syncVersion && this.wantedSyncVersion !== this.stagedSyncVersion)))
         void this.refreshCatalog();
     });
     return work;
   }
   record(answer: Answer) {
+    const word = this.data.words.find(item => item.id === answer.word_id);
+    this.playedAnswers.push({ ...answer, source: word?.source === "personal" ? "personal" : "word" });
     this.journal.record(answer);
     if (!this.options.previewWords && answer.result !== "timeout" && ++this.solvedSinceSave >= 5) {
       this.solvedSinceSave = 0;
@@ -189,7 +224,7 @@ export class TrainingRuntime {
   }
   async retry(): Promise<TrainingData> {
     this.catalogGeneration++;
-    this.stagedReading?.close(); this.stagedReading = undefined; this.stagedVersion = undefined;
+    this.stagedReading?.close(); this.stagedReading = undefined; this.stagedVersion = undefined; this.stagedSyncVersion = undefined;
     this.solvedSinceSave = 0;
     if (this.options.previewWords) return { ...this.current(), stats: [] };
     if (!(await this.journal.saveLocal())) return { ...this.current(), stats: [] };
@@ -211,6 +246,7 @@ export class TrainingRuntime {
       this.data = fresh;
       this.journal.setWords(fresh.words);
       this.planner = planner;
+      this.playedAnswers = [];
       return this.current();
     } catch {
       return { ...this.current(), stats: [] };
