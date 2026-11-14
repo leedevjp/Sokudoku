@@ -41,4 +41,5 @@ export type Question = {
   kind: Kind;
   options: Choice[];
   mode?: "exploration" | "review" | "exam";
+  encounterCount?: number;
 };

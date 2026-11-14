@@ -10,6 +10,7 @@ import {
   paintChoice as paintChoiceBackground,
 } from "./board-choices";
 import { drawQuestionCard } from "./board-cards";
+import { encounterLabel } from "../encounter";
 
 type BoardActions = {
   pause: () => void;
@@ -148,6 +149,7 @@ export class TrainingView extends TrainingSurface {
           (w, i) => String(i + 1) + ": " + choiceLabel(w, question.kind),
         ),
         this.t("ライフ", "하트") + this.hearts,
+        ...(question.encounterCount === undefined ? [] : [encounterLabel(question.encounterCount, this.prefs.lang)]),
       ].join(" / "),
     );
     drawInputHint(this);

@@ -34,6 +34,7 @@ export class TrainingPlanner {
   private prepared = false;
   private preparing?: Promise<void>;
   private generation = 0;
+  private readonly encounters = new Map<string, number>();
   constructor(
     readonly engine: LearningEngine,
     private words: Word[],
@@ -45,6 +46,12 @@ export class TrainingPlanner {
     this.byKey = new Map(
       words.map((word) => [wordKey(word.source, word.id), word]),
     );
+    // FSRS repetitions preserve answered encounters across sessions and modes.
+    // Reading and meaning share a word count; personal copies retain their own history.
+    for (const state of engine.words.values()) {
+      const key = wordKey(state.source, state.word_ref);
+      this.encounters.set(key, (this.encounters.get(key) ?? 0) + state.card.reps);
+    }
   }
   resetSet() {
     this.generation++;
@@ -60,6 +67,9 @@ export class TrainingPlanner {
     const question = this.queue.shift() ?? null;
     if (question) {
       this.lastWord = wordKey(question.word.source, question.word.id);
+      // Count only questions taken for display, never the prepared queue or redraws.
+      question.encounterCount = (this.encounters.get(this.lastWord) ?? 0) + 1;
+      this.encounters.set(this.lastWord, question.encounterCount);
       this.seen.add(this.lastWord);
       this.recentWords.push(this.lastWord);
       if (this.recentWords.length > 15) this.recentWords.shift();
