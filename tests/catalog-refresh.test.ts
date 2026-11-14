@@ -13,7 +13,7 @@ const words: Word[] = Array.from({ length: 8 }, (_, i) => ({
 }));
 const fresh = words.slice(1).map(w => ({ ...w, term: `new${w.id}`, meaning_ko: `new meaning${w.id}` }));
 
-test("catalog refresh freezes current/queued questions and adopts additions, edits and deletions at the next set", async () => {
+test("sync keeps the visible question intact but replaces the very next question", async () => {
   const engine = await LearningEngine.create();
   const planner = new TrainingPlanner(engine, words, ["meaning"], ["exam"], () => 0.4);
   const first = planner.next()!, options = first.options.map(w => w.meaning_ko);
@@ -21,15 +21,16 @@ test("catalog refresh freezes current/queued questions and adopts additions, edi
   planner.stageCatalog([...fresh, { ...words[0], id: "new-id", term: "new addition", meaning_ko: "new meaning addition" }], undefined, () => applied++);
   assert.equal(applied, 0); assert.ok(first.word.term.startsWith("old"));
   assert.deepEqual(first.options.map(w => w.meaning_ko), options);
-  for (let i = 0; i < 4; i++) assert.ok(planner.next()!.word.term.startsWith("old"));
-  assert.equal(applied, 0);
+  // Skip the four pending old questions as soon as fresh data is ready.
+  await planner.prepareSet();
+  assert.equal(applied, 1);
   const next = planner.next()!;
-  assert.equal(applied, 1); assert.ok(next.word.term.startsWith("new"));
+  assert.ok(next.word.term.startsWith("new"));
   for (let i = 0; i < 4; i++) assert.notEqual(planner.next()!.word.id, "0");
   assert.equal(planner.engine, engine);
 });
 
-test("an in-flight reading preparation finishes against its original catalog", async () => {
+test("a refresh arriving during preparation replaces its pending old set safely", async () => {
   let release!: () => void, started!: () => void;
   const gate = new Promise<void>(r => { release = r; }), began = new Promise<void>(r => { started = r; });
   let calls = 0, nextCalls = 0, applied = 0;
@@ -39,7 +40,6 @@ test("an in-flight reading preparation finishes against its original catalog", a
   planner.stageCatalog(fresh, async () => { nextCalls++; }, () => applied++);
   release(); await preparing;
   assert.equal(applied, 0); assert.equal(nextCalls, 0);
-  for (let i = 0; i < 5; i++) assert.ok(planner.next()!.word.term.startsWith("old"));
   await planner.prepareSet();
   assert.equal(applied, 1); assert.equal(nextCalls, 5);
   assert.ok(planner.next()!.word.term.startsWith("new"));
@@ -57,7 +57,7 @@ test("runtime background refresh preserves the active planner and learning histo
   data.planner.record({ id: "answer", word_id: first.word.id, question_type: "meaning", selected_word_id: first.word.id,
     result: "correct", response_ms: 100, time_limit_ms: 10000, answered_at: new Date().toISOString() }, first.word);
   await runtime.refreshCatalog();
-  for (let i = 0; i < 4; i++) assert.ok(data.planner.next()!.word.term.startsWith("old"));
+  await data.planner.prepareSet();
   assert.ok(data.planner.next()!.word.term.startsWith("new"));
   assert.equal(data.planner.engine.learner.review_count, 1);
   runtime.dispose();
@@ -75,4 +75,43 @@ test("a refresh that finishes after exit cannot replace a disposed game's catalo
   const refresh = runtime.refreshCatalog(); runtime.dispose();
   resolve({ user_id: "owner", words: fresh, stats: [], catalogVersion: "new" }); await refresh;
   for (let i = 0; i < 6; i++) assert.ok(data.planner.next()!.word.term.startsWith("old"));
+});
+
+test("answering the visible old question updates the staged FSRS engine too", async () => {
+  const original = await LearningEngine.create();
+  const incoming = await LearningEngine.create();
+  const planner = new TrainingPlanner(original, words, ["meaning"], ["exam"], () => 0.4);
+  const current = planner.next()!;
+  planner.stageCatalog(fresh, undefined, undefined, incoming);
+  const answer = { id: "local-answer", word_id: current.word.id, question_type: "meaning" as const,
+    selected_word_id: current.word.id, result: "correct" as const,
+    response_ms: 250, time_limit_ms: 10000, answered_at: new Date().toISOString() };
+  planner.record(answer, current.word);
+  await planner.prepareSet();
+  assert.equal(planner.engine, incoming);
+  assert.equal(planner.engine.learner.review_count, 1);
+  assert.equal(planner.engine.words.get(`word:${current.word.id}:meaning`)?.last_answer_id, answer.id);
+});
+
+test("a learning-only server refresh applies at the next question without catalog changes", async t => {
+  const remote = await LearningEngine.create();
+  const word = words[1];
+  remote.apply({ id: "remote-answer", word_id: word.id, question_type: "meaning",
+    result: "correct", answered_at: new Date().toISOString(), source: "word", difficulty: word.difficulty });
+  let fetches = 0;
+  t.mock.method(GameDataLoader.prototype, "fetchData", async () => ({
+    user_id: "owner", words, stats: [],
+    catalogVersion: "unchanged", syncVersion: ++fetches,
+    learning: fetches === 1 ? undefined : remote.snapshot(),
+  }));
+  t.mock.method(AnswerJournal.prototype, "recover", async () => []);
+  t.mock.method(AnswerJournal.prototype, "saveLocal", async () => true);
+  const runtime = new TrainingRuntime({ levels: "1", kinds: ["meaning"], modes: ["exam"], onLoginRequired() {} });
+  const data = await runtime.load();
+  const first = data.planner.next()!;
+  await runtime.refreshCatalog();
+  assert.equal(first.options.length, 4);
+  await data.planner.prepareSet();
+  assert.equal(data.planner.engine.words.get(`word:${word.id}:meaning`)?.last_answer_id, "remote-answer");
+  runtime.dispose();
 });
