@@ -4,6 +4,7 @@ import { choiceLabel } from "@/lib/game/rules";
 import { personalMessage } from "@/lib/personal/messages";
 import type { PersonalWord, PersonalWordList } from "@/lib/personal/types";
 import styles from "./personal-styles";
+import { WordReading } from "./word-reading";
 
 export function WordList({
   data,
@@ -109,10 +110,9 @@ export function WordList({
                 >
                   <span className={styles.identity}>
                     <strong lang="ja">{word.term}</strong>
-                    {(word.kana !== word.term || word.pronunciation_ko) && <span className={styles.reading}>
-                      {word.kana !== word.term && <span lang="ja">{word.kana}</span>}
-                      {word.pronunciation_ko && <span lang="ko">{word.kana !== word.term ? " · " : ""}{word.pronunciation_ko}</span>}
-                    </span>}
+                    <span className={styles.reading}>
+                      <WordReading {...word} />
+                    </span>
                   </span>
                   <span className={styles.meaning} lang="ko">{choiceLabel(word, "meaning")}</span>
                   <span className={styles.chevron} aria-hidden="true">›</span>
