@@ -1,9 +1,151 @@
-.trigger { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; min-height: 40px; margin: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text); font: inherit; font-size: 12px; box-shadow: none; }
-.trigger > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.panel { padding: 6px; }
-.panel h2 { margin: 0 0 16px; font-size: 20px; }
-.options { display: grid; gap: 4px; }
-.option { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 10px 14px; margin: 0; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--text); text-align: left; font: inherit; font-size: 15px; box-shadow: none; }
-.option small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 400; }
-.option[aria-pressed="true"] { background: var(--press); border-color: var(--line); color: var(--accent); font-weight: 700; }
-.option:hover { background: var(--tint); }
+/* Small trigger shared by the personal notebook and mistakes notebook. */
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Leave room for the shared dialog's close button without a visible heading. */
+.panel {
+  padding: 24px 1px 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.options {
+  display: grid;
+  gap: 5px;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  margin: 0;
+  padding: 0 12px 0 15px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color .12s ease, border-color .12s ease;
+}
+
+.optionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.optionTrailing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.optionDetail {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.optionCheck {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-brand);
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0;
+}
+
+.option[aria-pressed="true"] {
+  background: var(--press);
+  border-color: var(--line);
+  color: var(--accent);
+}
+
+.option[aria-pressed="true"] .optionLabel {
+  font-weight: 800;
+}
+
+.option[aria-pressed="true"] .optionCheck {
+  opacity: 1;
+}
+
+.option:not([aria-pressed="true"]):hover {
+  background: var(--tint);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 360px) {
+  .option {
+    padding-inline: 10px;
+    gap: 5px;
+    font-size: 14px;
+  }
+
+  .optionTrailing {
+    gap: 6px;
+  }
+
+  .optionDetail {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}
