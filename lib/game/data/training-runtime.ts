@@ -156,6 +156,9 @@ export class TrainingRuntime {
         : fresh.catalogVersion !== undefined &&
           (fresh.catalogVersion === this.data.catalogVersion || fresh.catalogVersion === this.stagedVersion)) return;
       const catalogChanged = fresh.catalogVersion !== this.data.catalogVersion;
+      // A learning-only sync does not invalidate the vocabulary or reading
+      // indexes. Reusing them avoids rebuilding choices for no catalog change.
+      const words = catalogChanged ? fresh.words : this.data.words;
       const reading = catalogChanged ? await this.createReading(fresh) : this.reading;
       // Replay pending answers plus this run's answers (even if already ACKed),
       // so a late sync cannot wipe out locally played questions.
@@ -163,19 +166,17 @@ export class TrainingRuntime {
       const engine = await recoverLearning(
         fresh.learning ?? planner.engine.snapshot(),
         [...pending, ...this.playedAnswers],
-        fresh.words,
+        words,
       );
       if (this.disposed || generation !== this.catalogGeneration || planner !== this.planner) {
         if (catalogChanged) reading?.close();
         return;
       }
-      if (catalogChanged) {
-        this.stagedReading?.close();
-        this.stagedReading = reading;
-      }
+      this.stagedReading?.close();
+      this.stagedReading = catalogChanged ? reading : undefined;
       this.stagedVersion = fresh.catalogVersion;
       this.stagedSyncVersion = fresh.syncVersion;
-      planner.stageCatalog(fresh.words, reading ? async (word, kind) => {
+      planner.stageCatalog(words, reading ? async (word, kind) => {
         if (kind === "reading") await reading.prepare(word);
       } : undefined, () => {
         if (catalogChanged) {
@@ -185,8 +186,8 @@ export class TrainingRuntime {
         }
         this.stagedVersion = undefined;
         this.stagedSyncVersion = undefined;
-        this.data = fresh;
-        this.journal.setWords(fresh.words);
+        this.data = { ...fresh, words, readingWords: catalogChanged ? fresh.readingWords : this.data.readingWords };
+        this.journal.setWords(words);
       }, engine);
     })().catch(() => { /* Keep the current usable catalog if background preparation fails. */ });
     this.catalogFlight = work;
