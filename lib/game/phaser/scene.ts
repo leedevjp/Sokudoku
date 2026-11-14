@@ -1,5 +1,7 @@
-import { MeadowBattle, preloadBattle, preloadLaterRegions } from "./meadow-battle";
-import { RabbitCompanion, preloadRabbit } from "./rabbit-companion";
+import { MeadowBattle } from "./meadow-battle";
+import { RabbitCompanion } from "./rabbit-companion";
+import { SceneMedia } from "./scene-media";
+import { battleReady } from "./presentation-assets";
 import { PetMotionState } from "../pet-motion";
 import { RunPersistence } from "./run-persistence";
 import { paintAnswerFeedback } from "./answer-feedback";
@@ -22,7 +24,7 @@ import { answerImpact, burst } from "./effects";
 import { resizeProgress } from "./resize-progress";
 import { Correction } from "../correction";
 import { BattleProgress, comboTier } from "../battle-progress";
-import { BattleAudio, preloadBattleAudio } from "./battle-audio";
+import { BattleAudio } from "./battle-audio";
 import type { CorrectionCard } from "./correction-card";
 import { showCorrection } from "./correction-presentation";
 export class TrainingScene extends Phaser.Scene {
@@ -44,6 +46,8 @@ export class TrainingScene extends Phaser.Scene {
   private session = new TrainingSession();
   private battleProgress = new BattleProgress();
   private battleAudio?: BattleAudio;
+  private media?: SceneMedia;
+  private questionHasBattle = false;
   private soundExpanded = false;
   private speechActive = false;
   private speechToken = 0;
@@ -125,10 +129,6 @@ export class TrainingScene extends Phaser.Scene {
       .setZoom(this.density)
       .centerOn(this.w / 2, this.h / 2);
   }
-  preload() {
-    preloadRabbit(this);
-    preloadBattle(this);
-  }
   create() {
     try {
       this.bootTraining();
@@ -151,21 +151,21 @@ export class TrainingScene extends Phaser.Scene {
     this.game.canvas.setAttribute("tabindex", "0");
     this.trainingInput.attach();
     this.battleAudio = new BattleAudio(this);
+    this.media = new SceneMedia(this);
     this.scale.on("resize", this.resize, this);
     const cleanup = () => {
       this.overlay?.destroy(); this.overlay = undefined;
       this.stopPronunciation(); this.nextGeneration++; this.trainingInput.detach();
+      this.media?.close();
       this.events.off("shutdown", cleanup); this.events.off("destroy", cleanup);
     };
     this.events.once("shutdown", cleanup);
     this.events.once("destroy", cleanup);
     this.startRun();
-    // The first board must not wait for later maps or optional sound decoding.
+    // Render and enable the quiz before any presentation downloads/decoding.
     this.game.events.once("postrender", () => {
       if (!this.sys.isActive()) return;
-      preloadLaterRegions(this);
-      preloadBattleAudio(this);
-      this.load.start();
+      this.media?.start();
     });
   }
   private clear() {
@@ -220,6 +220,7 @@ export class TrainingScene extends Phaser.Scene {
         return;
       }
       this.question = question;
+      this.questionHasBattle = battleReady(key => this.textures.exists(key));
     } catch (error) {
       if (request !== this.nextGeneration) return;
       this.preparingQuestion = false;
@@ -253,7 +254,8 @@ export class TrainingScene extends Phaser.Scene {
   private drawBoard() {
     this.clear();
     this.view.drawBoard(this.question, this.hearts, this.correct, this.maxTime, this.timeLimited);
-    this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
+    if (this.questionHasBattle)
+      this.battle = new MeadowBattle(this, this.view, this.question.word.id, this.correct, this.battleProgress.combo);
     this.notifyReady();
   }
   private notifyReady() {
@@ -627,6 +629,7 @@ export class TrainingScene extends Phaser.Scene {
         return;
       }
       this.question = question;
+      this.questionHasBattle = battleReady(key => this.textures.exists(key));
       this.maxTime = limitFor(this.correct);
     }
     this.resizeElapsed = progress.elapsed;

@@ -9,9 +9,13 @@ a 15-second retry interval. Web Locks serialize sync across same-origin tabs.
 The worker checks `/api/sync` for dataset revisions before pulling. Common words,
 all approved-choice source records, personal words, answers, canonical learning
 cards and learner state are prepared, regardless of the selected training scope.
-Images/effects/music are warmed through their content-addressed HTTP cache URLs.
+Images/effects/music are warmed through their content-addressed HTTP cache URLs
+and retained in the public `sokudoku-media-v1` Cache Storage cache. The shared
+worker deduplicates home prefetch and game requests, limits media fetches to two,
+and prioritizes queued files requested by the active game. Cache denial falls
+back to downloading for the session. Unchanged hashes are reusable across builds.
 The game filters its scope locally. A complete snapshot starts immediately even
-while an upload is outstanding; only first preparation waits for missing data.
+while an upload is outstanding; only first preparation waits for missing word data.
 Existing installations can also start from their previous vocabulary/choice
 cache while the first full snapshot downloads. Cached entry never waits for
 background media warming or the latest server revision.
@@ -21,6 +25,17 @@ and choice banks. An active game prepares changed vocabulary and reading indexes
 in the background, then adopts them after its frozen question set is consumed.
 The displayed question and queued choices remain stable. The same planner and
 learning engine retain answers, encounter counts and session progress throughout.
+
+Media never gates the question path, including first-ever entry. The Phaser scene
+renders the quiz before requesting images or decoding effects. Images are decoded
+in the background and texture uploads are spread over animation frames. A complete
+compatible core image group enables battle presentation on the next question;
+partial downloads and completion never redraw the visible question. Later maps
+use the existing ready-map fallback. Effects play only when decoded, and BGM uses
+a worker-provided blob when ready and browser playback has been unlocked. Scene
+shutdown releases blob URLs/listeners while root downloads continue. Media and
+user synchronization have independent retry clocks, so slow or failed media
+cannot postpone answer uploads or dataset checks.
 
 Postgres `sync_versions` counters are advanced in the original mutation's
 transaction. Updates to the same head serialize until commit. `sync_changes`

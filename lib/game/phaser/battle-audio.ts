@@ -1,15 +1,12 @@
 import Phaser from "phaser";
 import { gameAssetUrl } from "../asset-url";
+import { prepareMedia } from "@/lib/sync/client";
+import { effectFiles } from "./presentation-assets";
 
 const MUSIC_GAIN = 0.5;
 const EFFECTS_GAIN = 3;
 
-const files = ["dash", "hybrid", "jelly", "hybrid-combo", "miss-combo"] as const;
-type Cue = typeof files[number];
-export function preloadBattleAudio(scene: Phaser.Scene) {
-  for (const file of files) if (!scene.cache.audio.exists("battle-" + file))
-    scene.load.audio("battle-" + file, gameAssetUrl("/audio/audition-v1/" + file + ".wav"));
-}
+type Cue = typeof effectFiles[number];
 
 export class BattleAudio {
   enabled = false;
@@ -22,6 +19,10 @@ export class BattleAudio {
   private active = false;
   private duckUntil = 0;
   private generation = 0;
+  private closed = false;
+  private loading = false;
+  private retryAt = 0;
+  private musicUrl?: string;
   constructor(private scene: Phaser.Scene) {
     try {
       this.enabled = localStorage.getItem("sokudoku-battle-sound") === "on";
@@ -37,9 +38,11 @@ export class BattleAudio {
       window.removeEventListener("pointerdown", this.unlock);
       scene.sound.stopAll();
       this.generation++;
+      this.closed = true;
       this.music?.pause();
       this.music?.removeAttribute("src");
       this.music?.load();
+      if (this.musicUrl) URL.revokeObjectURL(this.musicUrl);
       scene.events.off("shutdown", cleanup);
       scene.events.off("destroy", cleanup);
     };
@@ -65,15 +68,8 @@ export class BattleAudio {
     active ||= this.preview;
     this.active = active;
     // One continuous study track for the whole run, including question/map changes.
-    if (!this.music && active && this.enabled && this.musicVolume > 0 && !document.hidden) {
-      this.generation++;
-      this.music = new Audio();
-      this.music.preload = "none";
-      this.music.src = gameAssetUrl("/audio/study-lobby-night-v1.mp3");
-      this.music.loop = true;
-      this.music.volume = 0;
-      this.playing = false;
-    }
+    if (!this.music && !this.loading && !this.closed && performance.now() >= this.retryAt &&
+        active && this.enabled && this.musicVolume > 0 && !document.hidden) void this.loadMusic();
     if (!active || !this.enabled || this.musicVolume <= 0 || document.hidden) {
       this.music?.pause(); this.playing = false; return;
     }
@@ -82,6 +78,21 @@ export class BattleAudio {
       const target = this.musicVolume * MUSIC_GAIN * (performance.now() < this.duckUntil ? .6 : 1);
       this.music.volume += (target - this.music.volume) * Math.min(1, delta / (target < this.music.volume ? 35 : 450));
     }
+  }
+  private async loadMusic() {
+    this.loading = true;
+    const generation = ++this.generation;
+    try {
+      const blob = await prepareMedia(gameAssetUrl("/audio/study-lobby-night-v1.mp3"), false);
+      if (this.closed || generation !== this.generation) return;
+      this.musicUrl = URL.createObjectURL(blob);
+      this.music = new Audio(this.musicUrl);
+      this.music.loop = true;
+      this.music.volume = 0;
+      this.playing = false;
+      this.startMusic();
+    } catch { this.retryAt = performance.now() + 15000; }
+    finally { this.loading = false; }
   }
   impact(tier: number) {
     this.duckUntil = performance.now() + 160;
