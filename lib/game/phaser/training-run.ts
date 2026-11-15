@@ -44,7 +44,7 @@ export class TrainingRun {
       resume: () => this.viewport.resume(),
       press: (source, index) => this.answers.press(source, index),
       toggleSound: () => this.toggleAllSound(),
-      finish: (complete, exit) => this.finish(complete, exit),
+      finish: (complete) => this.finish(complete),
       showResult: () => this.drawEnd(),
       clearCorrectionView: () => this.answers.clearView(),
     });
@@ -173,7 +173,7 @@ export class TrainingRun {
       this.feedback.stopSpeech();
     }
   };
-  private finish(reviewComplete = false, exitAfterSave = false) {
+  private finish(reviewComplete = false) {
     this.presentation.closePause();
     this.presentation.audio?.stop();
     this.feedback.stopSpeech();
@@ -190,9 +190,7 @@ export class TrainingRun {
     this.scene.time.paused = false;
     this.persistence.save(
       async () => {
-        const saved = await this.options.onFinish();
-        if (saved && exitAfterSave) this.options.onExit();
-        return saved;
+        return this.options.onFinish();
       },
       () => this.scene.sys.isActive(),
       () => this.drawEnd(),
