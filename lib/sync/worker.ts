@@ -7,6 +7,7 @@ import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
 import { browserMediaDownloads } from "./media";
 import { readLocalSync, commitLocalSync } from "./local-store";
+import { decodeSyncPage } from "./wire";
 
 let owner: string | null = null;
 let engine: SyncEngine | undefined;
@@ -53,10 +54,10 @@ async function pullPages(versions: Versions): Promise<SyncPacket> {
       if (through && (base[dataset] ?? "0") === (through[dataset] ?? "0")) continue;
       let after: [string, string] | null = null;
       do {
-        const page: SyncPacket & { done: boolean; after: [string, string] | null } = await json("/api/sync", {
+        const page = decodeSyncPage(await json("/api/sync", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ versions: base, dataset, through, after }),
-        });
+          body: JSON.stringify({ versions: base, dataset, through, after, compact: true }),
+        }));
         if (page.owner !== owner || page.protocol !== 1) throw Error("OWNER_CHANGED");
         through = page.versions; changes.push(...page.changes); after = page.done ? null : page.after;
         if (!page.done && !after) throw Error("INVALID_SYNC");
@@ -72,10 +73,10 @@ async function pullPages(versions: Versions): Promise<SyncPacket> {
 function makeEngine(user: string) {
   return new SyncEngine(user, {
     read: async () => (await readSnapshot(user)).snapshot,
-    pending: async () => ((await (await database()).getAll("answer")) as QueuedAnswer[]).filter(a => a.owner === user),
-    commit: async (snapshot, ids) => {
+    pending: async () => (await (await database()).getAllFromIndex("answer", "owner", user)) as QueuedAnswer[],
+    commit: async (snapshot, ids, delta) => {
       if (owner !== user) throw Error("OWNER_CHANGED");
-      await commitLocalSync(user, snapshot, ids);
+      await commitLocalSync(user, snapshot, ids, delta);
       localSnapshot = snapshot;
     },
   }, {

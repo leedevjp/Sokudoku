@@ -6,13 +6,10 @@ export async function queueAnswer(owner: string, answer: Answer) {
   await storageDeadline((await database()).put("answer", { ...answer, owner }));
 }
 export async function pendingCount(owner: string) {
-  return ((await (await database()).getAll("answer")) as Queued[]).filter(
-    (a) => a.owner === owner,
-  ).length;
+  return (await database()).countFromIndex("answer", "owner", owner);
 }
 export async function pendingAnswers(owner: string): Promise<Answer[]> {
-  return ((await storageDeadline((await database()).getAll("answer"))) as Queued[])
-    .filter((answer) => answer.owner === owner);
+  return storageDeadline((await database()).getAllFromIndex("answer", "owner", owner));
 }
 let flight: Promise<void> | null = null;
 export async function flushAnswers(owner: string): Promise<void> {
@@ -23,8 +20,8 @@ export async function flushAnswers(owner: string): Promise<void> {
   flight = (async () => {
     const db = await database();
     const all = (
-      (await storageDeadline(db.getAll("answer"))) as Queued[]
-    ).filter((a) => a.owner === owner);
+      (await storageDeadline(db.getAllFromIndex("answer", "owner", owner))) as Queued[]
+    );
     for (let i = 0; i < all.length; i += 200) {
       const batch = all.slice(i, i + 200);
       const response = await fetch("/api/game/answers", {

@@ -1,9 +1,9 @@
-import { applyPacket, emptySnapshot, versionsMatch, type QueuedAnswer, type SyncPacket, type SyncSnapshot, type Versions } from "./types";
+import { applyPacket, emptySnapshot, versionsMatch, type QueuedAnswer, type SyncDelta, type SyncPacket, type SyncSnapshot, type Versions } from "./types";
 
 export type SyncStore = {
   read: () => Promise<SyncSnapshot | undefined>;
   pending: () => Promise<QueuedAnswer[]>;
-  commit: (snapshot: SyncSnapshot, acknowledged: string[]) => Promise<void>;
+  commit: (snapshot: SyncSnapshot, acknowledged: string[], delta?: SyncDelta) => Promise<void>;
 };
 export type SyncTransport = {
   manifest: () => Promise<{ owner: string; versions: Versions; protocol: number; pending_learning?: boolean }>;
@@ -38,10 +38,11 @@ export class SyncEngine {
     const manifest = await this.transport.manifest();
     if (manifest.owner !== this.owner || manifest.protocol !== 1) throw Error("OWNER_CHANGED");
     if (!snapshot.savedAt || acknowledged.length || manifest.pending_learning || !versionsMatch(snapshot.versions, manifest.versions)) {
-      snapshot = applyPacket(snapshot, await this.transport.pull(snapshot.versions));
+      const base = snapshot.versions, localCommit = snapshot.localCommit, packet = await this.transport.pull(base);
+      snapshot = applyPacket(snapshot, packet);
       // Cursor, downloaded state and acknowledged queue removal commit together.
       // A crash between server ACK and this commit simply replays the same UUIDs.
-      await this.store.commit(snapshot, acknowledged);
+      await this.store.commit(snapshot, acknowledged, { base, localCommit, changes: packet.changes });
     }
     return snapshot;
   }

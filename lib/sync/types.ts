@@ -11,12 +11,17 @@ export type SyncSnapshot = {
   owner: string; protocol: 1; versions: Versions;
   data: Record<Dataset, Record<string, SyncRow>>;
   savedAt: number;
+  /** Local storage layout, independent of the wire protocol. */
+  learningRows?: true;
+  nextLearningOrdinal?: number;
+  localCommit?: number;
 };
 export type SyncPacket = {
   owner: string; protocol: 1; versions: Versions;
   changes: { dataset: Dataset; key: string; version: string; deleted: boolean; value: SyncRow | null }[];
 };
 export type QueuedAnswer = Answer & { owner: string };
+export type SyncDelta = { base: Versions; localCommit?: number; changes: SyncPacket["changes"] };
 export const snapshotKey = (owner: string) => `sync-v1:${owner}`;
 export function emptySnapshot(owner: string): SyncSnapshot {
   return { owner, protocol: 1, versions: {}, savedAt: 0,

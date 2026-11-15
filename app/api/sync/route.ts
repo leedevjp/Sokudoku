@@ -7,7 +7,7 @@ import { datasets } from "@/lib/sync/types";
 const headers = { "Cache-Control": "private, no-store" };
 const versions = z.partialRecord(z.enum(datasets), z.string().regex(/^\d{1,18}$/));
 const input = z.object({ versions, dataset: z.enum(datasets).default("words"), through: versions.nullable().optional(),
-  after: z.tuple([z.string().regex(/^\d{1,18}$/), z.string().max(250)]).nullable().optional() }).strict();
+  after: z.tuple([z.string().regex(/^\d{1,18}$/), z.string().max(250)]).nullable().optional(), compact: z.boolean().optional() }).strict();
 export async function GET() {
   const client = await createClient();
   if (!await readIdentity(client)) return Response.json({ error: "unauthorized" }, { status: 401, headers });
@@ -30,8 +30,8 @@ export async function POST(request: Request) {
     if (error) throw error;
     const latest = manifest as { versions: Record<string, string>; pending_learning?: boolean };
     if (!parsed.data.through && (latest.pending_learning || (parsed.data.versions.answers ?? "0") !== (latest.versions.answers ?? "0")))
-      await synchronizeLearning(client);
-    const result = await client.rpc("sync_pull", { p_versions: { ...parsed.data.versions,
+      await synchronizeLearning(client, false);
+    const result = await client.rpc(parsed.data.compact ? "sync_pull_compact" : "sync_pull", { p_versions: { ...parsed.data.versions,
       $dataset: parsed.data.dataset, ...(parsed.data.through ? { $through: parsed.data.through } : {}),
       ...(parsed.data.after ? { $after: parsed.data.after } : {}) } });
     if (result.error) throw result.error;
