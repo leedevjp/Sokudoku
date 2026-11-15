@@ -39,7 +39,9 @@ test("a refresh arriving during preparation replaces its pending old set safely"
   const preparing = planner.prepareSet(); await began;
   planner.stageCatalog(fresh, async () => { nextCalls++; }, () => applied++);
   release(); await preparing;
-  assert.equal(applied, 0); assert.equal(nextCalls, 0);
+  assert.equal(applied, 1); assert.equal(nextCalls, 5);
+  // Awaiting preparation now includes a catalog staged while work yielded;
+  // the immediately following next() must be ready, without SET_NOT_PREPARED.
   await planner.prepareSet();
   assert.equal(applied, 1); assert.equal(nextCalls, 5);
   assert.ok(planner.next()!.word.term.startsWith("new"));
@@ -117,7 +119,7 @@ test("a learning-only server refresh applies at the next question without catalo
 });
 
 
-test("own-answer sync ACK retains the exact pending questions and current FSRS engine", async t => {
+for (const incremental of [false, true]) test(`own-answer sync ACK retains the exact pending questions and current FSRS engine (delta=${incremental})`, async t => {
   const server = await LearningEngine.create();
   let fetches = 0;
   t.mock.method(GameDataLoader.prototype, "fetchData", async () => {
@@ -125,6 +127,10 @@ test("own-answer sync ACK retains the exact pending questions and current FSRS e
     return {
       user_id: "owner", words, stats: [], catalogVersion: "same", syncVersion: fetches,
       learning: fetches === 1 ? undefined : server.snapshot(),
+      ...(incremental ? {
+        learningKey: String(fetches), learningIndex: new Map(server.words),
+        learningDelta: fetches > 1 ? { baseKey: String(fetches - 1), words: [...server.words.values()], removed: [] } : undefined,
+      } : {}),
       pendingAnswers: [],
     };
   });

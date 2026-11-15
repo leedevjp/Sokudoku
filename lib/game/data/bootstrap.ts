@@ -13,12 +13,18 @@ import { loadMeaningBank, readMeaningBank } from "./meaning-bank";
 import { withMeaningBank } from "../meaning-bank";
 import { readLocalSync } from "@/lib/sync/local-store";
 import { preparedGame } from "@/lib/sync/prepared";
+import type { LearningDelta } from "@/lib/sync/prepared-learning";
+import type { LearningWord } from "../learning/types";
 
 export type Bootstrap = {
   words: Word[];
   stats: Stat[];
   user_id: string;
   learning?: LearningSnapshot;
+  learningKey?: string;
+  learningDelta?: LearningDelta;
+  /** Client-only canonical lookup, never part of the worker's wire payload. */
+  learningIndex?: ReadonlyMap<string, LearningWord>;
   readingWords?: Word[];
   catalogVersion?: string;
   syncVersion?: number;

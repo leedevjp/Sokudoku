@@ -11,6 +11,7 @@ export type SelectionContext = {
 
 export type Candidate = { word: Word; kind?: Kind; weight: number };
 export type PlannedQuestion = Question & { mode: TrainingMode };
+export type PreparationStep = { word: Word; kind: Kind } | null;
 
 export function draw<T extends Candidate>(candidates: T[], rng: () => number): T {
   let n = rng() * candidates.reduce((sum, c) => sum + c.weight, 0);

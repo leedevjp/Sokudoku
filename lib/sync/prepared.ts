@@ -4,6 +4,7 @@ import { withMeaningBank, type MeaningBank } from "../game/meaning-bank";
 import { parseLevels, selectedDifficulty, wordMatchesLevels } from "../game/selection";
 import { entryType, type Kind, type Word } from "../game/types";
 import { catalogVersion, type SyncSnapshot, type SyncRow } from "./types";
+import type { LearningPayload } from "./prepared-learning";
 
 // applyPacket and readLocalSync preserve unchanged dataset references. Cache
 // indexes by those immutable maps, so learning-only syncs never rebuild them.
@@ -35,14 +36,14 @@ function distractorIndex(rows: SyncSnapshot["data"]["distractors"]) {
 }
 
 /** Compose the whole catalog locally; no selected-stage API calls are needed. */
-export function preparedGame(snapshot: SyncSnapshot, levelsValue: string | null, kinds: Kind[], knownCatalogKey?: string): Bootstrap {
+export function preparedGame(snapshot: SyncSnapshot, levelsValue: string | null, kinds: Kind[], knownCatalogKey?: string, learningReply?: LearningPayload): Bootstrap {
   const catalogKey = JSON.stringify([snapshot.owner, catalogVersion(snapshot.versions), parseLevels(levelsValue), kinds]);
-  const learning: LearningSnapshot = {
+  const learning = learningReply ?? { learning: {
     learner: (snapshot.data.learner.self as unknown as Learner) ?? null,
     words: Object.values(snapshot.data.learning_states) as unknown as LearningWord[],
-  };
+  } satisfies LearningSnapshot };
   if (knownCatalogKey === catalogKey) return {
-    user_id: snapshot.owner, words: [], stats: [], learning,
+    user_id: snapshot.owner, words: [], stats: [], ...learning,
     catalogVersion: catalogVersion(snapshot.versions), syncVersion: snapshot.savedAt,
     catalogKey, catalogUnchanged: true,
   };
@@ -68,5 +69,5 @@ export function preparedGame(snapshot: SyncSnapshot, levelsValue: string | null,
   }
   if (kinds.includes("meaning")) selected = withMeaningBank(selected, bank);
   return { user_id: snapshot.owner, words: [...selected, ...(levels.includes("P") ? personal : [])],
-    stats: [], learning, catalogKey, ...(needsReading ? { readingWords: [...common, ...personal] } : {}), catalogVersion: catalogVersion(snapshot.versions), syncVersion: snapshot.savedAt };
+    stats: [], ...learning, catalogKey, ...(needsReading ? { readingWords: [...common, ...personal] } : {}), catalogVersion: catalogVersion(snapshot.versions), syncVersion: snapshot.savedAt };
 }
