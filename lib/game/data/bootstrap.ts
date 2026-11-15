@@ -177,7 +177,7 @@ export class GameDataLoader {
     // The worker may be unavailable while its last committed snapshot remains
     // perfectly usable. Restore that snapshot and the answer outbox atomically
     // instead of falling back to a potentially stale legacy learning cache.
-    const local = await readLocalSync(session.user.id, undefined, true);
+    const local = await readLocalSync(session.user.id, undefined, true, { includeHistory: false });
     if (local.snapshot?.savedAt) {
       return {
         ...preparedGame(local.snapshot, this.levels.join(","), [

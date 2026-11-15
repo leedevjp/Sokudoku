@@ -14,6 +14,10 @@ export type SyncSnapshot = {
   /** Local storage layout, independent of the wire protocol. */
   learningRows?: true;
   nextLearningOrdinal?: number;
+  answerRows?: true;
+  nextAnswerOrdinal?: number;
+  /** Projection only: full answer history remains in IndexedDB, not this map. */
+  answerHistoryOmitted?: true;
   localCommit?: number;
 };
 export type SyncPacket = {
@@ -40,6 +44,7 @@ export function applyPacket(current: SyncSnapshot, packet: SyncPacket): SyncSnap
   const copied = new Set<Dataset>();
   for (const change of packet.changes) {
     if (!datasets.includes(change.dataset)) throw Error("INVALID_SYNC");
+    if (change.dataset === "answers" && current.answerHistoryOmitted) continue;
     if (!copied.has(change.dataset)) {
       data[change.dataset] = { ...data[change.dataset] };
       copied.add(change.dataset);
@@ -47,5 +52,6 @@ export function applyPacket(current: SyncSnapshot, packet: SyncPacket): SyncSnap
     if (change.deleted) delete data[change.dataset][change.key];
     else if (change.value) data[change.dataset][change.key] = change.value;
   }
-  return { owner: packet.owner, protocol: 1, versions: packet.versions, data, savedAt: Date.now() };
+  return { owner: packet.owner, protocol: 1, versions: packet.versions, data, savedAt: Date.now(),
+    ...(current.answerHistoryOmitted ? { answerHistoryOmitted: true } : {}) };
 }
