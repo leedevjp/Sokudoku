@@ -115,3 +115,78 @@ test("a learning-only server refresh applies at the next question without catalo
   assert.equal(data.planner.engine.words.get(`word:${word.id}:meaning`)?.last_answer_id, "remote-answer");
   runtime.dispose();
 });
+
+
+test("own-answer sync ACK retains the exact pending questions and current FSRS engine", async t => {
+  const server = await LearningEngine.create();
+  let fetches = 0;
+  t.mock.method(GameDataLoader.prototype, "fetchData", async () => {
+    fetches++;
+    return {
+      user_id: "owner", words, stats: [], catalogVersion: "same", syncVersion: fetches,
+      learning: fetches === 1 ? undefined : server.snapshot(),
+      pendingAnswers: [],
+    };
+  });
+  t.mock.method(AnswerJournal.prototype, "recover", async () => []);
+  t.mock.method(AnswerJournal.prototype, "record", () => {});
+  t.mock.method(AnswerJournal.prototype, "saveLocal", async () => true);
+  const runtime = new TrainingRuntime({ levels: "1", kinds: ["meaning"], modes: ["exam"], onLoginRequired() {} });
+  const data = await runtime.load();
+  const first = data.planner.next()!;
+  const answer = {
+    id: "already-played", word_id: first.word.id, question_type: "meaning" as const,
+    selected_word_id: first.word.id, result: "correct" as const,
+    response_ms: 250, time_limit_ms: 10000, answered_at: "2026-11-15T00:00:00.000Z",
+  };
+  data.planner.record(answer, first.word);
+  runtime.record(answer);
+  server.apply({ ...answer, source: "word", difficulty: first.word.difficulty });
+  // Server revision is bookkeeping: it changes even when the local cards
+  // already contain precisely the answers just acknowledged.
+  server.learner.revision = 9;
+
+  const queue = (data.planner as unknown as { queue: unknown[] }).queue;
+  const expectedNext = queue[0];
+  const currentEngine = data.planner.engine;
+  assert.equal(queue.length, 4);
+
+  await runtime.refreshCatalog();
+  await data.planner.prepareSet();
+  assert.equal(data.planner.engine, currentEngine);
+  assert.equal((data.planner as unknown as { queue: unknown[] }).queue, queue, "ACK must not reset the quiz queue");
+  assert.equal(data.planner.next(), expectedNext, "the same prepared question should be shown next");
+
+  // Repeated sync notifications must also leave the remaining questions alone.
+  const remaining = (data.planner as unknown as { queue: unknown[] }).queue;
+  await runtime.refreshCatalog();
+  await data.planner.prepareSet();
+  assert.equal((data.planner as unknown as { queue: unknown[] }).queue, remaining);
+  runtime.dispose();
+});
+
+test("a genuinely new remote answer still invalidates pending questions", async t => {
+  const remote = await LearningEngine.create();
+  let fetches = 0;
+  t.mock.method(GameDataLoader.prototype, "fetchData", async () => ({
+    user_id: "owner", words, stats: [], catalogVersion: "same",
+    syncVersion: ++fetches, learning: fetches === 1 ? undefined : remote.snapshot(),
+    pendingAnswers: [],
+  }));
+  t.mock.method(AnswerJournal.prototype, "recover", async () => []);
+  t.mock.method(AnswerJournal.prototype, "saveLocal", async () => true);
+  const runtime = new TrainingRuntime({ levels: "1", kinds: ["meaning"], modes: ["exam"], onLoginRequired() {} });
+  const data = await runtime.load();
+  data.planner.next();
+  const oldQueue = (data.planner as unknown as { queue: unknown[] }).queue;
+  remote.apply({
+    id: "other-device", word_id: words[2].id, question_type: "meaning",
+    result: "incorrect", source: "word", difficulty: words[2].difficulty,
+    answered_at: "2026-11-15T00:00:00.000Z",
+  });
+  await runtime.refreshCatalog();
+  await data.planner.prepareSet();
+  assert.notEqual((data.planner as unknown as { queue: unknown[] }).queue, oldQueue);
+  assert.equal(data.planner.engine.words.get("word:2:meaning")?.last_answer_id, "other-device");
+  runtime.dispose();
+});
