@@ -139,7 +139,7 @@ export function drawEnd(
       x, y + 202 * s, buttonWidth, actions.exam, true, undefined, data.syncing || (!data.preview && !data.syncOK),
     );
     view.button(
-      view.t("ホームへ", "메인으로"),
+      view.t("確認", "확인"),
       x, y + 262 * s, buttonWidth, actions.exit, false, undefined, data.syncing || (!data.preview && !data.syncOK),
     );
   } else {
@@ -148,7 +148,7 @@ export function drawEnd(
       x, y + 150 * s, buttonWidth, actions.retry, true, undefined, data.syncing,
     );
     view.button(
-      view.t("ホームへ", "홈으로"),
+      view.t("確認", "확인"),
       x, y + 212 * s, buttonWidth, actions.exit, false, undefined, data.syncing || (!data.preview && !data.syncOK),
     );
   }
