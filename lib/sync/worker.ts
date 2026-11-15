@@ -2,7 +2,7 @@ import { database } from "../game/data/database";
 import { gameAssetUrls } from "../game/asset-url";
 import { preparedGame } from "./prepared";
 import { SyncEngine } from "./engine";
-import { catalogVersion, datasets, versionsMatch, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
+import { catalogVersion, datasets, emptySnapshot, versionsMatch, type QueuedAnswer, type SyncSnapshot, type SyncPacket, type Versions } from "./types";
 import { readLegacyGame } from "./legacy";
 import type { Kind } from "../game/types";
 import { browserMediaDownloads } from "./media";
@@ -21,7 +21,7 @@ let syncFlight: { owner: string; work: Promise<SyncSnapshot> } | undefined;
 let wakeAgain = false;
 let localSnapshot: SyncSnapshot | undefined;
 async function readSnapshot(user: string, includePending = false) {
-  const state = await readLocalSync(user, localSnapshot, includePending);
+  const state = await readLocalSync(user, localSnapshot, includePending, { includeHistory: false });
   if (state.snapshot) localSnapshot = state.snapshot;
   return state;
 }
@@ -72,7 +72,7 @@ async function pullPages(versions: Versions): Promise<SyncPacket> {
 }
 function makeEngine(user: string) {
   return new SyncEngine(user, {
-    read: async () => (await readSnapshot(user)).snapshot,
+    read: async () => (await readSnapshot(user)).snapshot ?? { ...emptySnapshot(user), answerHistoryOmitted: true },
     pending: async () => (await (await database()).getAllFromIndex("answer", "owner", user)) as QueuedAnswer[],
     commit: async (snapshot, ids, delta) => {
       if (owner !== user) throw Error("OWNER_CHANGED");

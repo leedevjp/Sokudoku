@@ -8,7 +8,7 @@ export function storageDeadline<T>(operation: Promise<T>): Promise<T> {
 let connection: Promise<IDBPDatabase> | undefined;
 export const database = () => {
   if (connection) return connection;
-  const opening = openDB("sokudoku-game-v1", 2, {
+  const opening = openDB("sokudoku-game-v1", 3, {
     upgrade(db, oldVersion, _newVersion, tx) {
       if (oldVersion < 1) {
         db.createObjectStore("answer", { keyPath: "id" });
@@ -18,6 +18,8 @@ export const database = () => {
         tx.objectStore("answer").createIndex("owner", "owner");
         db.createObjectStore("learning", { keyPath: ["owner", "key"] }).createIndex("owner", "owner");
       }
+      if (oldVersion < 3)
+        db.createObjectStore("history", { keyPath: ["owner", "key"] }).createIndex("owner", "owner");
     },
     blocking() {
       void opening.then((db) => db.close());

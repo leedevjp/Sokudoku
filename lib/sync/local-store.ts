@@ -1,6 +1,6 @@
 import { database, storageDeadline } from "../game/data/database";
 import { datasets, snapshotKey, versionsMatch, type QueuedAnswer, type SyncDelta, type SyncSnapshot } from "./types";
-import { learningMap, writeLearningRows } from "./learning-store";
+import { orderedRowMap, rowLayouts, writeSyncRows } from "./row-store";
 
 export const syncDataKey = (owner: string, dataset: string) =>
   `sync-data-v1:${owner}:${dataset}`;
@@ -21,8 +21,9 @@ export async function readLocalSync(
   owner: string,
   cached?: SyncSnapshot,
   includePending = false,
+  { includeHistory = true }: { includeHistory?: boolean } = {},
 ): Promise<PlayableSyncState> {
-  const tx = (await database()).transaction(["cache", "answer", "learning"], "readonly");
+  const tx = (await database()).transaction(["cache", "answer", "learning", "history"], "readonly");
   const cache = tx.objectStore("cache");
   void tx.done.catch(() => {});
   const [meta, pendingRows]: [SyncSnapshot | undefined, QueuedAnswer[]] = await Promise.all([
@@ -33,25 +34,29 @@ export async function readLocalSync(
   if (meta) {
     if (meta.owner !== owner) throw Error("OWNER_CHANGED");
     await Promise.all(datasets.map(async dataset => {
+      if (dataset === "answers" && !includeHistory) { data.answers = {}; return; }
       if (meta.data?.[dataset]) return; // Legacy monolithic snapshot.
+      const layout = dataset in rowLayouts ? rowLayouts[dataset as keyof typeof rowLayouts] : undefined;
       data[dataset] = cached?.owner === owner &&
+        !(dataset === "answers" && cached.answerHistoryOmitted) &&
         (cached.versions[dataset] ?? "0") === (meta.versions[dataset] ?? "0")
         ? cached.data[dataset]
-        : dataset === "learning_states" && meta.learningRows
-          ? learningMap(await tx.objectStore("learning").index("owner").getAll(owner))
+        : layout && meta[layout.ready]
+          ? orderedRowMap(await tx.objectStore(layout.store).index("owner").getAll(owner))
           : await cache.get(syncDataKey(owner, dataset)) ?? {};
     }));
   }
   const pending = pendingRows.filter(a => a.owner === owner);
   await tx.done;
-  return { snapshot: meta ? { ...meta, data } : undefined, pending };
+  return { snapshot: meta ? { ...meta, data, ...(includeHistory ? {} : { answerHistoryOmitted: true as const }) } : undefined, pending };
 }
 
 /** Dataset writes, metadata and ACK removal are still one atomic transaction.
  * Queue independent requests together instead of paying a round trip per row. */
 export async function commitLocalSync(owner: string, snapshot: SyncSnapshot, ids: string[], delta?: SyncDelta): Promise<void> {
   if (snapshot.owner !== owner) throw Error("OWNER_CHANGED");
-  const tx = (await database()).transaction(["cache", "answer", "learning"], "readwrite");
+  if (snapshot.answerHistoryOmitted && !delta) throw Error("INCOMPLETE_SYNC");
+  const tx = (await database()).transaction(["cache", "answer", "learning", "history"], "readwrite");
   void tx.done.catch(() => {});
   const writes: Promise<unknown>[] = [];
   try {
@@ -62,22 +67,36 @@ export async function commitLocalSync(owner: string, snapshot: SyncSnapshot, ids
     if (previous && datasets.some(dataset =>
       BigInt(previous.versions[dataset] ?? "0") > BigInt(snapshot.versions[dataset] ?? "0")))
       throw Error("STALE_SYNC");
+    let historySnapshot = snapshot;
+    if (snapshot.answerHistoryOmitted && !previous?.answerRows) {
+      // One-time migration: capture the old history and apply the current delta
+      // before activating row storage. Normal row commits never read this blob.
+      const answers = previous ? previous.data?.answers ?? await cache.get(syncDataKey(owner, "answers")) ?? {} : {};
+      for (const change of delta!.changes) if (change.dataset === "answers") {
+        if (change.deleted) delete answers[change.key];
+        else if (change.value) answers[change.key] = change.value;
+      }
+      historySnapshot = { ...snapshot, data: { ...snapshot.data, answers } };
+    }
     for (const dataset of datasets) {
-      if (dataset === "learning_states") continue;
+      if (dataset in rowLayouts) continue;
       // Reuse unchanged dictionaries even when answers/learning change.
       if (!previous || previous.data || (previous.versions[dataset] ?? "0") !== (snapshot.versions[dataset] ?? "0"))
         writes.push(cache.put(snapshot.data[dataset], syncDataKey(owner, dataset)));
     }
-    const { data: ignored, ...meta } = snapshot;
-    void ignored;
+    const { data: ignored, answerHistoryOmitted: omitted, ...meta } = snapshot;
+    void ignored; void omitted;
     // Row requests below may yield across IDB events. Observe earlier queued
     // failures immediately, then rethrow them through the atomic commit below.
     for (const write of writes) void write.catch(() => {});
-    const nextLearningOrdinal = await writeLearningRows(tx, owner, snapshot, previous, delta, writes);
+    const nextLearningOrdinal = await writeSyncRows(tx, owner, snapshot, previous, delta, writes);
+    const nextAnswerOrdinal = await writeSyncRows(tx, owner, historySnapshot, previous, delta, writes, "answers");
     const localCommit = (previous?.localCommit ?? 0) + 1;
     const savedAt = Math.max(snapshot.savedAt, (previous?.savedAt ?? 0) + 1);
     writes.push(cache.delete(syncDataKey(owner, "learning_states")));
-    writes.push(cache.put({ ...meta, savedAt, learningRows: true, nextLearningOrdinal, localCommit }, snapshotKey(owner)));
+    writes.push(cache.delete(syncDataKey(owner, "answers")));
+    writes.push(cache.put({ ...meta, savedAt, learningRows: true, nextLearningOrdinal,
+      answerRows: true, nextAnswerOrdinal, localCommit }, snapshotKey(owner)));
     writes.push(...ids.map(async id => {
       const answer: QueuedAnswer | undefined = await answers.get(id);
       if (answer?.owner === owner) await answers.delete(id);
