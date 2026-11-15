@@ -25,6 +25,29 @@ type RuntimeOptions = {
   onAnswersSaved?: () => void;
 };
 
+/** Ignore server-only revision bookkeeping; compare every field that can affect scheduling. */
+function sameLearningState(current: LearningEngine, incoming: LearningEngine): boolean {
+  const a = current.learner, b = incoming.learner;
+  if (a.ability !== b.ability || a.precision !== b.precision ||
+      a.review_count !== b.review_count || a.ability_count !== b.ability_count ||
+      a.last_answered_at !== b.last_answered_at || a.last_answer_id !== b.last_answer_id ||
+      a.model_version !== b.model_version || current.words.size !== incoming.words.size)
+    return false;
+  for (const [key, word] of current.words) {
+    const next = incoming.words.get(key);
+    if (!next || word.last_answer_id !== next.last_answer_id ||
+        word.last_review_at !== next.last_review_at || word.due_at !== next.due_at ||
+        word.last_result !== next.last_result || word.model_version !== next.model_version)
+      return false;
+    const card = next.card as Record<string, unknown>;
+    const fields = Object.entries(word.card);
+    if (fields.length !== Object.keys(card).length ||
+        fields.some(([name, value]) => !Object.prototype.hasOwnProperty.call(card, name) || card[name] !== value))
+      return false;
+  }
+  return true;
+}
+
 /** Owns data loading, local recovery and persistence; knows nothing about React or Phaser. */
 export class TrainingRuntime {
   private loader: GameDataLoader;
@@ -180,6 +203,14 @@ export class TrainingRuntime {
       );
       if (this.disposed || generation !== this.catalogGeneration || planner !== this.planner) {
         if (catalogChanged) reading?.close();
+        return;
+      }
+      // An ACK of this run's answers changes the server revision, not our
+      // already-updated FSRS cards. Keep the undisplayed questions intact.
+      // Do not bypass an earlier staged refresh (which may contain remote edits).
+      if (!catalogChanged && this.stagedVersion === undefined &&
+          this.stagedSyncVersion === undefined && sameLearningState(planner.engine, engine)) {
+        this.data = { ...this.data, syncVersion: fresh.syncVersion };
         return;
       }
       this.stagedReading?.close();
