@@ -101,7 +101,7 @@ export async function POST(request: Request) {
   // The answer log is durable before acknowledgement. Derived FSRS state must
   // not hold the save response; the next learning read also repairs pending work.
   if (stored.length) after(async () => {
-    try { await synchronizeLearning(client); }
+    try { await synchronizeLearning(client, false); }
     catch (error) { console.error("Deferred learning synchronization failed", error); }
   });
   return Response.json(
