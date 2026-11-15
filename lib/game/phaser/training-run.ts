@@ -44,7 +44,7 @@ export class TrainingRun {
       resume: () => this.viewport.resume(),
       press: (source, index) => this.answers.press(source, index),
       toggleSound: () => this.toggleAllSound(),
-      finish: (complete, exit) => this.finish(complete, exit),
+      finish: (complete) => this.finish(complete),
       showResult: () => this.drawEnd(),
       clearCorrectionView: () => this.answers.clearView(),
     });
