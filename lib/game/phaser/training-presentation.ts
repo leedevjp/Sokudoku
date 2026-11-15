@@ -20,7 +20,7 @@ type PresentationActions = {
   resume: () => void;
   press: (source: string, index: number) => void;
   toggleSound: () => void;
-  finish: (reviewComplete: boolean, exitAfterSave: boolean) => void;
+  finish: (reviewComplete: boolean) => void;
   showResult: () => void;
   clearCorrectionView: () => void;
 };
@@ -145,7 +145,7 @@ export class TrainingPresentation {
         this.overlay = undefined;
         this.scene.time.paused = false;
         this.scene.tweens.resumeAll();
-        this.actions.finish(false, true);
+        this.actions.finish(false);
       },
       preferences: this.preferences,
       audio: this.audio,
