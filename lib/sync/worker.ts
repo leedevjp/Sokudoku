@@ -8,6 +8,7 @@ import type { Kind } from "../game/types";
 import { browserMediaDownloads } from "./media";
 import { readLocalSync, commitLocalSync } from "./local-store";
 import { decodeSyncPage } from "./wire";
+import { prepareLearning, type LearningCache } from "./prepared-learning";
 
 let owner: string | null = null;
 let engine: SyncEngine | undefined;
@@ -20,6 +21,7 @@ let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let syncFlight: { owner: string; work: Promise<SyncSnapshot> } | undefined;
 let wakeAgain = false;
 let localSnapshot: SyncSnapshot | undefined;
+let learningCache: LearningCache | undefined;
 async function readSnapshot(user: string, includePending = false) {
   const state = await readLocalSync(user, localSnapshot, includePending, { includeHistory: false });
   if (state.snapshot) localSnapshot = state.snapshot;
@@ -120,7 +122,7 @@ function background() {
     }
   });
 }
-self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owner?: string | null; levels?: string | null; kinds?: Kind[]; knownCatalogKey?: string; url?: string; priority?: boolean }>) => {
+self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owner?: string | null; levels?: string | null; kinds?: Kind[]; knownCatalogKey?: string; knownLearningKey?: string; url?: string; priority?: boolean }>) => {
   try {
     if (data.type === "media") {
       if (!data.url || !gameAssetUrls().includes(data.url)) throw Error("INVALID_MEDIA");
@@ -132,6 +134,7 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
       requests.abort(); requests = new AbortController();
       clearTimeout(retryTimer);
       owner = data.owner ?? null; engine = owner ? makeEngine(owner) : undefined;
+      learningCache = undefined;
       if (owner) background();
       return;
     }
@@ -162,9 +165,11 @@ self.onmessage = async ({ data }: MessageEvent<{ id?: number; type: string; owne
     // The root worker owns both snapshot and pending answers, so a refresh
     // cannot remove the queue between separate page-level reads.
     if (!snapshot || snapshot.owner !== owner) throw Error("LOGIN");
-    postMessage({ id: data.id, result: data.type === "prepare"
-      ? { ...preparedGame(snapshot, data.levels ?? null, data.kinds ?? [], data.knownCatalogKey),
-          pendingAnswers: playable.pending }
-      : true });
+    if (data.type === "prepare") {
+      const learning = prepareLearning(snapshot, data.knownLearningKey, learningCache);
+      learningCache = learning.cache;
+      postMessage({ id: data.id, result: { ...preparedGame(snapshot, data.levels ?? null, data.kinds ?? [], data.knownCatalogKey, learning.reply),
+        pendingAnswers: playable.pending } });
+    } else postMessage({ id: data.id, result: true });
   } catch (error) { postMessage({ id: data.id, error: (error as Error).message }); }
 };

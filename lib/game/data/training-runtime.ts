@@ -9,6 +9,9 @@ import { GameDataLoader, type Bootstrap } from "./bootstrap";
 import { database, storageDeadline } from "./database";
 import { ReadingSearch } from "./reading-search";
 import { kickSync } from "@/lib/sync/client";
+import { sameLearningState } from "../learning/equivalent";
+import { equivalentLearningDelta, recoverLiveLearning } from "../learning/reconcile";
+import { wordKey } from "../learning/types";
 
 export type TrainingData = {
   words: Word[];
@@ -24,29 +27,6 @@ type RuntimeOptions = {
   onLoginRequired: () => void;
   onAnswersSaved?: () => void;
 };
-
-/** Ignore server-only revision bookkeeping; compare every field that can affect scheduling. */
-function sameLearningState(current: LearningEngine, incoming: LearningEngine): boolean {
-  const a = current.learner, b = incoming.learner;
-  if (a.ability !== b.ability || a.precision !== b.precision ||
-      a.review_count !== b.review_count || a.ability_count !== b.ability_count ||
-      a.last_answered_at !== b.last_answered_at || a.last_answer_id !== b.last_answer_id ||
-      a.model_version !== b.model_version || current.words.size !== incoming.words.size)
-    return false;
-  for (const [key, word] of current.words) {
-    const next = incoming.words.get(key);
-    if (!next || word.last_answer_id !== next.last_answer_id ||
-        word.last_review_at !== next.last_review_at || word.due_at !== next.due_at ||
-        word.last_result !== next.last_result || word.model_version !== next.model_version)
-      return false;
-    const card = next.card as Record<string, unknown>;
-    const fields = Object.entries(word.card);
-    if (fields.length !== Object.keys(card).length ||
-        fields.some(([name, value]) => !Object.prototype.hasOwnProperty.call(card, name) || card[name] !== value))
-      return false;
-  }
-  return true;
-}
 
 /** Owns data loading, local recovery and persistence; knows nothing about React or Phaser. */
 export class TrainingRuntime {
@@ -156,7 +136,9 @@ export class TrainingRuntime {
       this.data.learning,
       pending,
       this.data.words,
+      { shareWords: true, cooperative: true },
     );
+    if (this.disposed) throw Error("TRAINING_CLOSED");
     if (pending.length) {
       void Promise.resolve().then(() => database()).then(db => storageDeadline(
           db.put(
@@ -169,6 +151,7 @@ export class TrainingRuntime {
     this.reading = await this.createReading(this.data);
     this.planner = this.plan(engine);
     await this.planner.prepareSet();
+    if (this.disposed) throw Error("TRAINING_CLOSED");
     this.planner.hasQuestions();
     if ((this.wantedCatalog && this.wantedCatalog !== this.data.catalogVersion) ||
         (this.wantedSyncVersion && this.wantedSyncVersion !== this.data.syncVersion))
@@ -196,11 +179,16 @@ export class TrainingRuntime {
       // Replay pending answers plus this run's answers (even if already ACKed),
       // so a late sync cannot wipe out locally played questions.
       const pending = fresh.pendingAnswers ?? await this.journal.recover();
-      const engine = await recoverLearning(
-        fresh.learning ?? planner.engine.snapshot(),
-        [...pending, ...this.playedAnswers],
-        words,
-      );
+      const catalog = catalogChanged ? new Map(words.map(w => [wordKey(w.source, w.id), w])) : planner.wordIndex;
+      const unstageable = () => this.disposed || generation !== this.catalogGeneration || planner !== this.planner;
+      const acceptEquivalent = () => { this.data = { ...this.data, ...fresh, pendingAnswers: pending, words,
+        readingWords: this.data.readingWords }; };
+      if (!catalogChanged && this.stagedVersion === undefined && this.stagedSyncVersion === undefined &&
+          await equivalentLearningDelta(planner.engine, this.data, fresh, pending, this.playedAnswers, catalog)) {
+        if (!unstageable()) acceptEquivalent();
+        return;
+      }
+      const engine = await recoverLiveLearning(fresh.learning ?? planner.engine.snapshot(), pending, this.playedAnswers, catalog);
       if (this.disposed || generation !== this.catalogGeneration || planner !== this.planner) {
         if (catalogChanged) reading?.close();
         return;
@@ -210,7 +198,7 @@ export class TrainingRuntime {
       // Do not bypass an earlier staged refresh (which may contain remote edits).
       if (!catalogChanged && this.stagedVersion === undefined &&
           this.stagedSyncVersion === undefined && sameLearningState(planner.engine, engine)) {
-        this.data = { ...this.data, syncVersion: fresh.syncVersion };
+        acceptEquivalent();
         return;
       }
       this.stagedReading?.close();
@@ -228,7 +216,7 @@ export class TrainingRuntime {
         this.stagedVersion = undefined;
         this.stagedSyncVersion = undefined;
         this.data = { ...fresh, words, readingWords: catalogChanged ? fresh.readingWords : this.data.readingWords };
-        this.journal.setWords(words);
+        if (catalogChanged) this.journal.setWords(words);
       }, engine);
     })().catch(() => { /* Keep the current usable catalog if background preparation fails. */ });
     this.catalogFlight = work;
@@ -285,7 +273,7 @@ export class TrainingRuntime {
       const reading = await this.createReading(fresh);
       let planner: TrainingPlanner;
       try {
-        planner = this.plan(await recoverLearning(fresh.learning, fresh.pendingAnswers ?? await this.journal.recover(), fresh.words), fresh, reading);
+        planner = this.plan(await recoverLearning(fresh.learning, fresh.pendingAnswers ?? await this.journal.recover(), fresh.words, { shareWords: true, cooperative: true }), fresh, reading);
         await planner.prepareSet();
       } catch (error) { reading?.close(); throw error; }
       this.reading?.close();

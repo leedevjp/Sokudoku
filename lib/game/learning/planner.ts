@@ -3,10 +3,11 @@ import { trainingKinds } from "../selection";
 import type { LearningEngine } from "./engine";
 import { type TrainingMode, wordKey } from "./types";
 import { explorationWeights } from "./exploration";
-import { reviewCandidates } from "./review";
+import { prepareReviewCandidates, reviewCandidates } from "./review";
 import { cryptoRandom } from "./random";
 import { makeAutoSet, type AutoReviewBudget } from "./auto-set";
-import { selectQuestions, type PlannedQuestion } from "./question-selection";
+import { selectQuestions, type PlannedQuestion, type PreparationStep } from "./question-selection";
+import { WorkBudget } from "./work-budget";
 export type { PlannedQuestion } from "./question-selection";
 
 // Preserve the existing public import used by callers and regression tests.
@@ -40,9 +41,11 @@ export class TrainingPlanner {
     this.generation++;
     this.queue = [];
     this.prepared = false;
-    this.words = next.words;
-    this.byKey.clear();
-    for (const word of this.words) this.byKey.set(wordKey(word.source, word.id), word);
+    if (this.words !== next.words) {
+      this.words = next.words;
+      this.byKey.clear();
+      for (const word of this.words) this.byKey.set(wordKey(word.source, word.id), word);
+    }
     this.prepareQuestion = next.prepare;
     if (next.engine) {
       this.engine = next.engine;
@@ -71,6 +74,7 @@ export class TrainingPlanner {
       this.encounters.set(key, (this.encounters.get(key) ?? 0) + state.card.reps);
     }
   }
+  get wordIndex(): ReadonlyMap<string, Word> { return this.byKey; }
   resetSet() {
     this.generation++;
     this.prepared = false;
@@ -115,14 +119,15 @@ export class TrainingPlanner {
       return this.prepareSet();
     }
     this.adoptCatalog();
-    if (!this.prepareQuestion) { this.ensureSet(); return; }
     if (this.queue.length || this.prepared) return;
     const generation = this.generation;
     const work = (async () => {
-      const iterator = this.makeSet();
+      const budget = new WorkBudget(), iterator = this.makeSet(true);
       let step = iterator.next();
       while (!step.done) {
-        await this.prepareQuestion!(step.value.word, step.value.kind);
+        if (step.value) {
+          if (this.prepareQuestion) await this.prepareQuestion(step.value.word, step.value.kind);
+        } else if (budget.exhausted()) await budget.yield();
         if (generation !== this.generation) { iterator.return(); return; }
         step = iterator.next();
       }
@@ -130,7 +135,7 @@ export class TrainingPlanner {
     })();
     this.preparing = work;
     try { await work; } finally { if (this.preparing === work) this.preparing = undefined; }
-    if (generation !== this.generation) await this.prepareSet();
+    if (generation !== this.generation || this.stagedCatalog) await this.prepareSet();
   }
   record(answer: Answer, word: Word) {
     const event = { ...answer, source: word.source ?? ("word" as const), difficulty: word.difficulty };
@@ -171,12 +176,12 @@ export class TrainingPlanner {
       nextDue: future.length ? Math.min(...future) : null,
     };
   }
-  private *makeSet(): Generator<{ word: Word; kind: Kind }, void, void> {
+  private *makeSet(cooperative = false): Generator<PreparationStep, void, void> {
     if (this.modes.includes("auto")) {
       yield* makeAutoSet({
         words: this.words, kinds: this.kinds, lastWord: this.lastWord, rng: this.rng,
         engine: this.engine, byKey: this.byKey, recentWords: this.recentWords,
-        queue: this.queue, budget: this.autoBudget,
+        queue: this.queue, budget: this.autoBudget, cooperative,
       });
       return;
     }
@@ -196,11 +201,12 @@ export class TrainingPlanner {
     }
     const now = Date.now(),
       used = new Set<string>();
-    const candidates = reviewCandidates(
+    const candidates = yield* prepareReviewCandidates(
       this.engine,
       this.byKey,
       this.kinds,
       now,
+      cooperative,
     );
     const review = this.modes.includes("review")
       ? yield* selectQuestions(
@@ -209,11 +215,16 @@ export class TrainingPlanner {
         )
       : [];
     const known = new Set(this.seen);
-    for (const state of this.engine.words.values())
+    let index = 0;
+    for (const state of this.engine.words.values()) {
       known.add(wordKey(state.source, state.word_ref));
-    const unseen = this.words.filter(
-      (word) => !known.has(wordKey(word.source, word.id)),
-    );
+      if (cooperative && ++index % 256 === 0) yield null;
+    }
+    const unseen: Word[] = [];
+    for (const [i, word] of this.words.entries()) {
+      if (!known.has(wordKey(word.source, word.id))) unseen.push(word);
+      if (cooperative && i % 256 === 255) yield null;
+    }
     const exploration = this.modes.includes("exploration")
       ? yield* selectQuestions(
           explorationWeights(unseen), used, "exploration",

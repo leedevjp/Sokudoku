@@ -11,8 +11,19 @@ export function reviewCandidates(
   kinds: Kind[],
   now: number,
 ): ReviewCandidate[] {
+  const iterator = prepareReviewCandidates(engine, byKey, kinds, now);
+  let step = iterator.next();
+  while (!step.done) step = iterator.next();
+  return step.value;
+}
+
+export function* prepareReviewCandidates(
+  engine: LearningEngine, byKey: ReadonlyMap<string, Word>, kinds: Kind[], now: number, cooperative = false,
+): Generator<null, ReviewCandidate[], void> {
   const candidates: ReviewCandidate[] = [];
+  let index = 0;
   for (const state of engine.words.values()) {
+    if (cooperative && ++index % 256 === 0) yield null;
     const word = byKey.get(wordKey(state.source, state.word_ref));
     if (
       !word ||

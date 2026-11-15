@@ -1,5 +1,6 @@
 import { DefaultScheduler, Rating, type DefaultSchedulerCard } from "ts-fsrs";
 import { updateLearner } from "./ability";
+import { WorkBudget } from "./work-budget";
 import {
   cardKey,
   emptyLearning,
@@ -47,14 +48,19 @@ export class LearningEngine {
       }),
     };
     this.learner.ability_count ??= this.learner.review_count;
-    for (const word of snapshot.words)
-      this.words.set(
-        cardKey(word.source, word.word_ref, word.question_type),
-        structuredClone(word),
-      );
   }
-  static async create(snapshot: LearningSnapshot = emptyLearning()) {
-    return new LearningEngine(await scheduler(), snapshot);
+  static async create(snapshot: LearningSnapshot = emptyLearning(), options: { shareWords?: boolean; cooperative?: boolean } = {}) {
+    const engine = new LearningEngine(await scheduler(), snapshot);
+    const budget = options.cooperative ? new WorkBudget() : undefined;
+    for (let i = 0; i < snapshot.words.length; i++) {
+      const word = snapshot.words[i];
+      // apply() creates a new card/row; trusted canonical rows can be shared.
+      // Default callers retain the independent-copy contract.
+      engine.words.set(cardKey(word.source, word.word_ref, word.question_type),
+        options.shareWords ? word : structuredClone(word));
+      if (i % 256 === 255 && budget?.exhausted()) await budget.yield();
+    }
+    return engine;
   }
   snapshot(): LearningSnapshot {
     return { learner: { ...this.learner }, words: [...this.words.values()] };
