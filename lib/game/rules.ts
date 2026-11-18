@@ -19,6 +19,10 @@ export function choiceLabel(
   if (kind === "reading") return w.kana;
   const meaning = w.meaning_ko.trim();
   const hanja = w.hanja_reading?.trim();
+  if (hanja && /^[일이삼사오육칠팔구십백천만억조]*원$/.test(hanja) &&
+    /^(?:\d+(?:,\d{3})*\s*엔|엔(?:\s*\(일본의 화폐 단위\))?)$/.test(meaning)) {
+    return meaning;
+  }
   return hanja && hanja !== meaning ? `${hanja}(${meaning})` : meaning;
 }
 // A down event atomically claims a question; held/repeated input cannot claim it again.
